@@ -1,6 +1,6 @@
 import json
 import sys
-
+import argparse
 from pypdf import PdfReader
 
 
@@ -120,7 +120,7 @@ def get_field_info(reader: PdfReader):
         if "page" in field_info:
             fields_with_location.append(field_info)
         else:
-            print(f"Unable to determine location for field id: {field_info.get('field_id')}, ignoring")
+            print(f"Unable to determine location for field id: {field_info.get('field_id')}, ignoring", file=sys.stderr)
 
     # Sort by page number, then Y position (flipped in PDF coordinate system), then X.
     def sort_key(f):
@@ -142,11 +142,15 @@ def write_field_info(pdf_path: str, json_output_path: str):
     field_info = get_field_info(reader)
     with open(json_output_path, "w") as f:
         json.dump(field_info, f, indent=2)
-    print(f"Wrote {len(field_info)} fields to {json_output_path}")
+    print(f"Wrote {len(field_info)} fields to {json_output_path}", file=sys.stderr)
+    # Output the path to the result file
+    print(json_output_path)
 
 
 if __name__ == "__main__":
-    if len(sys.argv) != 3:
-        print("Usage: extract_form_field_info.py [input pdf] [output json]")
-        sys.exit(1)
-    write_field_info(sys.argv[1], sys.argv[2])
+    parser = argparse.ArgumentParser(description='Extract fillable form fields from a PDF to a JSON file.')
+    parser.add_argument('--input_pdf', type=str, required=True, help='The path to the input PDF file.')
+    parser.add_argument('--output_json', type=str, required=True, help='The path to the output JSON file.')
+    args = parser.parse_args()
+    
+    write_field_info(args.input_pdf, args.output_json)

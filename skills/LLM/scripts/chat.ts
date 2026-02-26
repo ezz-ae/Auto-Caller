@@ -7,7 +7,7 @@ async function main(prompt: string) {
     const messages: ChatMessage[] = [
       {
         role: "assistant",
-        content: "Hi, I'm a helpful assistant."
+        content: "You are a helpful assistant."
       },
       {
         role: "user",
@@ -22,11 +22,23 @@ async function main(prompt: string) {
     });
 
     const reply = response.choices?.[0]?.message?.content;
-    console.log("Chat reply:");
-    console.log(reply ?? JSON.stringify(response, null, 2));
+    if (reply) {
+      console.log(reply);
+    } else {
+      throw new Error("No reply from LLM");
+    }
   } catch (err: any) {
     console.error("Chat failed:", err?.message || err);
+    process.exit(1);
   }
 }
 
-main('What is the capital of France?');
+const args = process.argv.slice(2);
+const promptIndex = args.indexOf('--prompt');
+if (promptIndex === -1 || promptIndex === args.length - 1) {
+  console.error('Usage: ts-node chat.ts --prompt "<your prompt>"');
+  process.exit(1);
+}
+
+const prompt = args[promptIndex + 1];
+main(prompt);

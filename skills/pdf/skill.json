@@ -1,0 +1,22 @@
+{
+  "name": "pdf.extract_form_fields",
+  "description": "Extracts fillable form fields from a PDF file and saves them to a JSON file.",
+  "runtime": "python",
+  "entrypoint": "scripts/extract_form_field_info.py",
+  "parameters": [
+    {
+      "name": "input_pdf",
+      "type": "string",
+      "description": "The path to the input PDF file."
+    },
+    {
+      "name": "output_json",
+      "type": "string",
+      "description": "The path to the output JSON file."
+    }
+  ],
+  "output": {
+    "type": "string",
+    "description": "The path to the output JSON file containing the extracted form fields."
+  }
+}

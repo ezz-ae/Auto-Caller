@@ -24,6 +24,7 @@ export async function POST(request: NextRequest) {
         record: record || settings.recordCalls,
         transcribe: transcribe || settings.transcribeCalls,
         transcriptionCallback: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/calls/transcription`,
+        webSocketUrl: settings.webSocketUrl,
       }
     );
     

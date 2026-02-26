@@ -37,6 +37,7 @@ export function getSettings(): {
   recordCalls: boolean;
   transcribeCalls: boolean;
   openaiApiKey: string;
+  webSocketUrl: string;
 } {
   ensureDataDir();
   
@@ -50,6 +51,7 @@ export function getSettings(): {
       recordCalls: true,
       transcribeCalls: true,
       openaiApiKey: '',
+      webSocketUrl: '',
     };
   }
   
@@ -66,6 +68,7 @@ export function saveSettings(settings: Partial<{
   recordCalls: boolean;
   transcribeCalls: boolean;
   openaiApiKey: string;
+  webSocketUrl: string;
 }>): void {
   ensureDataDir();
   

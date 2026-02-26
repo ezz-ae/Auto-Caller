@@ -1,0 +1,17 @@
+{
+  "name": "workflow.run",
+  "description": "Runs a workflow of skills based on a natural language prompt.",
+  "runtime": "typescript",
+  "entrypoint": "scripts/run.ts",
+  "parameters": [
+    {
+      "name": "prompt",
+      "type": "string",
+      "description": "The natural language prompt describing the workflow to run."
+    }
+  ],
+  "output": {
+    "type": "string",
+    "description": "The final result of the workflow."
+  }
+}

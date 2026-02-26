@@ -31,10 +31,17 @@ export function generateCallTwiML(
     record?: boolean;
     transcribe?: boolean;
     transcriptionCallback?: string;
+    webSocketUrl?: string;
   } = {}
 ): string {
   const VoiceResponse = twilio.twiml.VoiceResponse;
   const response = new VoiceResponse();
+
+  if (options.webSocketUrl) {
+    response.start().stream({
+      url: options.webSocketUrl,
+    });
+  }
   
   // Start recording if enabled
   if (options.record) {

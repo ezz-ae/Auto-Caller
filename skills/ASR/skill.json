@@ -1,0 +1,17 @@
+{
+  "name": "asr.transcribe",
+  "description": "Transcribes an audio file using Automatic Speech Recognition.",
+  "runtime": "typescript",
+  "entrypoint": "scripts/asr.ts",
+  "parameters": [
+    {
+      "name": "input_file",
+      "type": "string",
+      "description": "The path to the input audio file."
+    }
+  ],
+  "output": {
+    "type": "string",
+    "description": "The transcribed text."
+  }
+}

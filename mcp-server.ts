@@ -1,41 +1,155 @@
 import http from 'http';
+import fs from 'fs';
+import path from 'path';
+import { spawn } from 'child_process';
 
 const API_URL = process.env.API_URL || 'http://localhost:3000';
 
+// == SKILL ENGINE ==
+
+interface SkillParameter {
+  name: string;
+  type: string;
+  description: string;
+}
+
+interface Skill {
+  name: string;
+  description: string;
+  runtime: 'python' | 'typescript';
+  entrypoint: string;
+  parameters: SkillParameter[];
+  output: {
+    type: string;
+    description: string;
+  };
+}
+
+class SkillExecutor {
+  constructor(private skillsDir: string) {}
+
+  async execute(skill: Skill, params: Record<string, unknown>): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const entrypointPath = path.join(this.skillsDir, skill.entrypoint);
+      let cmd: string;
+      let args: string[];
+
+      const paramArgs = Object.entries(params).flatMap(([key, value]) => [`--${key}`, String(value)]);
+
+      switch (skill.runtime) {
+        case 'python':
+          cmd = 'python3';
+          args = [entrypointPath, ...paramArgs];
+          break;
+        case 'typescript':
+          cmd = 'ts-node';
+          args = [entrypointPath, ...paramArgs];
+          break;
+        default:
+          return reject(new Error(`Unsupported runtime: ${skill.runtime}`));
+      }
+
+      console.error(`Executing skill: ${skill.name}`);
+      console.error(`> ${cmd} ${args.join(' ')}`);
+
+      const child = spawn(cmd, args, {
+        cwd: path.dirname(entrypointPath)
+      });
+
+      let stdout = '';
+      let stderr = '';
+
+      child.stdout.on('data', (data) => {
+        stdout += data.toString();
+      });
+
+      child.stderr.on('data', (data) => {
+        stderr += data.toString();
+      });
+
+      child.on('close', (code) => {
+        if (code !== 0) {
+          console.error(`Skill ${skill.name} exited with code ${code}`);
+          console.error('Stderr:', stderr);
+          return reject(new Error(`Skill execution failed: ${stderr}`));
+        }
+        console.error(`Skill ${skill.name} completed successfully.`);
+        console.error('Stdout:', stdout);
+        resolve(stdout.trim());
+      });
+
+      child.on('error', (err) => {
+        console.error(`Failed to start skill ${skill.name}:`, err);
+        reject(err);
+      });
+    });
+  }
+}
+
+async function loadSkills(skillsDir: string): Promise<Map<string, Skill>> {
+    const skills = new Map<string, Skill>();
+    if (!fs.existsSync(skillsDir)) {
+        console.error(`Skills directory not found: ${skillsDir}`);
+        return skills;
+    }
+
+    const entries = await fs.promises.readdir(skillsDir, { withFileTypes: true });
+
+    for (const entry of entries) {
+        if (entry.isDirectory()) {
+            const skillManifestPath = path.join(skillsDir, entry.name, 'skill.json');
+            if (fs.existsSync(skillManifestPath)) {
+                try {
+                    const manifestContent = await fs.promises.readFile(skillManifestPath, 'utf-8');
+                    const skill: Skill = JSON.parse(manifestContent);
+                    skill.entrypoint = path.join(entry.name, skill.entrypoint);
+                    skills.set(skill.name, skill);
+                    console.error(`Loaded skill: ${skill.name}`);
+                } catch (error) {
+                    console.error(`Error loading skill from ${skillManifestPath}:`, error);
+                }
+            }
+        }
+    }
+    return skills;
+}
+
+
+// == MCP SERVER ==
+
 /**
  * MCP (Model Context Protocol) Server for Auto Caller Pro
- * 
- * This server allows AI assistants (Claude, ChatGPT, etc.) to control
- * the Auto Caller Pro application programmatically.
- * 
- * WHY MCP IS KEY TO THE BUSINESS MODEL:
- * =====================================
- * 
- * 1. NO INTEGRATION WORK FOR BUYERS
- *    - Buyers can use their existing AI assistant to control the app
- *    - No need to learn a new interface
- *    - "Hey Claude, call these 50 leads for me" just works
- * 
- * 2. VALUE MULTIPLIER
- *    - The app isn't just a standalone tool
- *    - It becomes part of the buyer's AI workflow
- *    - AI assistant + Auto Caller = Automated lead generation
- * 
- * 3. ZERO CODE DELIVERY
- *    - Buyers get the interface, not the codebase
- *    - MCP gives them CONTROL without OWNERSHIP
- *    - Protects your IP while maximizing utility
- * 
- * 4. COMPETITIVE MOAT
- *    - Most competitors sell just software
- *    - You're selling AI-controllable automation
- *    - The MCP layer is hard to replicate
+ * This server now features a dynamic skill orchestrator alongside its
+ * original API-bridging capabilities.
  */
-
-// MCP Protocol Handler
 class MCPServer {
-  tools = [
-    {
+  private skillExecutor: SkillExecutor;
+  private skills: Map<string, Skill>;
+  public tools: any[];
+
+  constructor(skills: Map<string, Skill>, skillsDir: string) {
+    this.skills = skills;
+    this.skillExecutor = new SkillExecutor(skillsDir);
+
+    const dynamicTools = Array.from(skills.values()).map(skill => ({
+      name: skill.name,
+      description: skill.description,
+      inputSchema: {
+        type: 'object',
+        properties: skill.parameters.reduce((acc, param) => {
+          acc[param.name] = { type: param.type, description: param.description };
+          return acc;
+        }, {} as Record<string, any>),
+        required: skill.parameters.map(p => p.name),
+      },
+    }));
+    
+    this.tools = [...this.getBuiltInTools(), ...dynamicTools];
+  }
+
+  private getBuiltInTools() {
+    return [
+        {
       name: 'start_campaign',
       description: 'Start calling a list of phone numbers with AI voice. When someone answers, the call is forwarded to your phone.',
       inputSchema: {
@@ -120,6 +234,14 @@ class MCPServer {
           openaiApiKey: {
             type: 'string',
             description: 'OpenAI API key for transcription and analysis'
+          },
+          deepgramApiKey: {
+            type: 'string',
+            description: 'Deepgram API key for real-time transcription'
+          },
+          webSocketUrl: {
+            type: 'string',
+            description: 'WebSocket URL for real-time transcription'
           },
           recordCalls: {
             type: 'boolean',
@@ -264,7 +386,8 @@ class MCPServer {
         required: ['query']
       }
     }
-  ];
+    ];
+  }
 
   async apiRequest(endpoint: string, options: { method?: string; body?: unknown } = {}): Promise<unknown> {
     return new Promise((resolve, reject) => {
@@ -301,6 +424,13 @@ class MCPServer {
   }
 
   async handleRequest(method: string, params: Record<string, unknown>): Promise<unknown> {
+    // Check if it's a dynamic skill
+    const skill = this.skills.get(method);
+    if (skill) {
+      return this.skillExecutor.execute(skill, params);
+    }
+
+    // Fallback to built-in methods
     switch (method) {
       case 'start_campaign':
         return this.apiRequest('/api/calls', { method: 'POST', body: params });
@@ -431,38 +561,43 @@ class MCPServer {
   }
 }
 
-// Start server
-const server = new MCPServer();
+async function main() {
+    const skillsDir = path.join(process.cwd(), 'skills');
+    const skills = await loadSkills(skillsDir);
+    const server = new MCPServer(skills, skillsDir);
 
-// Handle stdin for MCP protocol
-process.stdin.on('data', async (data) => {
-  try {
-    const message = JSON.parse(data.toString());
-    
-    if (message.method === 'tools/list') {
-      console.log(JSON.stringify({ tools: server.tools }));
-    } else if (message.method === 'tools/call') {
-      const result = await server.handleRequest(
-        message.params.name,
-        message.params.arguments || {}
-      );
-      console.log(JSON.stringify({ result }));
-    } else if (message.method === 'initialize') {
-      console.log(JSON.stringify({
-        protocolVersion: '2024-11-05',
-        capabilities: { tools: {} },
-        serverInfo: {
-          name: 'auto-caller-pro',
-          version: '1.0.0'
+    process.stdin.on('data', async (data) => {
+        try {
+            const message = JSON.parse(data.toString());
+            
+            if (message.method === 'tools/list') {
+                console.log(JSON.stringify({ tools: server.tools }));
+            } else if (message.method === 'tools/call') {
+                const result = await server.handleRequest(
+                    message.params.name,
+                    message.params.arguments || {}
+                );
+                console.log(JSON.stringify({ result }));
+            } else if (message.method === 'initialize') {
+                console.log(JSON.stringify({
+                    protocolVersion: '2024-11-05',
+                    capabilities: { tools: {} },
+                    serverInfo: {
+                        name: 'auto-caller-pro',
+                        version: '1.1.0-orchestrator'
+                    }
+                }));
+            }
+        } catch (error) {
+            console.log(JSON.stringify({ error: (error as Error).message }));
         }
-      }));
-    }
-  } catch (error) {
-    console.log(JSON.stringify({ error: (error as Error).message }));
-  }
-});
+    });
 
-// Log to stderr (doesn't interfere with MCP protocol on stdout)
-console.error('Auto Caller Pro MCP Server started');
-console.error('Ready to accept AI assistant commands');
-console.error('Features: Calling, Recording, Transcription, Analysis');
+    console.error('Auto Caller Pro MCP Server started');
+    console.error(`Loaded ${skills.size} dynamic skills.`);
+    console.error('Ready to accept AI assistant commands');
+}
+
+main().catch(error => {
+    console.error('Failed to start MCP server:', error);
+});

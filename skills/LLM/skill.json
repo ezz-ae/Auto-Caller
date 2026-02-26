@@ -1,0 +1,17 @@
+{
+  "name": "llm.chat",
+  "description": "A chat skill to interact with an LLM.",
+  "runtime": "typescript",
+  "entrypoint": "scripts/chat.ts",
+  "parameters": [
+    {
+      "name": "prompt",
+      "type": "string",
+      "description": "The prompt to send to the LLM."
+    }
+  ],
+  "output": {
+    "type": "string",
+    "description": "The LLM's response."
+  }
+}
