@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">'use client'\n\nimport { useEffect } from 'react'\nimport { useRouter } from 'next/navigation'\n\nexport default function LandingPage() {\n  const router = useRouter()\n  useEffect(() => {\n    router.replace('/dashboard')\n  }, [router])\n\n  return (\n    <div className=\"w-full h-screen bg-[#080808] flex items-center justify-center\">\n      <p className=\"text-white/30\">Loading LocalAgent...</p>\n    </div>\n  )\n}\n</pre></body></html>",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/ezz-ae/Agentic/main/frontend/app/page.tsx",
+    "usage": {
+      "tokens": 139
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 139
+    }
+  },
+  "status": 20000
+}

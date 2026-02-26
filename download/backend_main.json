@@ -1,0 +1,18 @@
+{
+  "code": 200,
+  "data": {
+    "description": "",
+    "html": "<html><head><meta name=\"color-scheme\" content=\"light dark\"></head><body><pre style=\"word-wrap: break-word; white-space: pre-wrap;\">import os\nfrom fastapi import FastAPI\nfrom fastapi.middleware.cors import CORSMiddleware\nfrom dotenv import load_dotenv\n\n# API Routers\nfrom .api import sessions, chat, dashboard, tools, prompts, memory, folders, secrets, linkbio, voice, comms, monitoring, ads\n\nload_dotenv()\n\napp = FastAPI(title=\"LocalAgent API\", version=\"1.1.0\")\n\napp.add_middleware(\n    CORSMiddleware,\n    allow_origins=[\"http://localhost:3000\", \"http://localhost:3001\", \"http://localhost:3002\"],\n    allow_credentials=True,\n    allow_methods=[\"*\"],\n    allow_headers=[\"*\"],\n)\n\n# Register Routers\napp.include_router(sessions.router)\napp.include_router(chat.router)\napp.include_router(dashboard.router)\napp.include_router(tools.router)\napp.include_router(prompts.router)\napp.include_router(memory.router)\napp.include_router(folders.router)\napp.include_router(secrets.router)\napp.include_router(linkbio.router)\napp.include_router(voice.router)\napp.include_router(comms.router)\napp.include_router(monitoring.router)\napp.include_router(ads.router)\n\n@app.get(\"/health\")\nasync def health():\n    return {\"status\": \"ok\", \"version\": \"1.1.0\"}\n\nif __name__ == \"__main__\":\n    import uvicorn\n    uvicorn.run(app, host=\"0.0.0.0\", port=8000)\n</pre></body></html>",
+    "title": "",
+    "url": "https://raw.githubusercontent.com/ezz-ae/Agentic/main/backend/main.py",
+    "usage": {
+      "tokens": 341
+    }
+  },
+  "meta": {
+    "usage": {
+      "tokens": 341
+    }
+  },
+  "status": 20000
+}

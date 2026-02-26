@@ -1,0 +1,42 @@
+# Auto Caller Pro - .gitignore
+
+# Dependencies
+node_modules/
+bun.lock
+
+# Build output
+.next/
+out/
+build/
+dist/
+
+# Local data (user's private data)
+data/
+
+# Environment files (user's keys)
+.env
+.env.local
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Package files (for distribution)
+*.zip
+*.tar.gz
