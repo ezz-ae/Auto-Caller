@@ -17,6 +17,8 @@ Production-ready outbound AI calling platform with:
 - Caller identities in dedicated `Callers` tab (name, position, voice, language, disclosure mode, conversation constraints, KPI counters)
 - Number upload flow with direct caller assignment + optional schedule in `Call Center`
 - Target blueprint-driven calling (goal, audience, offer, qualification, CTA) instead of fixed script reading
+- Lead notes support (`number | user comment | target comment`) attached to per-call results
+- Auto callback scheduling when lead says “call me later” (server-side scheduled follow-up campaign)
 - Natural call voice delivery via ElevenLabs TTS for identity voices (with gender/language filtering in identity setup)
 - Optional dashboard access protection with login (`/login`)
 - Managed billing flows (PayPal number activation + credit top-up)

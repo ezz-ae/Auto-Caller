@@ -42,6 +42,17 @@ export async function POST(request: NextRequest) {
       status: mappedStatus,
     };
 
+    const statusCommentMap: Record<string, string> = {
+      completed: 'Completed call leg',
+      answered: 'Lead answered',
+      'no-answer': 'No answer from lead',
+      failed: 'Call failed to connect',
+      busy: 'Lead line was busy',
+      ringing: 'Ringing',
+      'in-progress': 'Live conversation in progress',
+    };
+    patch.callComment = statusCommentMap[callStatus] || patch.callComment;
+
     if (callDuration) {
       const duration = parseInt(callDuration, 10);
       if (!Number.isNaN(duration)) {
@@ -51,6 +62,7 @@ export async function POST(request: NextRequest) {
 
     if (errorCode || errorMessage) {
       patch.error = [errorCode, errorMessage].filter(Boolean).join(': ');
+      patch.callComment = `Error: ${patch.error}`;
     }
 
     const updated = await updateCampaignResultByCallSid(callSid, patch);

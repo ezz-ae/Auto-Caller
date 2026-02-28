@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import twilio from 'twilio';
-import { getSettings } from '@/lib/store';
+import { v4 as uuidv4 } from 'uuid';
+import { getCampaign, getSettings, saveCampaign, updateCampaignResultByCallSid } from '@/lib/store';
 import { getCallerIdentity } from '@/lib/caller-identity-store';
 import { generateConversationDecision, ConversationTurn } from '@/lib/conversation-agent';
 import { generateCallTwiML, isTwilioNativeVoice } from '@/lib/twilio';
@@ -13,6 +14,126 @@ interface ConversationState {
 }
 
 const MAX_TURNS = 6;
+
+function parseCallbackRequest(utterance: string): { delayMs: number; label: string; reason: string } | null {
+  const text = String(utterance || '').toLowerCase();
+  if (!text) return null;
+
+  const hardDecline = ['do not call', "don't call", 'stop calling', 'remove me', 'never call'];
+  if (hardDecline.some(token => text.includes(token))) return null;
+
+  const wantsCallback = [
+    'call me later',
+    'call back',
+    'callback',
+    'call me in',
+    'call me after',
+    'reach me later',
+    'try later',
+  ].some(token => text.includes(token));
+
+  if (!wantsCallback) return null;
+
+  const numberMatch = text.match(/(?:in|after)\s+(\d+)\s*(minute|minutes|min|hour|hours|hr|hrs)/i);
+  if (numberMatch) {
+    const amount = Math.max(1, parseInt(numberMatch[1], 10));
+    const unit = numberMatch[2].toLowerCase();
+    const isHour = unit.startsWith('h');
+    const delayMs = isHour ? amount * 60 * 60 * 1000 : amount * 60 * 1000;
+    const label = isHour
+      ? `${amount} hour${amount > 1 ? 's' : ''}`
+      : `${amount} minute${amount > 1 ? 's' : ''}`;
+    return { delayMs, label, reason: `Lead requested callback in ${label}` };
+  }
+
+  if (text.includes('tomorrow')) {
+    return { delayMs: 24 * 60 * 60 * 1000, label: 'about 24 hours', reason: 'Lead requested callback tomorrow' };
+  }
+
+  if (text.includes('later today')) {
+    return { delayMs: 3 * 60 * 60 * 1000, label: 'about 3 hours', reason: 'Lead requested callback later today' };
+  }
+
+  return { delayMs: 60 * 60 * 1000, label: '1 hour', reason: 'Lead requested callback later' };
+}
+
+async function scheduleFollowUpCampaign(payload: {
+  callSid: string;
+  callbackDelayMs: number;
+  callbackReason: string;
+  language: string;
+  voiceId: string;
+  callerIdentityId?: string;
+  record: boolean;
+  transcribe: boolean;
+}): Promise<{ callbackAt: Date; campaignId?: string; phoneNumber?: string }> {
+  const callbackAt = new Date(Date.now() + payload.callbackDelayMs);
+  const patch: Parameters<typeof updateCampaignResultByCallSid>[1] = {
+    leadRequest: payload.callbackReason,
+    callComment: payload.callbackReason,
+    followUpRequested: true,
+    followUpAt: callbackAt,
+    followUpStatus: 'scheduled',
+  };
+
+  const updated = await updateCampaignResultByCallSid(payload.callSid, patch);
+  if (!updated.updated || !updated.campaignId || !updated.resultId) {
+    return { callbackAt };
+  }
+
+  const parentCampaign = await getCampaign(updated.campaignId);
+  const parentResult = parentCampaign?.results.find(result => result.id === updated.resultId);
+  const targetNumber = parentResult?.phoneNumber;
+  if (!parentCampaign || !targetNumber) {
+    return { callbackAt };
+  }
+
+  const followUpCampaignId = uuidv4();
+  const followUpCampaign = {
+    id: followUpCampaignId,
+    userId: parentCampaign.userId,
+    name: `Follow-up ${targetNumber}`,
+    status: 'scheduled' as const,
+    voiceId: payload.voiceId || parentCampaign.voiceId,
+    language: payload.language || parentCampaign.language,
+    callerIdentityId: payload.callerIdentityId || parentCampaign.callerIdentityId,
+    callerIdentityName: parentCampaign.callerIdentityName,
+    callerPosition: parentCampaign.callerPosition,
+    script: parentCampaign.script,
+    numbers: [targetNumber],
+    currentIndex: 0,
+    results: [
+      {
+        id: uuidv4(),
+        campaignId: followUpCampaignId,
+        phoneNumber: targetNumber,
+        status: 'pending' as const,
+        timestamp: new Date(),
+        userComment: parentResult.userComment,
+        targetComment: parentResult.targetComment,
+        callComment: `Auto follow-up scheduled from ${payload.callSid}`,
+        parentCallSid: payload.callSid,
+      },
+    ],
+    createdAt: new Date(),
+    scheduledAt: callbackAt,
+    recordCalls: payload.record,
+    transcribeCalls: payload.transcribe,
+  };
+
+  await saveCampaign(followUpCampaign);
+  await updateCampaignResultByCallSid(payload.callSid, {
+    followUpCampaignId: followUpCampaignId,
+    followUpStatus: 'scheduled',
+    callComment: `${payload.callbackReason}. Auto callback scheduled.`,
+  });
+
+  return {
+    callbackAt,
+    campaignId: followUpCampaignId,
+    phoneNumber: targetNumber,
+  };
+}
 
 function clipText(input: string, max: number): string {
   const cleaned = String(input || '').replace(/\s+/g, ' ').trim();
@@ -425,6 +546,42 @@ async function handleAnswer(request: NextRequest) {
     conversationState.noInputCount = 0;
     conversationState.history.push({ role: 'lead', text: speechResult });
 
+    if (callSid) {
+      await updateCampaignResultByCallSid(callSid, {
+        leadSummary: speechResult,
+        callComment: 'Lead responded',
+      });
+    }
+
+    const callbackRequest = parseCallbackRequest(speechResult);
+    if (callbackRequest && callSid) {
+      const followUp = await scheduleFollowUpCampaign({
+        callSid,
+        callbackDelayMs: callbackRequest.delayMs,
+        callbackReason: callbackRequest.reason,
+        language,
+        voiceId,
+        callerIdentityId: callerIdentityId || undefined,
+        record,
+        transcribe,
+      });
+
+      const callbackText = followUp.callbackAt
+        ? `Perfect, I got it. I will call you again in ${callbackRequest.label}. Thanks and speak soon.`
+        : `Perfect, I got it. I noted your callback request and we will try you again in ${callbackRequest.label}.`;
+
+      const twiml = buildEndTwiml({
+        appUrl,
+        language,
+        voiceId,
+        spokenText: callbackText,
+      });
+
+      return new NextResponse(twiml, {
+        headers: { 'Content-Type': 'application/xml' },
+      });
+    }
+
     const decision = await generateConversationDecision({
       leadUtterance: speechResult,
       campaignBrief: conversationState.brief,
@@ -444,6 +601,17 @@ async function handleAnswer(request: NextRequest) {
     let action = decision.action;
     const reply = clipText(decision.reply, 280);
 
+    if (callSid) {
+      const basePatch: Parameters<typeof updateCampaignResultByCallSid>[1] = {
+        leadSummary: speechResult,
+        leadRequest: decision.reason,
+      };
+      if (action === 'continue') {
+        basePatch.callComment = 'Active conversation - follow-up question asked';
+      }
+      await updateCampaignResultByCallSid(callSid, basePatch);
+    }
+
     // Keep calls concise. After enough turns, hand off if not closed yet.
     if (conversationState.turn >= MAX_TURNS && action === 'continue') {
       action = 'forward';
@@ -453,6 +621,12 @@ async function handleAnswer(request: NextRequest) {
     conversationState.history.push({ role: 'agent', text: reply });
 
     if (action === 'forward') {
+      if (callSid) {
+        await updateCampaignResultByCallSid(callSid, {
+          callComment: 'Lead engaged, transferring to human team',
+          leadRequest: decision.reason,
+        });
+      }
       const twiml = buildForwardTwiml({
         appUrl,
         callSid,
@@ -469,6 +643,12 @@ async function handleAnswer(request: NextRequest) {
     }
 
     if (action === 'end') {
+      if (callSid) {
+        await updateCampaignResultByCallSid(callSid, {
+          callComment: reply || 'Conversation closed',
+          leadRequest: decision.reason,
+        });
+      }
       const twiml = buildEndTwiml({
         appUrl,
         language,

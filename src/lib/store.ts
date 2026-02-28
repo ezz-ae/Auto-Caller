@@ -108,6 +108,7 @@ function serializeCallResult(result: CallResult) {
   return {
     ...result,
     timestamp: toDate(result.timestamp)?.toISOString() || new Date().toISOString(),
+    followUpAt: toDate(result.followUpAt)?.toISOString() || undefined,
   };
 }
 
@@ -115,6 +116,7 @@ function deserializeCallResult(result: any): CallResult {
   return {
     ...(result as Omit<CallResult, 'timestamp'>),
     timestamp: new Date(result?.timestamp || new Date().toISOString()),
+    followUpAt: toDate(result?.followUpAt),
   };
 }
 

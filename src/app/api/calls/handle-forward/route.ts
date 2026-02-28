@@ -27,6 +27,12 @@ async function handleForward(request: NextRequest) {
   if (callSid) {
     const patch: Partial<CallResult> = {
       status: mapDialStatus(dialCallStatus),
+      callComment:
+        dialCallStatus === 'completed' || dialCallStatus === 'answered'
+          ? 'Transferred to human team'
+          : dialCallStatus
+            ? `Transfer leg status: ${dialCallStatus}`
+            : 'Transfer attempt finished',
     };
 
     if (dialCallDuration) {

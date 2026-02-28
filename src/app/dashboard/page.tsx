@@ -100,6 +100,14 @@ interface CallResult {
   status: string
   timestamp: string
   error?: string
+  userComment?: string
+  targetComment?: string
+  callComment?: string
+  leadSummary?: string
+  leadRequest?: string
+  followUpRequested?: boolean
+  followUpAt?: string
+  followUpStatus?: string
 }
 
 interface Campaign {
@@ -283,6 +291,7 @@ export default function Dashboard() {
   
   // Call state
   const [numbers, setNumbers] = useState('')
+  const [leadNotesText, setLeadNotesText] = useState('')
   const [scheduledAt, setScheduledAt] = useState('')
   const [script, setScript] = useState([
     'Goal: qualify lead and transfer to human agent',
@@ -1061,6 +1070,7 @@ export default function Dashboard() {
           scheduledAt: scheduledAt || undefined,
           target: script,
           script,
+          leadNotes: leadNotesText,
           record: settings.recordCalls,
           transcribe: settings.transcribeCalls,
         }),
@@ -1172,6 +1182,10 @@ export default function Dashboard() {
     if (campaign.callerIdentityId) {
       setSelectedCallerIdentityId(campaign.callerIdentityId)
     }
+    const noteLines = (campaign.results || [])
+      .filter(result => result.userComment || result.targetComment)
+      .map(result => `${result.phoneNumber} | ${result.userComment || ''} | ${result.targetComment || ''}`)
+    setLeadNotesText(noteLines.join('\n'))
     setScheduledAt(toDateTimeInputValue(campaign.scheduledAt))
     setActiveTab('call')
     toast.success('Campaign loaded into Call Center')
@@ -2138,6 +2152,19 @@ export default function Dashboard() {
 	                        <p className="text-xs text-zinc-500">Leave empty to start immediately. Scheduled campaigns auto-start when due.</p>
 	                      </div>
 	                    </div>
+	                    <div className="mt-3 space-y-2">
+	                      <Label>Lead Notes (optional)</Label>
+	                      <Textarea
+	                        placeholder={"+971501234567 | user said interested in villa | target: qualify budget + timeline\n+971559876543 | asked for weekend callback | target: book appointment"}
+	                        value={leadNotesText}
+	                        onChange={(e) => setLeadNotesText(e.target.value)}
+	                        disabled={isCalling}
+	                        className="min-h-[92px] bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
+	                      />
+	                      <p className="text-xs text-zinc-500">
+	                        Format per line: <code>number | user comment | target comment</code>. These comments attach to each call result.
+	                      </p>
+	                    </div>
 	                    <div className="mt-2 flex items-center justify-between text-xs text-zinc-400">
 	                      <span>{extractNumbers(numbers).length} numbers</span>
 	                      <Button
@@ -2709,6 +2736,38 @@ export default function Dashboard() {
 	                            <span>Scheduled: {new Date(campaign.scheduledAt).toLocaleString()}</span>
 	                          )}
 	                        </div>
+                          {(campaign.results || []).length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              {(campaign.results || []).slice(0, 6).map((result) => (
+                                <div key={result.id} className="rounded-md border border-zinc-700 bg-zinc-900/60 p-3">
+                                  <div className="flex items-center justify-between gap-2">
+                                    <p className="text-sm text-zinc-200">{result.phoneNumber}</p>
+                                    <Badge className="bg-zinc-700 text-zinc-200 border-zinc-600">{result.status}</Badge>
+                                  </div>
+                                  {result.userComment && (
+                                    <p className="text-xs text-zinc-300 mt-1">User note: {result.userComment}</p>
+                                  )}
+                                  {result.targetComment && (
+                                    <p className="text-xs text-zinc-400 mt-1">Target note: {result.targetComment}</p>
+                                  )}
+                                  {result.callComment && (
+                                    <p className="text-xs text-emerald-300 mt-1">Call feedback: {result.callComment}</p>
+                                  )}
+                                  {result.leadSummary && (
+                                    <p className="text-xs text-zinc-400 mt-1">Lead said: {result.leadSummary}</p>
+                                  )}
+                                  {result.followUpRequested && result.followUpAt && (
+                                    <p className="text-xs text-amber-300 mt-1">
+                                      Callback scheduled: {new Date(result.followUpAt).toLocaleString()} ({result.followUpStatus || 'scheduled'})
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                              {(campaign.results || []).length > 6 && (
+                                <p className="text-xs text-zinc-500">Showing 6 of {campaign.results.length} call outcomes</p>
+                              )}
+                            </div>
+                          )}
 	                      </div>
 	                    ))}
 	                  </div>

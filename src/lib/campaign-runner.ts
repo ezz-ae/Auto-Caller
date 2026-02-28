@@ -4,6 +4,10 @@ import { getCampaign, getSettings, saveCampaign, updateCampaignResult, updateCre
 import { makeCall } from '@/lib/twilio';
 import { Campaign, CallResult } from '@/lib/types';
 
+function normalizePhoneKey(raw: string): string {
+  return String(raw || '').replace(/[^\d+]/g, '');
+}
+
 export async function runCampaign(campaign: Campaign): Promise<void> {
   const settings = await getSettings();
   const selectedIdentity = campaign.callerIdentityId
@@ -28,14 +32,23 @@ export async function runCampaign(campaign: Campaign): Promise<void> {
     }
 
     const number = campaign.numbers[i];
-    const callId = uuidv4();
+    const existingResult = (currentCampaign.results || []).find(result =>
+      normalizePhoneKey(result.phoneNumber) === normalizePhoneKey(number)
+    );
 
     const result: CallResult = {
-      id: callId,
+      id: existingResult?.id || uuidv4(),
       campaignId: campaign.id,
       phoneNumber: number,
       status: 'calling',
       timestamp: new Date(),
+      userComment: existingResult?.userComment,
+      targetComment: existingResult?.targetComment,
+      callComment: existingResult?.callComment || 'Dialing lead',
+      followUpRequested: existingResult?.followUpRequested,
+      followUpAt: existingResult?.followUpAt,
+      followUpStatus: existingResult?.followUpStatus,
+      followUpCampaignId: existingResult?.followUpCampaignId,
     };
 
     await updateCampaignResult(campaign.id, result);
@@ -70,6 +83,7 @@ export async function runCampaign(campaign: Campaign): Promise<void> {
 
       result.callSid = call.sid;
       result.status = 'calling';
+      result.callComment = 'Call initiated';
       await updateCampaignResult(campaign.id, result);
 
       await new Promise(resolve => setTimeout(resolve, 3000));

@@ -6,6 +6,49 @@ import { Campaign } from '@/lib/types';
 import { runCampaign } from '@/lib/campaign-runner';
 import { dispatchDueScheduledCampaigns } from '@/lib/campaign-scheduler';
 
+function normalizePhoneKey(raw: string): string {
+  return String(raw || '').replace(/[^\d+]/g, '');
+}
+
+function parseLeadNotes(
+  input: unknown
+): Record<string, { userComment?: string; targetComment?: string }> {
+  if (!input) return {};
+
+  if (typeof input === 'object' && !Array.isArray(input)) {
+    const map: Record<string, { userComment?: string; targetComment?: string }> = {};
+    for (const [key, value] of Object.entries(input as Record<string, any>)) {
+      const normalized = normalizePhoneKey(key);
+      if (!normalized) continue;
+      map[normalized] = {
+        userComment: String(value?.userComment || '').trim() || undefined,
+        targetComment: String(value?.targetComment || '').trim() || undefined,
+      };
+    }
+    return map;
+  }
+
+  if (typeof input !== 'string') return {};
+
+  const map: Record<string, { userComment?: string; targetComment?: string }> = {};
+  const lines = input
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean);
+
+  for (const line of lines) {
+    const [rawNumber, rawUserComment, rawTargetComment] = line.split('|').map(part => String(part || '').trim());
+    const normalized = normalizePhoneKey(rawNumber);
+    if (!normalized) continue;
+    map[normalized] = {
+      userComment: rawUserComment || undefined,
+      targetComment: rawTargetComment || undefined,
+    };
+  }
+
+  return map;
+}
+
 // Get all campaigns
 export async function GET(request: NextRequest) {
   try {
@@ -29,7 +72,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { numbers, voiceId, language, script, target, name, record, transcribe, callerIdentityId, scheduledAt } = body;
+    const { numbers, voiceId, language, script, target, leadNotes, name, record, transcribe, callerIdentityId, scheduledAt } = body;
 
     if (!Array.isArray(numbers) || numbers.length === 0) {
       return NextResponse.json({
@@ -91,6 +134,7 @@ export async function POST(request: NextRequest) {
     ).trim();
     const ruleNotes = (selectedIdentity?.sayThisRules || settings.sayThisRules || '').trim();
     const finalScript = [baseScript, ruleNotes].filter(Boolean).join(' ');
+    const noteMap = parseLeadNotes(leadNotes);
     const parsedSchedule =
       typeof scheduledAt === 'string' && scheduledAt.trim().length > 0
         ? new Date(scheduledAt)
@@ -116,12 +160,29 @@ export async function POST(request: NextRequest) {
       script: finalScript,
       numbers,
       currentIndex: 0,
-      results: [],
+      results: numbers.map((phoneNumber: string) => {
+        const note = noteMap[normalizePhoneKey(phoneNumber)] || {};
+        return {
+          id: uuidv4(),
+          campaignId: '',
+          phoneNumber,
+          status: 'pending' as const,
+          timestamp: new Date(),
+          userComment: note.userComment,
+          targetComment: note.targetComment,
+          callComment: 'Queued for first attempt',
+        };
+      }),
       createdAt: new Date(),
       scheduledAt: parsedSchedule || undefined,
       recordCalls: typeof record === 'boolean' ? record : settings.recordCalls,
       transcribeCalls: typeof transcribe === 'boolean' ? transcribe : settings.transcribeCalls,
     };
+
+    campaign.results = campaign.results.map(result => ({
+      ...result,
+      campaignId: campaign.id,
+    }));
     
     await saveCampaign(campaign);
 

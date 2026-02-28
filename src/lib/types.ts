@@ -38,6 +38,16 @@ export interface CallResult {
   duration?: number;
   callSid?: string;
   error?: string;
+  userComment?: string;
+  targetComment?: string;
+  callComment?: string;
+  leadSummary?: string;
+  leadRequest?: string;
+  followUpRequested?: boolean;
+  followUpAt?: Date;
+  followUpStatus?: 'scheduled' | 'completed' | 'cancelled';
+  followUpCampaignId?: string;
+  parentCallSid?: string;
   timestamp: Date;
 }
 
