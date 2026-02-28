@@ -5,20 +5,23 @@ Production-ready outbound AI calling platform with:
 - AI script copilot
 - call forwarding
 - call recordings + transcription
+- scheduled campaign dispatch
 - credit billing + PayPal checkout
 - managed mode (customers do not bring their own API keys)
 
 ## What Is Included
 
-- Full multi-tab platform UI (`Overview`, `Call Center`, `Recordings`, `History`, `Billing`, `Settings`)
+- Full multi-tab platform UI (`Overview`, `Call Center`, `Callers`, `Recordings`, `History`, `Billing`, `Settings`)
 - Guided onboarding wizard in `Overview` for first-launch setup
 - Team accounts directory in `Settings` (owner/agent/manager operational records)
-- Caller identities in `Settings` (name, position, voice, language, disclosure mode, script constraints, KPI counters)
+- Caller identities in dedicated `Callers` tab (name, position, voice, language, disclosure mode, script constraints, KPI counters)
+- Number upload flow with direct caller assignment + optional schedule in `Call Center`
 - Natural call voice delivery via ElevenLabs TTS for identity voices (with gender/language filtering in identity setup)
 - Optional dashboard access protection with login (`/login`)
 - Managed billing flows (PayPal number activation + credit top-up)
 - Twilio callback handling (status, forwarding, recording, voicemail)
-- OpenAI transcription + analysis pipeline
+- Google AI script copilot + transcription analysis (OpenAI fallback optional)
+- Vercel cron dispatch endpoint for scheduled campaigns (`/api/cron/dispatch-scheduled`)
 - Data layer with dual drivers:
   - `postgres` (Neon/Postgres via Prisma, recommended for production)
   - `filesystem` (local JSON store for quick dev)
@@ -30,7 +33,7 @@ Production-ready outbound AI calling platform with:
 - Prisma ORM
 - Neon Postgres (production)
 - Twilio (calling)
-- OpenAI + ElevenLabs (AI)
+- Google AI + ElevenLabs (AI/voice)
 - PayPal (checkout)
 
 ## Domain Recommendation
@@ -54,7 +57,7 @@ Edit `.env.local` and set at least:
 - `NEXT_PUBLIC_APP_URL`
 - `STORE_DRIVER`
 - `DATABASE_URL` (if `STORE_DRIVER=postgres`)
-- Twilio / OpenAI / ElevenLabs / PayPal vars for your mode
+- Twilio / Google AI / ElevenLabs / PayPal vars for your mode
 - `APP_ACCESS_PASSWORD` (optional, but recommended in production)
 
 ## 2. Neon DB Setup
@@ -117,13 +120,16 @@ For exact copy-paste Vercel setup values, use:
 - PayPal app set to `live` mode for production:
   - `PAYPAL_MODE=live`
   - live `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET`
+- Vercel cron:
+  - `vercel.json` already includes `* * * * *` cron for `/api/cron/dispatch-scheduled`
+  - set `CRON_SECRET` in Vercel env (Production + Preview)
 
 ## 6. Managed Mode (Sell As a Platform)
 
 Set:
 - `MANAGED_MODE=true`
 - `MANAGED_TWILIO_*`
-- `MANAGED_OPENAI_API_KEY`
+- `MANAGED_GOOGLE_AI_API_KEY`
 - `MANAGED_ELEVENLABS_API_KEY`
 
 In this mode customers only need to:
@@ -151,6 +157,11 @@ Natural voices (ElevenLabs):
 - Caller identities now filter voices by gender and language.
 - Non-Twilio voices are rendered with ElevenLabs TTS during live calls via `/api/calls/tts`.
 - Optional: set `ELEVENLABS_MODEL_ID` (default `eleven_multilingual_v2`).
+
+AI provider:
+- Google AI is primary for script copilot and transcript analysis.
+- Set `GOOGLE_AI_API_KEY` (and optional `GOOGLE_AI_MODEL`).
+- Optional fallback: `OPENAI_API_KEY`.
 
 ## 7. Useful Commands
 

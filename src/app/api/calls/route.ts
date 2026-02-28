@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCredits, updateCredits, getSettings, saveCampaign, getCampaign, getAllCampaigns, updateCampaignResult } from '@/lib/store';
-import { makeCall } from '@/lib/twilio';
+import { getCredits, getSettings, saveCampaign, getCampaign, getAllCampaigns } from '@/lib/store';
 import { applyCallerIdentityKpiDelta, getCallerIdentity } from '@/lib/caller-identity-store';
 import { v4 as uuidv4 } from 'uuid';
-import { Campaign, CallResult } from '@/lib/types';
+import { Campaign } from '@/lib/types';
+import { runCampaign } from '@/lib/campaign-runner';
+import { dispatchDueScheduledCampaigns } from '@/lib/campaign-scheduler';
 
 // Get all campaigns
 export async function GET(request: NextRequest) {
   try {
+    await dispatchDueScheduledCampaigns();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
@@ -27,7 +29,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { numbers, voiceId, language, script, name, record, transcribe, callerIdentityId } = body;
+    const { numbers, voiceId, language, script, name, record, transcribe, callerIdentityId, scheduledAt } = body;
 
     if (!Array.isArray(numbers) || numbers.length === 0) {
       return NextResponse.json({
@@ -64,13 +66,23 @@ export async function POST(request: NextRequest) {
     const ruleNotes = (selectedIdentity?.sayThisRules || settings.sayThisRules || '').trim();
 
     const finalScript = [introLine, baseScript, ruleNotes].filter(Boolean).join(' ');
+    const parsedSchedule =
+      typeof scheduledAt === 'string' && scheduledAt.trim().length > 0
+        ? new Date(scheduledAt)
+        : null;
+
+    if (parsedSchedule && Number.isNaN(parsedSchedule.getTime())) {
+      return NextResponse.json({ error: 'Invalid scheduled date' }, { status: 400 });
+    }
+
+    const shouldSchedule = !!(parsedSchedule && parsedSchedule.getTime() > Date.now());
     
     // Create campaign
     const campaign: Campaign = {
       id: uuidv4(),
       userId: 'default',
       name: name || `Campaign ${new Date().toLocaleDateString()}`,
-      status: 'running',
+      status: shouldSchedule ? 'scheduled' : 'running',
       voiceId: selectedVoiceId,
       language: selectedLanguage,
       callerIdentityId: selectedIdentity?.id,
@@ -81,6 +93,7 @@ export async function POST(request: NextRequest) {
       currentIndex: 0,
       results: [],
       createdAt: new Date(),
+      scheduledAt: parsedSchedule || undefined,
       recordCalls: typeof record === 'boolean' ? record : settings.recordCalls,
       transcribeCalls: typeof transcribe === 'boolean' ? transcribe : settings.transcribeCalls,
     };
@@ -93,8 +106,18 @@ export async function POST(request: NextRequest) {
       });
     }
     
+    if (shouldSchedule) {
+      return NextResponse.json({
+        success: true,
+        campaign,
+        message: `Campaign scheduled for ${parsedSchedule?.toLocaleString()}`,
+      });
+    }
+
     // Start calling in background
-    startCalling(campaign);
+    void runCampaign(campaign).catch(error => {
+      console.error('Campaign runner failed:', campaign.id, error);
+    });
     
     return NextResponse.json({ 
       success: true, 
@@ -125,89 +148,5 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to stop campaign' }, { status: 500 });
-  }
-}
-
-// Background calling function
-async function startCalling(campaign: Campaign) {
-  const settings = await getSettings();
-  
-  // Determine webhook URL (this server)
-  const webhookUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  
-  for (let i = 0; i < campaign.numbers.length; i++) {
-    // Check if campaign was stopped
-    const currentCampaign = await getCampaign(campaign.id);
-    if (!currentCampaign || currentCampaign.status !== 'running') {
-      break;
-    }
-    
-    const number = campaign.numbers[i];
-    const callId = uuidv4();
-    
-    // Create pending result
-    const result: CallResult = {
-      id: callId,
-      campaignId: campaign.id,
-      phoneNumber: number,
-      status: 'calling',
-      timestamp: new Date(),
-    };
-    
-    await updateCampaignResult(campaign.id, result);
-    
-    try {
-      // Make the call
-      const call = await makeCall(
-        number,
-        campaign.script,
-        settings.forwardToNumber,
-        webhookUrl,
-        {
-          record: campaign.recordCalls ?? settings.recordCalls,
-          transcribe: campaign.transcribeCalls ?? settings.transcribeCalls,
-          language: campaign.language || 'en-US',
-          callerIdentityId: campaign.callerIdentityId,
-          voiceId: campaign.voiceId,
-        }
-      );
-      
-      // Deduct credit
-      await updateCredits(-1);
-      if (campaign.callerIdentityId) {
-        await applyCallerIdentityKpiDelta(campaign.callerIdentityId, {
-          totalCalls: 1,
-          creditsUsed: 1,
-          lastCalledAt: new Date(),
-        });
-      }
-      
-      // Update result
-      result.callSid = call.sid;
-      result.status = 'calling';
-      await updateCampaignResult(campaign.id, result);
-      
-      // Wait between calls to avoid rate limits
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
-    } catch (error: any) {
-      result.status = 'failed';
-      result.error = error.message;
-      await updateCampaignResult(campaign.id, result);
-    }
-    
-    // Update index
-    if (currentCampaign) {
-      currentCampaign.currentIndex = i + 1;
-      await saveCampaign(currentCampaign);
-    }
-  }
-  
-  // Mark campaign as completed
-  const finalCampaign = await getCampaign(campaign.id);
-  if (finalCampaign && finalCampaign.status === 'running') {
-    finalCampaign.status = 'completed';
-    finalCampaign.completedAt = new Date();
-    await saveCampaign(finalCampaign);
   }
 }

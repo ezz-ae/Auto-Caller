@@ -1,12 +1,13 @@
 'use client'
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
+import Link from 'next/link'
+import { Check, Crown, Phone, Sparkles, Wallet, Zap } from 'lucide-react'
+import { toast } from 'sonner'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
-import { Check, Zap, Crown, Building2, Phone, ArrowLeft, Wallet } from 'lucide-react'
-import Link from 'next/link'
-import { toast } from 'sonner'
+import { MarketingFooter, MarketingHeader } from '@/components/marketing/site-shell'
 
 interface BillingProduct {
   id: string
@@ -27,25 +28,25 @@ function getProductIcon(product: BillingProduct) {
   if (product.kind === 'number') return <Phone className="w-6 h-6" />
   if ((product.credits || 0) <= 500) return <Zap className="w-6 h-6" />
   if ((product.credits || 0) <= 1500) return <Crown className="w-6 h-6" />
-  return <Building2 className="w-6 h-6" />
+  return <Wallet className="w-6 h-6" />
 }
 
 function getProductFeatures(product: BillingProduct): string[] {
   if (product.kind === 'number') {
     return [
-      'Dedicated caller number for your workspace',
-      'Auto-provisioned instantly after activation',
-      'Used across all outbound campaigns',
-      'No technical setup required from end users',
+      'Dedicated caller number for the customer workspace',
+      'Used across all campaign callers and scripts',
+      'Provisioned and managed by platform operations',
+      'No provider account needed for customer',
     ]
   }
 
   const credits = product.credits || 0
   return [
     `${credits.toLocaleString()} outbound call credits`,
-    'Credits added instantly after payment capture',
-    'Managed call delivery included',
-    'No external account setup required from customers',
+    'Credits applied immediately after successful checkout',
+    'Compatible with scheduled and live campaigns',
+    'Full reporting and caller KPI visibility in dashboard',
   ]
 }
 
@@ -95,7 +96,6 @@ export default function PricingPage() {
       })
 
       const data = await res.json()
-
       if (data.approvalUrl) {
         setRedirectUrl(data.approvalUrl)
         return
@@ -110,83 +110,60 @@ export default function PricingPage() {
   }, [])
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
-      <header className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
-          <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
-              <Phone className="w-5 h-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl font-bold">Auto Caller Platform</h1>
-              <p className="text-xs text-zinc-400">by 1hundred.ai</p>
-            </div>
-          </Link>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#172e26_0%,#0c1010_45%,#09090b_100%)] text-white">
+      <MarketingHeader />
 
-          <Link href="/" className="flex items-center gap-2 text-zinc-400 hover:text-white transition">
-            <ArrowLeft className="w-4 h-4" />
-            Back to Home
-          </Link>
-        </div>
-      </header>
-
-      <main className="container mx-auto px-4 py-16">
-        <div className="text-center mb-12">
-          <Badge className="mb-4 bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+      <main className="mx-auto max-w-7xl px-4 py-12 md:py-16 space-y-12">
+        <section className="text-center space-y-4 max-w-4xl mx-auto">
+          <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+            <Sparkles className="w-3.5 h-3.5 mr-1" />
             Managed Platform Billing
           </Badge>
-          <h2 className="text-4xl font-bold mb-4">Activate Number + Buy Credits</h2>
-          <p className="text-zinc-400 max-w-3xl mx-auto text-lg">
-            Customers pay you directly. Number provisioning and call infrastructure are managed by your platform.
-            No customer API keys required.
+          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">Sell Number + Credits, Start Calls Fast</h1>
+          <p className="text-zinc-300 text-lg">
+            This page is customer-facing checkout: activate a dedicated number, top up credits, and run campaigns
+            without external provider setup.
           </p>
-        </div>
+        </section>
 
-        <div className="grid gap-8 lg:grid-cols-4 max-w-7xl mx-auto">
-          {sortedProducts.map((product) => {
+        <section className="grid gap-6 lg:grid-cols-4">
+          {sortedProducts.map(product => {
             const isPopular = product.kind === 'credits' && (product.credits || 0) >= 1500 && (product.credits || 0) < 5000
             const title = product.kind === 'number' ? 'Dedicated Number' : `${(product.credits || 0).toLocaleString()} Credits`
 
             return (
-              <Card
-                key={product.id}
-                className={`relative bg-zinc-900 border-zinc-800 ${isPopular ? 'border-emerald-500 scale-[1.02]' : ''}`}
-              >
+              <Card key={product.id} className={`relative bg-zinc-900 border-zinc-800 ${isPopular ? 'border-emerald-500/60 shadow-lg shadow-emerald-500/10' : ''}`}>
                 {isPopular && (
-                  <div className="absolute -top-4 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-emerald-500 text-white">Recommended</Badge>
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <Badge className="bg-emerald-500 text-white">Best Value</Badge>
                   </div>
                 )}
-
                 <CardHeader className="text-center pb-4">
-                  <div className={`w-14 h-14 rounded-xl mx-auto mb-4 flex items-center justify-center ${
-                    isPopular ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-400'
+                  <div className={`w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center ${
+                    isPopular ? 'bg-emerald-500/20 text-emerald-300' : 'bg-zinc-800 text-zinc-400'
                   }`}>
                     {getProductIcon(product)}
                   </div>
                   <CardTitle className="text-2xl">{title}</CardTitle>
-                  <CardDescription>{product.name}</CardDescription>
+                  <CardDescription className="text-zinc-400">{product.name}</CardDescription>
                 </CardHeader>
-
                 <CardContent className="space-y-6">
                   <div className="text-center">
-                    <div className="text-5xl font-bold">${product.price.toFixed(2)}</div>
-                    <div className="text-zinc-400 mt-1">one-time purchase</div>
+                    <p className="text-5xl font-bold">${product.price.toFixed(2)}</p>
+                    <p className="text-zinc-400 mt-1 text-sm">one-time purchase</p>
                   </div>
-
                   <ul className="space-y-3">
-                    {getProductFeatures(product).map((feature) => (
+                    {getProductFeatures(product).map(feature => (
                       <li key={feature} className="flex items-start gap-3">
                         <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
-                        <span className="text-zinc-300">{feature}</span>
+                        <span className="text-zinc-300 text-sm">{feature}</span>
                       </li>
                     ))}
                   </ul>
-
                   <Button
                     onClick={() => handlePurchase(product.id)}
                     disabled={loading !== null}
-                    className={`w-full h-12 text-lg ${
+                    className={`w-full h-12 text-base ${
                       isPopular
                         ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700'
                         : 'bg-zinc-700 hover:bg-zinc-600'
@@ -194,60 +171,53 @@ export default function PricingPage() {
                   >
                     {loading === product.id ? 'Processing...' : `Buy Now - $${product.price.toFixed(2)}`}
                   </Button>
-
-                  <div className="flex items-center justify-center gap-2 text-xs text-zinc-500">
-                    <Wallet className="w-4 h-4" />
-                    Secure checkout
-                  </div>
                 </CardContent>
               </Card>
             )
           })}
-        </div>
+        </section>
 
-        <div className="mt-20 max-w-3xl mx-auto space-y-4">
-          <h3 className="text-2xl font-bold text-center mb-8">Frequently Asked Questions</h3>
-
+        <section className="grid gap-4 md:grid-cols-3">
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
-              <CardTitle className="text-lg">Do customers need extra provider accounts?</CardTitle>
+              <CardTitle className="text-lg">Do customers need external accounts?</CardTitle>
             </CardHeader>
-            <CardContent className="text-zinc-400">
-              No. This is a fully managed platform model. You control account infrastructure and billing while customers only
-              manage forwarding number, scripts, and campaigns.
+            <CardContent className="text-zinc-400 text-sm">
+              No. In managed mode, all provider credentials stay in your environment. Customers only use your app.
             </CardContent>
           </Card>
-
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
-              <CardTitle className="text-lg">How are credits priced?</CardTitle>
+              <CardTitle className="text-lg">How are credit prices set?</CardTitle>
             </CardHeader>
-            <CardContent className="text-zinc-400">
-              Credit pricing is calculated server-side from your estimated per-call operating cost plus your margin multiplier
-              (for example, `2.0` = 100% markup).
+            <CardContent className="text-zinc-400 text-sm">
+              Prices are calculated server-side using your estimated call cost and markup multiplier values.
             </CardContent>
           </Card>
-
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
-              <CardTitle className="text-lg">When is the phone number purchased?</CardTitle>
+              <CardTitle className="text-lg">Can number assignment be automatic?</CardTitle>
             </CardHeader>
-            <CardContent className="text-zinc-400">
-              The platform provisions the number automatically after successful checkout, so you do not need to pre-buy and hold inventory.
+            <CardContent className="text-zinc-400 text-sm">
+              Yes. You can auto-provision from Twilio and auto-assign on registration using managed mode env settings.
             </CardContent>
           </Card>
-        </div>
+        </section>
 
-        <footer className="mt-20 text-center text-zinc-500 text-sm">
-          <p>© 2026 1hundred.ai - All rights reserved</p>
-          <p className="mt-2">
-            Questions? Email us at{' '}
-            <a href="mailto:support@1hundred.ai" className="text-emerald-400 hover:underline">
-              support@1hundred.ai
-            </a>
-          </p>
-        </footer>
+        <section className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <p className="text-sm text-zinc-300">Need setup guidance before launch?</p>
+          <div className="flex gap-2">
+            <Button variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
+              <Link href="/docs">Read Docs</Link>
+            </Button>
+            <Button variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
+              <Link href="/faq">Open FAQ</Link>
+            </Button>
+          </div>
+        </section>
       </main>
+
+      <MarketingFooter />
     </div>
   )
 }

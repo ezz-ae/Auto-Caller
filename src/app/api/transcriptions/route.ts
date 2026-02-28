@@ -38,7 +38,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { recordingId, useOpenAI } = body;
+    const { recordingId, useOpenAI, useAI } = body;
     
     if (!recordingId) {
       return NextResponse.json({ error: 'Recording ID required' }, { status: 400 });
@@ -54,16 +54,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No recording SID' }, { status: 400 });
     }
     
-    // Check if we have OpenAI API key for high-quality transcription
+    // Check if we have AI provider for high-quality transcription + analysis
     const settings = await getSettings();
-    
-    if (useOpenAI && settings.openaiApiKey) {
+    const googleApiKey =
+      process.env.MANAGED_GOOGLE_AI_API_KEY ||
+      process.env.GOOGLE_AI_API_KEY ||
+      process.env.GEMINI_API_KEY ||
+      '';
+    const openAIApiKey =
+      settings.openaiApiKey ||
+      process.env.OPENAI_API_KEY ||
+      process.env.MANAGED_OPENAI_API_KEY ||
+      '';
+    const shouldUseAI = typeof useAI === 'boolean' ? useAI : !!useOpenAI;
+
+    if (shouldUseAI && (googleApiKey || openAIApiKey)) {
       // Download recording from Twilio
-      console.log('Downloading recording for Whisper transcription...');
+      console.log('Downloading recording for AI transcription...');
       const audioBuffer = await downloadTwilioRecording(recording.recordingSid);
       
-      // Process with OpenAI Whisper
-      console.log('Transcribing with OpenAI Whisper...');
+      // Process with AI provider (Google primary, OpenAI fallback)
+      console.log('Transcribing with AI provider...');
       const transcript = await processRecording(audioBuffer, {
         phoneNumber: recording.phoneNumber,
       });
@@ -75,7 +86,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ 
         success: true, 
         transcript,
-        message: 'Transcription completed with OpenAI Whisper',
+        message: googleApiKey ? 'Transcription completed with Google AI' : 'Transcription completed with OpenAI',
       });
     }
     
@@ -89,7 +100,7 @@ export async function POST(request: NextRequest) {
     }
     
     return NextResponse.json({ 
-      error: 'No transcript available. Enable OpenAI for high-quality transcription.',
+      error: 'No transcript available. Configure GOOGLE_AI_API_KEY (recommended) or OPENAI_API_KEY for high-quality transcription.',
     }, { status: 400 });
     
   } catch (error) {

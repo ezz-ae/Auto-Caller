@@ -149,6 +149,7 @@ function deserializeCampaign(row: {
   recordCalls: boolean | null;
   transcribeCalls: boolean | null;
   createdAt: Date;
+  scheduledAt: Date | null;
   completedAt: Date | null;
 }): Campaign {
   return {
@@ -168,6 +169,7 @@ function deserializeCampaign(row: {
     recordCalls: row.recordCalls ?? undefined,
     transcribeCalls: row.transcribeCalls ?? undefined,
     createdAt: row.createdAt,
+    scheduledAt: row.scheduledAt || undefined,
     completedAt: row.completedAt || undefined,
   };
 }
@@ -642,6 +644,7 @@ async function dbSaveCampaign(campaign: Campaign): Promise<void> {
       recordCalls: campaign.recordCalls,
       transcribeCalls: campaign.transcribeCalls,
       createdAt: toDate(campaign.createdAt) || new Date(),
+      scheduledAt: toDate(campaign.scheduledAt) || null,
       completedAt: toDate(campaign.completedAt) || null,
     },
     update: {
@@ -660,6 +663,7 @@ async function dbSaveCampaign(campaign: Campaign): Promise<void> {
       recordCalls: campaign.recordCalls,
       transcribeCalls: campaign.transcribeCalls,
       createdAt: toDate(campaign.createdAt) || new Date(),
+      scheduledAt: toDate(campaign.scheduledAt) || null,
       completedAt: toDate(campaign.completedAt) || null,
     },
   });

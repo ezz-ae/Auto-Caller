@@ -68,7 +68,7 @@ function SuccessContent() {
   }, [searchParams])
   
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-4">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#142a24_0%,#0a0f10_50%,#09090b_100%)] text-white flex items-center justify-center p-4">
       <Card className="bg-zinc-900 border-zinc-800 max-w-md w-full">
         <CardHeader className="text-center">
           {status === 'loading' && (
@@ -104,11 +104,18 @@ function SuccessContent() {
         
         <CardContent>
           {status !== 'loading' && (
-            <Link href="/dashboard">
-              <Button className="w-full bg-emerald-500 hover:bg-emerald-600">
-                Open Workspace
-              </Button>
-            </Link>
+            <div className="space-y-2">
+              <Link href="/dashboard">
+                <Button className="w-full bg-emerald-500 hover:bg-emerald-600">
+                  Open Workspace
+                </Button>
+              </Link>
+              <Link href="/faq">
+                <Button variant="secondary" className="w-full bg-zinc-800 hover:bg-zinc-700">
+                  Need Help? Open FAQ
+                </Button>
+              </Link>
+            </div>
           )}
         </CardContent>
       </Card>

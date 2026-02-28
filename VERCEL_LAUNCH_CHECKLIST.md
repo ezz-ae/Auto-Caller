@@ -51,11 +51,14 @@ MANAGED_NUMBER_CONTAINS=
 MANAGED_NUMBER_ACTIVATION_PRICE=39
 MANAGED_ASSIGN_NUMBER_ON_REGISTRATION=false
 
-MANAGED_OPENAI_API_KEY=sk-...
+MANAGED_GOOGLE_AI_API_KEY=AIza...
 MANAGED_ELEVENLABS_API_KEY=xi-...
 ELEVENLABS_MODEL_ID=eleven_multilingual_v2
 
+GOOGLE_AI_API_KEY=AIza...
+GOOGLE_AI_MODEL=gemini-1.5-flash
 OPENAI_API_KEY=sk-...
+CRON_SECRET=LONG_RANDOM_SECRET
 
 TWILIO_ESTIMATED_COST_PER_CALL_USD=0.02
 CREDIT_MARGIN_MULTIPLIER=2.0
@@ -63,7 +66,8 @@ CREDIT_MARGIN_MULTIPLIER=2.0
 
 Notes:
 - `DATABASE_URL` should be your Neon production connection string.
-- `OPENAI_API_KEY` is fallback only.
+- `GOOGLE_AI_API_KEY` (or `MANAGED_GOOGLE_AI_API_KEY`) is the primary AI provider.
+- `OPENAI_API_KEY` is optional fallback only.
 - Keep all secret values in Vercel only, never in git.
 
 ## 4. Environment Variables (Preview)
@@ -91,10 +95,13 @@ MANAGED_NUMBER_AREA_CODE=
 MANAGED_NUMBER_CONTAINS=
 MANAGED_NUMBER_ACTIVATION_PRICE=39
 MANAGED_ASSIGN_NUMBER_ON_REGISTRATION=false
-MANAGED_OPENAI_API_KEY=sk-...
+MANAGED_GOOGLE_AI_API_KEY=AIza...
 MANAGED_ELEVENLABS_API_KEY=xi-...
 ELEVENLABS_MODEL_ID=eleven_multilingual_v2
+GOOGLE_AI_API_KEY=AIza...
+GOOGLE_AI_MODEL=gemini-1.5-flash
 OPENAI_API_KEY=sk-...
+CRON_SECRET=LONG_RANDOM_SECRET
 TWILIO_ESTIMATED_COST_PER_CALL_USD=0.02
 CREDIT_MARGIN_MULTIPLIER=2.0
 ```
@@ -120,7 +127,16 @@ Configure your Twilio number:
 - Status Callback: `https://acaller.ai/api/calls/status`
 - Recording Callback: `https://acaller.ai/api/calls/recording-complete`
 
-## 7. Post-Deploy Smoke Test
+## 7. Scheduled Campaign Cron
+
+`vercel.json` already schedules:
+- `GET /api/cron/dispatch-scheduled` every minute
+
+Set `CRON_SECRET` in Vercel and keep it secret.
+
+Vercel automatically sends `Authorization: Bearer <CRON_SECRET>` for cron requests.
+
+## 8. Post-Deploy Smoke Test
 
 After deployment:
 
@@ -131,11 +147,11 @@ APP_URL=https://acaller.ai npm run smoke:test
 Expected result:
 - script prints `Smoke test passed.`
 
-## 8. Go-Live Checks
+## 9. Go-Live Checks
 
 Before accepting customers:
 1. Verify login gate works (`/login`) with `APP_ACCESS_PASSWORD`.
 2. Verify billing tab starts PayPal checkout.
 3. Verify calls can start and callbacks update campaign status.
-4. Verify recordings appear and transcription can run.
+4. Verify recordings appear and transcription analysis runs with Google AI.
 5. Verify credits decrement and top-up flow updates balance.

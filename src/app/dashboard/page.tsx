@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef, useMemo, type ChangeEvent } from 'react'
+import Link from 'next/link'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -108,6 +109,7 @@ interface Campaign {
   numbers: string[]
   results: CallResult[]
   createdAt: string
+  scheduledAt?: string
   script?: string
   voiceId?: string
   language?: string
@@ -208,6 +210,7 @@ export default function Dashboard() {
   
   // Call state
   const [numbers, setNumbers] = useState('')
+  const [scheduledAt, setScheduledAt] = useState('')
   const [script, setScript] = useState('Hi, this is a call about an exciting property opportunity in your area. I\'d love to share more details with you. Are you available to talk?')
   const [selectedVoice, setSelectedVoice] = useState('21m00Tcm4TlvDq8ikWAM')
   const [selectedLanguage, setSelectedLanguage] = useState('en-US')
@@ -228,6 +231,7 @@ export default function Dashboard() {
     avoidThisRules: '',
   })
   const [identityLoading, setIdentityLoading] = useState(false)
+  const [editingCallerIdentityId, setEditingCallerIdentityId] = useState<string | null>(null)
   const [voicePreviewText, setVoicePreviewText] = useState('Hi, this is Sara from Acaller. I wanted to share a quick update about our latest launch and see if this is relevant for you.')
   const [previewingVoice, setPreviewingVoice] = useState<string | null>(null)
   
@@ -271,9 +275,11 @@ export default function Dashboard() {
       const loadedCampaigns = data.campaigns || []
       setCampaigns(loadedCampaigns)
 
-      const active = loadedCampaigns.find((c: Campaign) => c.status === 'running')
+      const active =
+        loadedCampaigns.find((c: Campaign) => c.status === 'running') ||
+        loadedCampaigns.find((c: Campaign) => c.status === 'scheduled')
       setCurrentCampaign(active || null)
-      setIsCalling(!!active)
+      setIsCalling(active?.status === 'running')
     } catch {
       console.error('Failed to load campaigns')
     }
@@ -434,6 +440,42 @@ export default function Dashboard() {
     toast.success(`${identity.name} is now active`)
   }
 
+  const resetCallerIdentityForm = () => {
+    setEditingCallerIdentityId(null)
+    setIdentityForm({
+      name: '',
+      position: '',
+      gender: 'any',
+      language: selectedLanguage,
+      voiceId: selectedVoice,
+      industry: settings.industry || '',
+      mentionAi: false,
+      campaignGoal: '',
+      script: '',
+      sayThisRules: settings.sayThisRules || '',
+      avoidThisRules: settings.avoidThisRules || '',
+    })
+  }
+
+  const editCallerIdentity = (identity: CallerIdentity) => {
+    setEditingCallerIdentityId(identity.id)
+    setIdentityForm({
+      name: identity.name || '',
+      position: identity.position || '',
+      gender: identity.gender || 'any',
+      language: identity.language || 'en-US',
+      voiceId: identity.voiceId || '21m00Tcm4TlvDq8ikWAM',
+      industry: identity.industry || '',
+      mentionAi: !!identity.mentionAi,
+      campaignGoal: '',
+      script: identity.script || '',
+      sayThisRules: identity.sayThisRules || '',
+      avoidThisRules: identity.avoidThisRules || '',
+    })
+    setActiveTab('callers')
+    toast.success(`Editing ${identity.name}`)
+  }
+
   const saveCallerIdentity = async () => {
     if (!identityForm.name.trim() || !identityForm.position.trim()) {
       toast.error('Identity name and position are required')
@@ -446,6 +488,7 @@ export default function Dashboard() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          id: editingCallerIdentityId || undefined,
           name: identityForm.name.trim(),
           position: identityForm.position.trim(),
           gender: identityForm.gender,
@@ -467,20 +510,9 @@ export default function Dashboard() {
 
       const identity = data.identity as CallerIdentity
       await fetchCallerIdentities()
-      setIdentityForm({
-        name: '',
-        position: '',
-        gender: 'any',
-        language: selectedLanguage,
-        voiceId: selectedVoice,
-        industry: settings.industry || '',
-        mentionAi: false,
-        campaignGoal: '',
-        script: '',
-        sayThisRules: settings.sayThisRules || '',
-        avoidThisRules: settings.avoidThisRules || '',
-      })
+      resetCallerIdentityForm()
       applyIdentityToComposer(identity)
+      toast.success(editingCallerIdentityId ? 'Caller identity updated' : 'Caller identity created')
     } catch {
       toast.error('Failed to save caller identity')
     } finally {
@@ -500,6 +532,9 @@ export default function Dashboard() {
 
       if (selectedCallerIdentityId === id) {
         setSelectedCallerIdentityId('')
+      }
+      if (editingCallerIdentityId === id) {
+        resetCallerIdentityForm()
       }
       await fetchCallerIdentities()
       toast.success('Caller identity removed')
@@ -675,7 +710,8 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
-    if (!isCalling) return
+    const hasLiveCampaign = isCalling || currentCampaign?.status === 'scheduled'
+    if (!hasLiveCampaign) return
 
     const interval = setInterval(() => {
       fetchCampaigns()
@@ -685,7 +721,7 @@ export default function Dashboard() {
     }, 4000)
 
     return () => clearInterval(interval)
-  }, [activeTab, fetchCampaigns, fetchRecordings, isCalling])
+  }, [activeTab, currentCampaign?.status, fetchCampaigns, fetchRecordings, isCalling])
 
   useEffect(() => {
     if (activeTab !== 'recordings') return
@@ -822,6 +858,20 @@ export default function Dashboard() {
       toast.error('Please enter at least one phone number')
       return
     }
+
+    if (!selectedCallerIdentityId) {
+      toast.error('Please assign this campaign to a caller identity')
+      setActiveTab('callers')
+      return
+    }
+
+    if (scheduledAt) {
+      const parsed = new Date(scheduledAt)
+      if (Number.isNaN(parsed.getTime())) {
+        toast.error('Invalid schedule date')
+        return
+      }
+    }
     
     if (credits < numberList.length) {
       toast.error(`Not enough credits. Need ${numberList.length}, have ${credits}`)
@@ -838,6 +888,7 @@ export default function Dashboard() {
           voiceId: selectedVoice,
           language: selectedLanguage,
           callerIdentityId: selectedCallerIdentityId || undefined,
+          scheduledAt: scheduledAt || undefined,
           script,
           record: settings.recordCalls,
           transcribe: settings.transcribeCalls,
@@ -848,7 +899,7 @@ export default function Dashboard() {
       
       if (data.success) {
         setCurrentCampaign(data.campaign)
-        setIsCalling(true)
+        setIsCalling(data.campaign?.status === 'running')
         fetchCampaigns()
         toast.success(data.message)
       } else {
@@ -882,6 +933,15 @@ export default function Dashboard() {
         .map(n => n.trim())
         .filter(Boolean)
     ))
+  }
+
+  const toDateTimeInputValue = (value?: string) => {
+    if (!value) return ''
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return ''
+
+    const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
+    return local.toISOString().slice(0, 16)
   }
 
   const handleCsvImport = async (event: ChangeEvent<HTMLInputElement>) => {
@@ -936,6 +996,7 @@ export default function Dashboard() {
     if (campaign.callerIdentityId) {
       setSelectedCallerIdentityId(campaign.callerIdentityId)
     }
+    setScheduledAt(toDateTimeInputValue(campaign.scheduledAt))
     setActiveTab('call')
     toast.success('Campaign loaded into Call Center')
   }
@@ -1026,7 +1087,7 @@ export default function Dashboard() {
     { label: 'Call script prepared', ready: script.trim().length >= 20, tab: 'call' },
     { label: 'Lead list imported', ready: preparedNumbers > 0, tab: 'call' },
     {
-      label: managedMode ? 'Dedicated caller number active' : 'Provider credentials configured',
+      label: managedMode ? 'Dedicated caller number active' : 'Calling setup active',
       ready: managedMode ? !!(assignedPhoneNumber || settings.twilioPhoneNumber) : isConfigured,
       tab: managedMode ? 'billing' : 'settings',
     },
@@ -1093,6 +1154,8 @@ export default function Dashboard() {
       ? 'Platform Overview'
       : activeTab === 'call'
       ? 'Call Operations'
+      : activeTab === 'callers'
+        ? 'Caller Identity Hub'
       : activeTab === 'recordings'
         ? 'Conversation Intelligence'
         : activeTab === 'history'
@@ -1102,6 +1165,233 @@ export default function Dashboard() {
           : 'Workspace Settings'
 
   const getProduct = (id: string) => billingProducts[id] || DEFAULT_BILLING_PRODUCTS[id]
+
+  const callerIdentityManager = (
+    <Card className="bg-zinc-900 border-zinc-800">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Users className="w-5 h-5 text-emerald-400" />
+          Caller Identities
+        </CardTitle>
+        <CardDescription>
+          Create and manage caller profiles. Assign every campaign to a caller identity with voice, language, and script behavior.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="grid gap-3 md:grid-cols-2">
+          <Input
+            placeholder="Caller name (e.g., Sara)"
+            value={identityForm.name}
+            onChange={e => setIdentityForm(prev => ({ ...prev, name: e.target.value }))}
+            className="bg-zinc-800 border-zinc-700"
+          />
+          <Input
+            placeholder="Position (e.g., Sales Advisor)"
+            value={identityForm.position}
+            onChange={e => setIdentityForm(prev => ({ ...prev, position: e.target.value }))}
+            className="bg-zinc-800 border-zinc-700"
+          />
+          <Select value={identityForm.gender} onValueChange={(value) => setIdentityForm(prev => ({ ...prev, gender: value }))}>
+            <SelectTrigger className="bg-zinc-800 border-zinc-700">
+              <SelectValue placeholder="Select gender" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="any">Any</SelectItem>
+              <SelectItem value="female">Female</SelectItem>
+              <SelectItem value="male">Male</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={identityForm.language} onValueChange={(value) => setIdentityForm(prev => ({ ...prev, language: value }))}>
+            <SelectTrigger className="bg-zinc-800 border-zinc-700">
+              <SelectValue placeholder="Select language" />
+            </SelectTrigger>
+            <SelectContent>
+              {LANGUAGE_OPTIONS.map(option => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={identityForm.voiceId} onValueChange={(value) => setIdentityForm(prev => ({ ...prev, voiceId: value }))}>
+            <SelectTrigger className="bg-zinc-800 border-zinc-700">
+              <SelectValue placeholder="Select voice" />
+            </SelectTrigger>
+            <SelectContent>
+              {filteredIdentityVoices.map(voice => (
+                <SelectItem key={voice.id} value={voice.id}>
+                  {voice.name} ({voice.labels?.gender || 'N/A'}) • {voice.language || voice.labels?.language || 'multi'} {voice.source === 'elevenlabs' ? '• Natural' : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Input
+            placeholder="Industry override (optional)"
+            value={identityForm.industry}
+            onChange={e => setIdentityForm(prev => ({ ...prev, industry: e.target.value }))}
+            className="bg-zinc-800 border-zinc-700"
+          />
+          <Input
+            placeholder="Campaign goal (new launch, follow-up, reactivation...)"
+            value={identityForm.campaignGoal}
+            onChange={e => setIdentityForm(prev => ({ ...prev, campaignGoal: e.target.value }))}
+            className="bg-zinc-800 border-zinc-700"
+          />
+        </div>
+        <p className="text-xs text-zinc-500">
+          Voice list is filtered by selected gender + language and prioritizes natural voices.
+        </p>
+        <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 space-y-3">
+          <p className="text-sm font-medium text-zinc-200">Voice Quality Test</p>
+          <Textarea
+            placeholder="Sample text for voice preview"
+            value={voicePreviewText}
+            onChange={e => setVoicePreviewText(e.target.value)}
+            className="min-h-[88px] bg-zinc-900 border-zinc-700"
+          />
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <p className="text-xs text-zinc-500">
+              Selected voice: {selectedIdentityVoice ? `${selectedIdentityVoice.name} (${selectedIdentityVoice.language || selectedIdentityVoice.labels?.language || 'multi'})` : 'None'}
+            </p>
+            <Button
+              type="button"
+              variant="secondary"
+              className="bg-zinc-800 hover:bg-zinc-700"
+              onClick={() => previewIdentityVoice(identityForm.voiceId, identityForm.language)}
+              disabled={!identityForm.voiceId || !!previewingVoice}
+            >
+              {previewingVoice === identityForm.voiceId ? 'Playing...' : 'Test Voice'}
+            </Button>
+          </div>
+        </div>
+        <div className="grid gap-3 md:grid-cols-2">
+          <Textarea
+            placeholder='Identity "say this" rules'
+            value={identityForm.sayThisRules}
+            onChange={e => setIdentityForm(prev => ({ ...prev, sayThisRules: e.target.value }))}
+            className="min-h-[80px] bg-zinc-800 border-zinc-700"
+          />
+          <Textarea
+            placeholder='Identity "avoid this" rules'
+            value={identityForm.avoidThisRules}
+            onChange={e => setIdentityForm(prev => ({ ...prev, avoidThisRules: e.target.value }))}
+            className="min-h-[80px] bg-zinc-800 border-zinc-700"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label>Identity Script</Label>
+          <Textarea
+            placeholder="Script for this caller identity. Leave blank to auto-generate from profile and goal."
+            value={identityForm.script}
+            onChange={e => setIdentityForm(prev => ({ ...prev, script: e.target.value }))}
+            className="min-h-[96px] bg-zinc-800 border-zinc-700"
+          />
+        </div>
+        <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+          <div>
+            <p className="text-sm font-medium">AI Disclosure</p>
+            <p className="text-xs text-zinc-500">If enabled, opening line says caller is an AI assistant.</p>
+          </div>
+          <Switch
+            checked={identityForm.mentionAi}
+            onCheckedChange={(checked) => setIdentityForm(prev => ({ ...prev, mentionAi: checked }))}
+          />
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            onClick={saveCallerIdentity}
+            disabled={identityLoading}
+            className="bg-zinc-700 hover:bg-zinc-600"
+          >
+            {identityLoading ? 'Saving...' : (editingCallerIdentityId ? 'Update Caller Identity' : 'Create New Caller')}
+          </Button>
+          {editingCallerIdentityId && (
+            <Button
+              type="button"
+              variant="secondary"
+              className="bg-zinc-800 hover:bg-zinc-700"
+              onClick={resetCallerIdentityForm}
+              disabled={identityLoading}
+            >
+              Cancel Edit
+            </Button>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          {callerIdentities.length === 0 ? (
+            <p className="text-sm text-zinc-500">No caller identities yet.</p>
+          ) : (
+            callerIdentities.map(identity => {
+              const successRate = identity.totalCalls > 0
+                ? Math.round((identity.connectedCalls / identity.totalCalls) * 100)
+                : 0
+              const isActive = selectedCallerIdentityId === identity.id
+              return (
+                <div key={identity.id} className={`rounded-lg border p-3 ${isActive ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-zinc-800 bg-zinc-950/40'}`}>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium">
+                        {identity.name} <span className="text-zinc-500">({identity.position})</span>
+                      </p>
+                      <p className="text-xs text-zinc-400">
+                        {identity.gender} • {identity.language} • {identity.industry || settings.industry || 'General'} • Voice {identity.voiceId}
+                      </p>
+                      <p className="text-xs text-zinc-500 mt-1">
+                        Calls {identity.totalCalls} • Connected {identity.connectedCalls} • Success {successRate}% • Credits {identity.creditsUsed}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="bg-zinc-800 hover:bg-zinc-700"
+                        onClick={() => applyIdentityToComposer(identity)}
+                      >
+                        Use
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="bg-zinc-800 hover:bg-zinc-700"
+                        onClick={() => editCallerIdentity(identity)}
+                      >
+                        Edit
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="bg-zinc-800 hover:bg-zinc-700"
+                        onClick={() => previewIdentityVoice(identity.voiceId, identity.language)}
+                        disabled={!!previewingVoice}
+                      >
+                        {previewingVoice === identity.voiceId ? 'Playing...' : 'Preview'}
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="text-red-300 hover:text-red-200"
+                        onClick={() => removeCallerIdentity(identity.id)}
+                        disabled={identityLoading}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#1a2b24_0%,#0a0a0b_40%,#09090b_100%)] text-white">
@@ -1211,7 +1501,7 @@ export default function Dashboard() {
               {isCalling ? 'Campaign currently running' : 'No active campaign'}
             </div>
           </div>
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 h-auto bg-transparent p-0">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-2 h-auto bg-transparent p-0">
             <TabsTrigger value="overview" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
               <LayoutDashboard className="w-4 h-4 mr-2" />
               Overview
@@ -1219,6 +1509,10 @@ export default function Dashboard() {
             <TabsTrigger value="call" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
               <Phone className="w-4 h-4 mr-2" />
               Call Center
+            </TabsTrigger>
+            <TabsTrigger value="callers" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
+              <Users className="w-4 h-4 mr-2" />
+              Callers
             </TabsTrigger>
             <TabsTrigger value="recordings" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
               <Mic className="w-4 h-4 mr-2" />
@@ -1344,13 +1638,19 @@ export default function Dashboard() {
                     <Mic className="w-4 h-4 mr-2" />
                     Review Conversations
                   </Button>
-                  <Button variant="secondary" className="w-full justify-start bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('settings')}>
-                    <Settings className="w-4 h-4 mr-2" />
-                    Update Workspace Settings
-                  </Button>
-                </CardContent>
-              </Card>
-            </div>
+	                  <Button variant="secondary" className="w-full justify-start bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('callers')}>
+	                    <Users className="w-4 h-4 mr-2" />
+	                    Manage Caller Identities
+	                  </Button>
+	                  <Button variant="secondary" asChild className="w-full justify-start bg-zinc-800 hover:bg-zinc-700">
+	                    <Link href="/docs">
+	                      <FileText className="w-4 h-4 mr-2" />
+	                      Open Launch Docs
+	                    </Link>
+	                  </Button>
+	                </CardContent>
+	              </Card>
+	            </div>
 
             <div className="grid gap-6 lg:grid-cols-3">
               <Card className="bg-zinc-900 border-zinc-800">
@@ -1438,17 +1738,17 @@ export default function Dashboard() {
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2 space-y-6">
                 {/* Numbers Input */}
-                <Card className="bg-zinc-900 border-zinc-800">
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Users className="w-5 h-5 text-emerald-400" />
-                      Phone Numbers
-                    </CardTitle>
-                    <CardDescription>
-                      Paste numbers or upload CSV (one per line)
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
+	                <Card className="bg-zinc-900 border-zinc-800">
+	                  <CardHeader>
+	                    <CardTitle className="text-lg flex items-center gap-2">
+	                      <Users className="w-5 h-5 text-emerald-400" />
+	                      Phone Numbers
+	                    </CardTitle>
+	                    <CardDescription>
+	                      Paste numbers or upload CSV, assign a caller identity, then choose when to launch.
+	                    </CardDescription>
+	                  </CardHeader>
+	                  <CardContent>
                     <input
                       ref={csvInputRef}
                       type="file"
@@ -1456,16 +1756,61 @@ export default function Dashboard() {
                       onChange={handleCsvImport}
                       className="hidden"
                     />
-                    <Textarea
-                      placeholder="+971 50 123 4567&#10;+971 55 987 6543&#10;+971 56 456 7890"
-                      value={numbers}
-                      onChange={(e) => setNumbers(e.target.value)}
-                      disabled={isCalling}
-                      className="min-h-[150px] bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
-                    />
-                    <div className="mt-2 flex items-center justify-between text-xs text-zinc-400">
-                      <span>{extractNumbers(numbers).length} numbers</span>
-                      <Button
+	                    <Textarea
+	                      placeholder="+971 50 123 4567&#10;+971 55 987 6543&#10;+971 56 456 7890"
+	                      value={numbers}
+	                      onChange={(e) => setNumbers(e.target.value)}
+	                      disabled={isCalling}
+	                      className="min-h-[150px] bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
+	                    />
+	                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+	                      <div className="space-y-2">
+	                        <Label>Assign Caller Identity</Label>
+	                        <Select
+	                          value={selectedCallerIdentityId || 'none'}
+	                          onValueChange={(value) => {
+	                            if (value === 'none') {
+	                              setSelectedCallerIdentityId('')
+	                              return
+	                            }
+	                            const identity = callerIdentities.find(item => item.id === value)
+	                            if (identity) {
+	                              applyIdentityToComposer(identity)
+	                            }
+	                          }}
+	                          disabled={isCalling}
+	                        >
+	                          <SelectTrigger className="bg-zinc-800 border-zinc-700">
+	                            <SelectValue placeholder="Choose a caller identity" />
+	                          </SelectTrigger>
+	                          <SelectContent>
+	                            <SelectItem value="none">No identity</SelectItem>
+	                            {callerIdentities.map(identity => (
+	                              <SelectItem key={identity.id} value={identity.id}>
+	                                {identity.name} ({identity.position}) - {identity.language}
+	                              </SelectItem>
+	                            ))}
+	                          </SelectContent>
+	                        </Select>
+	                        <p className="text-xs text-zinc-500">
+	                          No caller yet? Create one in the Callers tab.
+	                        </p>
+	                      </div>
+	                      <div className="space-y-2">
+	                        <Label>Schedule Calls (optional)</Label>
+	                        <Input
+	                          type="datetime-local"
+	                          value={scheduledAt}
+	                          onChange={(e) => setScheduledAt(e.target.value)}
+	                          disabled={isCalling}
+	                          className="bg-zinc-800 border-zinc-700"
+	                        />
+	                        <p className="text-xs text-zinc-500">Leave empty to start immediately. Scheduled campaigns auto-start when due.</p>
+	                      </div>
+	                    </div>
+	                    <div className="mt-2 flex items-center justify-between text-xs text-zinc-400">
+	                      <span>{extractNumbers(numbers).length} numbers</span>
+	                      <Button
                         type="button"
                         variant="ghost"
                         size="sm"
@@ -1482,46 +1827,16 @@ export default function Dashboard() {
 
                 {/* Voice & Script */}
                 <Card className="bg-zinc-900 border-zinc-800">
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      <Volume2 className="w-5 h-5 text-emerald-400" />
-                      Voice & Script
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="space-y-2">
-                      <Label>Caller Identity</Label>
-                      <Select
-                        value={selectedCallerIdentityId || 'none'}
-                        onValueChange={(value) => {
-                          if (value === 'none') {
-                            setSelectedCallerIdentityId('')
-                            return
-                          }
-                          const identity = callerIdentities.find(item => item.id === value)
-                          if (identity) {
-                            applyIdentityToComposer(identity)
-                          }
-                        }}
-                        disabled={isCalling}
-                      >
-                        <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                          <SelectValue placeholder="Choose a caller identity" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No identity</SelectItem>
-                          {callerIdentities.map(identity => (
-                            <SelectItem key={identity.id} value={identity.id}>
-                              {identity.name} ({identity.position}) - {identity.language}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label>Select Voice</Label>
-                      <Select value={selectedVoice} onValueChange={setSelectedVoice} disabled={isCalling}>
+	                  <CardHeader>
+	                    <CardTitle className="text-lg flex items-center gap-2">
+	                      <Volume2 className="w-5 h-5 text-emerald-400" />
+	                      Voice & Script
+	                    </CardTitle>
+	                  </CardHeader>
+	                  <CardContent className="space-y-4">
+	                    <div className="space-y-2">
+	                      <Label>Select Voice</Label>
+	                      <Select value={selectedVoice} onValueChange={setSelectedVoice} disabled={isCalling}>
                         <SelectTrigger className="bg-zinc-800 border-zinc-700">
                           <SelectValue />
                         </SelectTrigger>
@@ -1568,9 +1883,9 @@ export default function Dashboard() {
                     </div>
                     
                     {/* Recording Options */}
-                    <div className="flex items-center gap-6 pt-2">
-                      <div className="flex items-center gap-2">
-                        <Switch
+	                    <div className="flex items-center gap-6 pt-2">
+	                      <div className="flex items-center gap-2">
+	                        <Switch
                           checked={settings.recordCalls}
                           onCheckedChange={(checked) => setSettings({ ...settings, recordCalls: checked })}
                           disabled={isCalling}
@@ -1583,11 +1898,11 @@ export default function Dashboard() {
                           onCheckedChange={(checked) => setSettings({ ...settings, transcribeCalls: checked })}
                           disabled={isCalling}
                         />
-                        <Label className="text-sm text-zinc-400">Transcribe</Label>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+	                        <Label className="text-sm text-zinc-400">Transcribe</Label>
+	                      </div>
+	                    </div>
+	                  </CardContent>
+	                </Card>
 
                 {/* Action Buttons */}
                 <Card className="bg-zinc-900 border-zinc-800">
@@ -1662,14 +1977,14 @@ export default function Dashboard() {
                 {/* Action Buttons */}
                 <div className="flex gap-4">
                   {!isCalling ? (
-                    <Button 
-                      onClick={startCalling}
-                      disabled={loading || !isConfigured}
-                      className="flex-1 h-14 text-lg bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
-                    >
-                      <Play className="w-5 h-5 mr-2" />
-                      Start Calling
-                    </Button>
+	                    <Button 
+	                      onClick={startCalling}
+	                      disabled={loading || !isConfigured}
+	                      className="flex-1 h-14 text-lg bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
+	                    >
+	                      <Play className="w-5 h-5 mr-2" />
+	                      {scheduledAt ? 'Schedule Campaign' : 'Start Calling'}
+	                    </Button>
                   ) : (
                     <Button 
                       onClick={stopCalling}
@@ -1686,46 +2001,58 @@ export default function Dashboard() {
               {/* Right Column - Status */}
               <div className="space-y-6">
                 <Card className="bg-zinc-900 border-zinc-800">
-                  <CardHeader>
-                    <CardTitle className="text-lg flex items-center gap-2">
-                      {isCalling ? (
-                        <span className="relative flex h-3 w-3">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                        </span>
-                      ) : (
-                        <Clock className="w-5 h-5 text-zinc-400" />
-                      )}
-                      {isCalling ? 'Calling...' : 'Status'}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    {isCalling && currentCampaign ? (
-                      <>
-                        <div className="space-y-2">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-zinc-400">Progress</span>
-                            <span>{stats.connected + stats.failed} / {stats.total}</span>
-                          </div>
-                          <Progress value={stats.total > 0 ? ((stats.connected + stats.failed) / stats.total) * 100 : 0} className="h-2" />
-                        </div>
-                        
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                            <div className="text-2xl font-bold text-emerald-400">{stats.connected}</div>
-                            <div className="text-xs text-zinc-400">Connected</div>
-                          </div>
-                          <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
-                            <div className="text-2xl font-bold text-red-400">{stats.failed}</div>
-                            <div className="text-xs text-zinc-400">Failed</div>
-                          </div>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="text-center py-8 text-zinc-500">
-                        <PhoneOff className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                        <p>No active campaign</p>
-                      </div>
+	                  <CardHeader>
+	                    <CardTitle className="text-lg flex items-center gap-2">
+	                      {isCalling ? (
+	                        <span className="relative flex h-3 w-3">
+	                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+	                          <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+	                        </span>
+	                      ) : (
+	                        <Clock className="w-5 h-5 text-zinc-400" />
+	                      )}
+	                      {isCalling ? 'Calling...' : currentCampaign?.status === 'scheduled' ? 'Scheduled Campaign' : 'Status'}
+	                    </CardTitle>
+	                  </CardHeader>
+	                  <CardContent className="space-y-4">
+	                    {currentCampaign ? (
+	                      currentCampaign.status === 'scheduled' ? (
+	                        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 space-y-2">
+	                          <p className="text-sm text-amber-200">Campaign is queued and will start automatically.</p>
+	                          <p className="text-xs text-zinc-300">
+	                            Scheduled for {new Date(currentCampaign.scheduledAt || currentCampaign.createdAt).toLocaleString()}
+	                          </p>
+	                          <p className="text-xs text-zinc-400">
+	                            {currentCampaign.numbers?.length || 0} numbers assigned
+	                          </p>
+	                        </div>
+	                      ) : (
+	                        <>
+	                          <div className="space-y-2">
+	                            <div className="flex justify-between text-sm">
+	                              <span className="text-zinc-400">Progress</span>
+	                              <span>{stats.connected + stats.failed} / {stats.total}</span>
+	                            </div>
+	                            <Progress value={stats.total > 0 ? ((stats.connected + stats.failed) / stats.total) * 100 : 0} className="h-2" />
+	                          </div>
+	                          
+	                          <div className="grid grid-cols-2 gap-3">
+	                            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+	                              <div className="text-2xl font-bold text-emerald-400">{stats.connected}</div>
+	                              <div className="text-xs text-zinc-400">Connected</div>
+	                            </div>
+	                            <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20">
+	                              <div className="text-2xl font-bold text-red-400">{stats.failed}</div>
+	                              <div className="text-xs text-zinc-400">Failed</div>
+	                            </div>
+	                          </div>
+	                        </>
+	                      )
+	                    ) : (
+	                      <div className="text-center py-8 text-zinc-500">
+	                        <PhoneOff className="w-12 h-12 mx-auto mb-3 opacity-50" />
+	                        <p>No active campaign</p>
+	                      </div>
                     )}
                   </CardContent>
                 </Card>
@@ -1756,11 +2083,16 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
               </div>
-            </div>
-          </TabsContent>
+	            </div>
+	          </TabsContent>
 
-          {/* Recordings Tab */}
-          <TabsContent value="recordings" className="space-y-6 animate-in fade-in-50 duration-200">
+	          {/* Callers Tab */}
+	          <TabsContent value="callers" className="space-y-6 animate-in fade-in-50 duration-200">
+	            {callerIdentityManager}
+	          </TabsContent>
+
+	          {/* Recordings Tab */}
+	          <TabsContent value="recordings" className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="grid gap-6 lg:grid-cols-3">
               {/* Recordings List */}
               <div className="lg:col-span-2 space-y-4">
@@ -2025,14 +2357,17 @@ export default function Dashboard() {
                             </Button>
                           </div>
                         </div>
-                        <div className="flex gap-4 text-sm text-zinc-400">
-                          <span>{campaign.numbers?.length || 0} numbers</span>
-                          <span>{campaign.results?.length || 0} called</span>
-                          <span>{new Date(campaign.createdAt).toLocaleDateString()}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+	                        <div className="flex gap-4 text-sm text-zinc-400">
+	                          <span>{campaign.numbers?.length || 0} numbers</span>
+	                          <span>{campaign.results?.length || 0} called</span>
+	                          <span>{new Date(campaign.createdAt).toLocaleDateString()}</span>
+	                          {campaign.status === 'scheduled' && campaign.scheduledAt && (
+	                            <span>Scheduled: {new Date(campaign.scheduledAt).toLocaleString()}</span>
+	                          )}
+	                        </div>
+	                      </div>
+	                    ))}
+	                  </div>
                 )}
               </CardContent>
             </Card>
@@ -2166,98 +2501,25 @@ export default function Dashboard() {
             )}
           </TabsContent>
 
-          {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-6 animate-in fade-in-50 duration-200" id="settings">
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings className="w-5 h-5 text-emerald-400" />
-                  Configuration
-                </CardTitle>
-                <CardDescription>
-                  {managedMode
-                    ? 'Your account is fully managed. Configure forwarding, billing, and campaign preferences.'
-                    : 'Enter your API keys. All data is stored locally.'}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                {managedMode ? (
-                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
-                    <p className="text-sm text-emerald-300 font-medium">Managed Platform Active</p>
-                    <p className="text-xs text-zinc-300 mt-1">
-                      API keys are handled by the platform. You only manage your forwarding number, credits, and script workflow.
-                    </p>
-                  </div>
-                ) : (
-                  <>
-                    {/* ElevenLabs */}
-                    <div className="space-y-4">
-                      <h3 className="font-medium text-emerald-400">ElevenLabs (Voice)</h3>
-                      <div className="space-y-2">
-                        <Label>API Key</Label>
-                        <Input
-                          type="password"
-                          placeholder="xi-xxxxxxxxxxxxx"
-                          value={settings.elevenLabsApiKey}
-                          onChange={(e) => setSettings({ ...settings, elevenLabsApiKey: e.target.value })}
-                          className="bg-zinc-800 border-zinc-700"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Twilio */}
-                    <div className="space-y-4">
-                      <h3 className="font-medium text-emerald-400">Twilio (Calling)</h3>
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <div className="space-y-2">
-                          <Label>Account SID</Label>
-                          <Input
-                            type="password"
-                            placeholder="ACxxxxxxxxxxxxx"
-                            value={settings.twilioAccountSid}
-                            onChange={(e) => setSettings({ ...settings, twilioAccountSid: e.target.value })}
-                            className="bg-zinc-800 border-zinc-700"
-                          />
-                        </div>
-                        <div className="space-y-2">
-                          <Label>Auth Token</Label>
-                          <Input
-                            type="password"
-                            placeholder="xxxxxxxxxxxxx"
-                            value={settings.twilioAuthToken}
-                            onChange={(e) => setSettings({ ...settings, twilioAuthToken: e.target.value })}
-                            className="bg-zinc-800 border-zinc-700"
-                          />
-                        </div>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Twilio Phone Number</Label>
-                        <Input
-                          placeholder="+1234567890"
-                          value={settings.twilioPhoneNumber}
-                          onChange={(e) => setSettings({ ...settings, twilioPhoneNumber: e.target.value })}
-                          className="bg-zinc-800 border-zinc-700"
-                        />
-                      </div>
-                    </div>
-
-                    {/* OpenAI for Transcription */}
-                    <div className="space-y-4">
-                      <h3 className="font-medium text-emerald-400">OpenAI (Transcription & Analysis)</h3>
-                      <div className="space-y-2">
-                        <Label>API Key</Label>
-                        <Input
-                          type="password"
-                          placeholder="sk-xxxxxxxxxxxxx"
-                          value={settings.openaiApiKey}
-                          onChange={(e) => setSettings({ ...settings, openaiApiKey: e.target.value })}
-                          className="bg-zinc-800 border-zinc-700"
-                        />
-                        <p className="text-xs text-zinc-500">Required for Whisper transcription and GPT-4 analysis</p>
-                      </div>
-                    </div>
-                  </>
-                )}
+	          {/* Settings Tab */}
+	          <TabsContent value="settings" className="space-y-6 animate-in fade-in-50 duration-200" id="settings">
+	            <Card className="bg-zinc-900 border-zinc-800">
+	              <CardHeader>
+	                <CardTitle className="flex items-center gap-2">
+	                  <Settings className="w-5 h-5 text-emerald-400" />
+	                  Account Settings
+	                </CardTitle>
+	                <CardDescription>
+	                  Manage account profile, forwarding, call behavior, and team members.
+	                </CardDescription>
+	              </CardHeader>
+	              <CardContent className="space-y-6">
+	                <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+	                  <p className="text-sm text-emerald-300 font-medium">Platform-Managed Integrations</p>
+	                  <p className="text-xs text-zinc-300 mt-1">
+	                    Voice, telephony, and AI provider keys are managed by the platform. Users only configure account and campaign settings.
+	                  </p>
+	                </div>
 
                 {/* Business Profile */}
                 <div className="space-y-4">
@@ -2349,200 +2611,15 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  <h3 className="font-medium text-emerald-400">Caller Identities</h3>
-                  <p className="text-xs text-zinc-500">
-                    Create agent personas with voice, language, disclosure settings, and script constraints. Each identity keeps its own KPI counters.
-                  </p>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <Input
-                      placeholder="Caller name (e.g., Sara)"
-                      value={identityForm.name}
-                      onChange={e => setIdentityForm(prev => ({ ...prev, name: e.target.value }))}
-                      className="bg-zinc-800 border-zinc-700"
-                    />
-                    <Input
-                      placeholder="Position (e.g., Sales Advisor)"
-                      value={identityForm.position}
-                      onChange={e => setIdentityForm(prev => ({ ...prev, position: e.target.value }))}
-                      className="bg-zinc-800 border-zinc-700"
-                    />
-                    <Select value={identityForm.gender} onValueChange={(value) => setIdentityForm(prev => ({ ...prev, gender: value }))}>
-                      <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                        <SelectValue placeholder="Select gender" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="any">Any</SelectItem>
-                        <SelectItem value="female">Female</SelectItem>
-                        <SelectItem value="male">Male</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <Select value={identityForm.language} onValueChange={(value) => setIdentityForm(prev => ({ ...prev, language: value }))}>
-                      <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                        <SelectValue placeholder="Select language" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {LANGUAGE_OPTIONS.map(option => (
-                          <SelectItem key={option.value} value={option.value}>
-                            {option.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Select value={identityForm.voiceId} onValueChange={(value) => setIdentityForm(prev => ({ ...prev, voiceId: value }))}>
-                      <SelectTrigger className="bg-zinc-800 border-zinc-700">
-                        <SelectValue placeholder="Select voice" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {filteredIdentityVoices.map(voice => (
-                          <SelectItem key={voice.id} value={voice.id}>
-                            {voice.name} ({voice.labels?.gender || 'N/A'}) • {voice.language || voice.labels?.language || 'multi'} {voice.source === 'elevenlabs' ? '• ElevenLabs' : ''}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <Input
-                      placeholder="Industry override (optional)"
-                      value={identityForm.industry}
-                      onChange={e => setIdentityForm(prev => ({ ...prev, industry: e.target.value }))}
-                      className="bg-zinc-800 border-zinc-700"
-                    />
-                    <Input
-                      placeholder="Campaign goal (new launch, follow-up, reactivation...)"
-                      value={identityForm.campaignGoal}
-                      onChange={e => setIdentityForm(prev => ({ ...prev, campaignGoal: e.target.value }))}
-                      className="bg-zinc-800 border-zinc-700"
-                    />
-                  </div>
-                  <p className="text-xs text-zinc-500">
-                    Voice list is filtered by selected gender + language and prioritizes ElevenLabs voices for natural delivery.
-                  </p>
-                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 space-y-3">
-                    <p className="text-sm font-medium text-zinc-200">Voice Quality Test</p>
-                    <Textarea
-                      placeholder="Sample text for voice preview"
-                      value={voicePreviewText}
-                      onChange={e => setVoicePreviewText(e.target.value)}
-                      className="min-h-[88px] bg-zinc-900 border-zinc-700"
-                    />
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                      <p className="text-xs text-zinc-500">
-                        Selected voice: {selectedIdentityVoice ? `${selectedIdentityVoice.name} (${selectedIdentityVoice.language || selectedIdentityVoice.labels?.language || 'multi'})` : 'None'}
-                      </p>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className="bg-zinc-800 hover:bg-zinc-700"
-                        onClick={() => previewIdentityVoice(identityForm.voiceId, identityForm.language)}
-                        disabled={!identityForm.voiceId || !!previewingVoice}
-                      >
-                        {previewingVoice === identityForm.voiceId ? 'Playing...' : 'Test Voice'}
-                      </Button>
-                    </div>
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-2">
-                    <Textarea
-                      placeholder='Identity "say this" rules'
-                      value={identityForm.sayThisRules}
-                      onChange={e => setIdentityForm(prev => ({ ...prev, sayThisRules: e.target.value }))}
-                      className="min-h-[80px] bg-zinc-800 border-zinc-700"
-                    />
-                    <Textarea
-                      placeholder='Identity "avoid this" rules'
-                      value={identityForm.avoidThisRules}
-                      onChange={e => setIdentityForm(prev => ({ ...prev, avoidThisRules: e.target.value }))}
-                      className="min-h-[80px] bg-zinc-800 border-zinc-700"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Identity Script</Label>
-                    <Textarea
-                      placeholder="Script for this caller identity. Leave blank to auto-generate from profile and goal."
-                      value={identityForm.script}
-                      onChange={e => setIdentityForm(prev => ({ ...prev, script: e.target.value }))}
-                      className="min-h-[96px] bg-zinc-800 border-zinc-700"
-                    />
-                  </div>
-                  <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
-                    <div>
-                      <p className="text-sm font-medium">AI Disclosure</p>
-                      <p className="text-xs text-zinc-500">If enabled, opening line says caller is an AI assistant.</p>
-                    </div>
-                    <Switch
-                      checked={identityForm.mentionAi}
-                      onCheckedChange={(checked) => setIdentityForm(prev => ({ ...prev, mentionAi: checked }))}
-                    />
-                  </div>
-                  <Button
-                    type="button"
-                    onClick={saveCallerIdentity}
-                    disabled={identityLoading}
-                    className="bg-zinc-700 hover:bg-zinc-600"
-                  >
-                    {identityLoading ? 'Saving...' : 'Create Caller Identity'}
-                  </Button>
-
-                  <div className="space-y-2">
-                    {callerIdentities.length === 0 ? (
-                      <p className="text-sm text-zinc-500">No caller identities yet.</p>
-                    ) : (
-                      callerIdentities.map(identity => {
-                        const successRate = identity.totalCalls > 0
-                          ? Math.round((identity.connectedCalls / identity.totalCalls) * 100)
-                          : 0
-                        const isActive = selectedCallerIdentityId === identity.id
-                        return (
-                          <div key={identity.id} className={`rounded-lg border p-3 ${isActive ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-zinc-800 bg-zinc-950/40'}`}>
-                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-                              <div>
-                                <p className="text-sm font-medium">
-                                  {identity.name} <span className="text-zinc-500">({identity.position})</span>
-                                </p>
-                                <p className="text-xs text-zinc-400">
-                                  {identity.gender} • {identity.language} • {identity.industry || settings.industry || 'General'} • Voice {identity.voiceId}
-                                </p>
-                                <p className="text-xs text-zinc-500 mt-1">
-                                  Calls {identity.totalCalls} • Connected {identity.connectedCalls} • Success {successRate}% • Credits {identity.creditsUsed}
-                                </p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="secondary"
-                                  className="bg-zinc-800 hover:bg-zinc-700"
-                                  onClick={() => applyIdentityToComposer(identity)}
-                                >
-                                  Use
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="secondary"
-                                  className="bg-zinc-800 hover:bg-zinc-700"
-                                  onClick={() => previewIdentityVoice(identity.voiceId, identity.language)}
-                                  disabled={!!previewingVoice}
-                                >
-                                  {previewingVoice === identity.voiceId ? 'Playing...' : 'Preview'}
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  className="text-red-300 hover:text-red-200"
-                                  onClick={() => removeCallerIdentity(identity.id)}
-                                  disabled={identityLoading}
-                                >
-                                  <Trash2 className="w-4 h-4" />
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        )
-                      })
-                    )}
-                  </div>
-                </div>
+	                <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+	                  <div>
+	                    <p className="text-sm font-medium text-zinc-200">Caller identities are managed in a dedicated workspace tab.</p>
+	                    <p className="text-xs text-zinc-400">Create, edit, preview voice, and track KPI performance per caller identity.</p>
+	                  </div>
+	                  <Button variant="secondary" className="bg-zinc-700 hover:bg-zinc-600" onClick={() => setActiveTab('callers')}>
+	                    Open Callers Tab
+	                  </Button>
+	                </div>
 
                 <div className="space-y-4">
                   <h3 className="font-medium text-emerald-400">Team Accounts</h3>
@@ -2617,8 +2694,8 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {managedMode && (
-                  <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+	                {managedMode && (
+	                  <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                     <div>
                       <p className="text-sm font-medium text-zinc-200">Billing is now managed in a dedicated workspace tab.</p>
                       <p className="text-xs text-zinc-400">Use the Billing tab for PayPal checkout, number activation, and top-ups.</p>
@@ -2626,11 +2703,26 @@ export default function Dashboard() {
                     <Button variant="secondary" className="bg-zinc-700 hover:bg-zinc-600" onClick={() => setActiveTab('billing')}>
                       Open Billing Tab
                     </Button>
-                  </div>
-                )}
+	                  </div>
+	                )}
 
-                <Button 
-                  onClick={saveSettings}
+	                <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+	                  <div>
+	                    <p className="text-sm font-medium text-zinc-200">Need setup guidance?</p>
+	                    <p className="text-xs text-zinc-400">Open Docs and FAQ for deployment, billing, and campaign operations.</p>
+	                  </div>
+	                  <div className="flex items-center gap-2">
+	                    <Button variant="secondary" asChild className="bg-zinc-700 hover:bg-zinc-600">
+	                      <Link href="/docs">Docs</Link>
+	                    </Button>
+	                    <Button variant="secondary" asChild className="bg-zinc-700 hover:bg-zinc-600">
+	                      <Link href="/faq">FAQ</Link>
+	                    </Button>
+	                  </div>
+	                </div>
+
+	                <Button 
+	                  onClick={saveSettings}
                   disabled={loading}
                   className="w-full bg-emerald-500 hover:bg-emerald-600"
                 >

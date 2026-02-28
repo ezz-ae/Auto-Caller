@@ -57,6 +57,7 @@ model CampaignRecord {
   recordCalls    Boolean?
   transcribeCalls Boolean?
   createdAt      DateTime @default(now())
+  scheduledAt    DateTime?
   completedAt    DateTime?
 
   @@map("campaigns")

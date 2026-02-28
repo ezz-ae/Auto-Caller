@@ -1,10 +1,74 @@
 import { NextRequest, NextResponse } from 'next/server';
-import OpenAI from 'openai';
-import { getSettings } from '@/lib/store';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
+}
+
+function extractJsonObject(raw: string): Record<string, any> {
+  const cleaned = raw
+    .replace(/^```json\s*/i, '')
+    .replace(/^```\s*/i, '')
+    .replace(/```$/i, '')
+    .trim();
+
+  try {
+    return JSON.parse(cleaned);
+  } catch {
+    const match = cleaned.match(/\{[\s\S]*\}/);
+    if (!match) throw new Error('AI response did not contain JSON');
+    return JSON.parse(match[0]);
+  }
+}
+
+async function generateJsonWithGemini(payload: {
+  apiKey: string;
+  model: string;
+  systemPrompt: string;
+  userPrompt: string;
+}) {
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(payload.model)}:generateContent?key=${encodeURIComponent(payload.apiKey)}`,
+    {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: payload.systemPrompt }],
+        },
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: payload.userPrompt }],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.4,
+          responseMimeType: 'application/json',
+          maxOutputTokens: 2048,
+        },
+      }),
+    }
+  );
+
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(data?.error?.message || `Google AI request failed: ${response.status}`);
+  }
+
+  const text = (data?.candidates || [])
+    .flatMap((candidate: any) => candidate?.content?.parts || [])
+    .map((part: any) => part?.text || '')
+    .join('\n')
+    .trim();
+
+  if (!text) {
+    throw new Error('Google AI returned an empty response');
+  }
+
+  return extractJsonObject(text);
 }
 
 export async function POST(request: NextRequest) {
@@ -31,14 +95,19 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
-    const settings = await getSettings();
-    const apiKey = settings.openaiApiKey || process.env.OPENAI_API_KEY || '';
+    const apiKey =
+      process.env.MANAGED_GOOGLE_AI_API_KEY ||
+      process.env.GOOGLE_AI_API_KEY ||
+      process.env.GEMINI_API_KEY ||
+      '';
+    const model =
+      process.env.GOOGLE_AI_MODEL ||
+      process.env.GEMINI_MODEL ||
+      'gemini-1.5-flash';
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'OpenAI API key is not configured on server' }, { status: 400 });
+      return NextResponse.json({ error: 'Google AI API key is not configured on server' }, { status: 400 });
     }
-
-    const client = new OpenAI({ apiKey });
 
     const history = messages
       .slice(-8)
@@ -76,18 +145,12 @@ ${history || 'No previous history'}
 User request:
 ${prompt}`;
 
-    const completion = await client.chat.completions.create({
-      model: 'gpt-4o-mini',
-      temperature: 0.4,
-      response_format: { type: 'json_object' },
-      messages: [
-        { role: 'system', content: systemPrompt },
-        { role: 'user', content: userPrompt },
-      ],
+    const parsed = await generateJsonWithGemini({
+      apiKey,
+      model,
+      systemPrompt,
+      userPrompt,
     });
-
-    const raw = completion.choices[0]?.message?.content || '{}';
-    const parsed = JSON.parse(raw);
 
     return NextResponse.json({
       success: true,

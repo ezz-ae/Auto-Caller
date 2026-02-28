@@ -13,7 +13,7 @@ export interface Campaign {
   id: string;
   userId: string;
   name: string;
-  status: 'pending' | 'running' | 'paused' | 'completed' | 'stopped';
+  status: 'pending' | 'scheduled' | 'running' | 'paused' | 'completed' | 'stopped';
   voiceId: string;
   language?: string;
   callerIdentityId?: string;
@@ -24,6 +24,7 @@ export interface Campaign {
   currentIndex: number;
   results: CallResult[];
   createdAt: Date;
+  scheduledAt?: Date;
   completedAt?: Date;
   recordCalls?: boolean;
   transcribeCalls?: boolean;

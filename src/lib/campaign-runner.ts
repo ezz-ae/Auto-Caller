@@ -1,0 +1,77 @@
+import { v4 as uuidv4 } from 'uuid';
+import { applyCallerIdentityKpiDelta } from '@/lib/caller-identity-store';
+import { getCampaign, getSettings, saveCampaign, updateCampaignResult, updateCredits } from '@/lib/store';
+import { makeCall } from '@/lib/twilio';
+import { Campaign, CallResult } from '@/lib/types';
+
+export async function runCampaign(campaign: Campaign): Promise<void> {
+  const settings = await getSettings();
+  const webhookUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+  for (let i = 0; i < campaign.numbers.length; i++) {
+    const currentCampaign = await getCampaign(campaign.id);
+    if (!currentCampaign || currentCampaign.status !== 'running') {
+      break;
+    }
+
+    const number = campaign.numbers[i];
+    const callId = uuidv4();
+
+    const result: CallResult = {
+      id: callId,
+      campaignId: campaign.id,
+      phoneNumber: number,
+      status: 'calling',
+      timestamp: new Date(),
+    };
+
+    await updateCampaignResult(campaign.id, result);
+
+    try {
+      const call = await makeCall(
+        number,
+        campaign.script,
+        settings.forwardToNumber,
+        webhookUrl,
+        {
+          record: campaign.recordCalls ?? settings.recordCalls,
+          transcribe: campaign.transcribeCalls ?? settings.transcribeCalls,
+          language: campaign.language || 'en-US',
+          callerIdentityId: campaign.callerIdentityId,
+          voiceId: campaign.voiceId,
+        }
+      );
+
+      await updateCredits(-1);
+      if (campaign.callerIdentityId) {
+        await applyCallerIdentityKpiDelta(campaign.callerIdentityId, {
+          totalCalls: 1,
+          creditsUsed: 1,
+          lastCalledAt: new Date(),
+        });
+      }
+
+      result.callSid = call.sid;
+      result.status = 'calling';
+      await updateCampaignResult(campaign.id, result);
+
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    } catch (error: any) {
+      result.status = 'failed';
+      result.error = error.message;
+      await updateCampaignResult(campaign.id, result);
+    }
+
+    if (currentCampaign) {
+      currentCampaign.currentIndex = i + 1;
+      await saveCampaign(currentCampaign);
+    }
+  }
+
+  const finalCampaign = await getCampaign(campaign.id);
+  if (finalCampaign && finalCampaign.status === 'running') {
+    finalCampaign.status = 'completed';
+    finalCampaign.completedAt = new Date();
+    await saveCampaign(finalCampaign);
+  }
+}

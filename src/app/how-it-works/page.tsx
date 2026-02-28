@@ -1,63 +1,102 @@
 import Link from 'next/link'
+import { ArrowRight, CalendarClock, CheckCircle2, ListChecks, Mic, PhoneForwarded, UserRoundCog } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { MarketingFooter, MarketingHeader } from '@/components/marketing/site-shell'
 
 const flow = [
   {
     step: '01',
-    title: 'Configure Your Calling Profiles',
-    description: 'Create caller identities with voice, language, and script behavior for each use case.',
+    title: 'Create caller identities',
+    description: 'Define each AI caller with name, role, voice, language, and disclosure behavior.',
+    icon: UserRoundCog,
   },
   {
     step: '02',
-    title: 'Load Leads And Launch',
-    description: 'Upload phone numbers, choose your identity, and start campaigns with one click.',
+    title: 'Prepare campaign inputs',
+    description: 'Upload phone numbers, assign caller identity, and set script/call constraints.',
+    icon: ListChecks,
   },
   {
     step: '03',
-    title: 'Connect Leads To Your Team',
-    description: 'When a lead engages, calls are forwarded instantly to your configured destination number.',
+    title: 'Schedule or start immediately',
+    description: 'Run now or schedule launch time. Scheduled campaigns auto-dispatch in production.',
+    icon: CalendarClock,
   },
   {
     step: '04',
-    title: 'Analyze And Improve',
-    description: 'Use transcripts, outcomes, and KPI trends to improve script quality and team conversion.',
+    title: 'Forward engaged leads',
+    description: 'When prospects engage, calls route to your configured team forwarding number.',
+    icon: PhoneForwarded,
+  },
+  {
+    step: '05',
+    title: 'Review recordings and optimize',
+    description: 'Analyze transcripts and campaign outcomes to improve scripts and conversion.',
+    icon: Mic,
   },
 ]
 
 export default function HowItWorksPage() {
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
-      <main className="mx-auto max-w-5xl px-4 py-14 space-y-8">
-        <div className="space-y-3">
-          <p className="text-emerald-400 text-sm font-semibold">How It Works</p>
-          <h1 className="text-4xl font-semibold tracking-tight">From Lead List To Live Calls In Minutes</h1>
-          <p className="text-zinc-400 max-w-3xl">The workflow is intentionally simple so you can move fast while keeping call quality and messaging controlled.</p>
-        </div>
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#152a24_0%,#0a0d0f_50%,#09090b_100%)] text-white">
+      <MarketingHeader />
 
-        <div className="grid gap-4">
-          {flow.map((item) => (
+      <main className="mx-auto max-w-6xl px-4 py-12 md:py-16 space-y-10">
+        <section className="space-y-4">
+          <p className="text-emerald-400 text-sm font-semibold">How It Works</p>
+          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">From Lead File To Revenue Calls</h1>
+          <p className="text-zinc-400 max-w-3xl text-lg">
+            The platform is built around one operational path: caller identity, campaign launch, lead connection,
+            and optimization feedback loops.
+          </p>
+        </section>
+
+        <section className="grid gap-4">
+          {flow.map(item => (
             <Card key={item.step} className="bg-zinc-900 border-zinc-800">
               <CardHeader>
-                <p className="text-emerald-400 text-xs font-semibold">STEP {item.step}</p>
-                <CardTitle>{item.title}</CardTitle>
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center shrink-0">
+                    <item.icon className="w-5 h-5" />
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-emerald-400 font-semibold">STEP {item.step}</p>
+                    <CardTitle>{item.title}</CardTitle>
+                  </div>
+                </div>
               </CardHeader>
               <CardContent>
                 <p className="text-zinc-400">{item.description}</p>
               </CardContent>
             </Card>
           ))}
-        </div>
+        </section>
 
-        <div className="flex gap-2">
-          <Button variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
-            <Link href="/">Back Home</Link>
-          </Button>
-          <Button asChild className="bg-emerald-500 hover:bg-emerald-600">
-            <Link href="/pricing">Open Pricing</Link>
-          </Button>
-        </div>
+        <section className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5 md:p-6 space-y-3">
+          <p className="text-lg font-semibold">Go-live standard</p>
+          <p className="text-sm text-zinc-200">
+            Before onboarding customers, verify Twilio callbacks, PayPal capture, scheduled dispatch, and transcript processing.
+          </p>
+          <p className="text-sm text-zinc-300 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+            Use `/docs` + `/faq` for exact setup and operations guidance.
+          </p>
+          <div className="flex flex-wrap gap-2 pt-1">
+            <Button variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
+              <Link href="/docs">Open Docs</Link>
+            </Button>
+            <Button asChild className="bg-emerald-500 hover:bg-emerald-600">
+              <Link href="/pricing">
+                Start Setup
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </Link>
+            </Button>
+          </div>
+        </section>
       </main>
+
+      <MarketingFooter />
     </div>
   )
 }
