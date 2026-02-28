@@ -189,6 +189,9 @@ function buildConversationTwiml(params: {
   const gather = response.gather({
     input: 'speech',
     language: params.language,
+    speechModel: 'phone_call',
+    enhanced: true,
+    actionOnEmptyResult: true,
     speechTimeout: 'auto',
     timeout: 6,
     action: actionUrl,

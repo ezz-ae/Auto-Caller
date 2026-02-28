@@ -161,6 +161,13 @@ Natural voices (ElevenLabs):
 - Caller identities now filter voices by gender and language.
 - Non-Twilio voices are rendered with ElevenLabs TTS during live calls via `/api/calls/tts`.
 - Optional: set `ELEVENLABS_MODEL_ID` (default `eleven_multilingual_v2`).
+- For more human-like phone delivery, tune:
+  - `ELEVENLABS_VOICE_STABILITY`
+  - `ELEVENLABS_VOICE_SIMILARITY_BOOST`
+  - `ELEVENLABS_VOICE_STYLE`
+  - `ELEVENLABS_VOICE_SPEED`
+  - `ELEVENLABS_USE_SPEAKER_BOOST`
+  - `ELEVENLABS_OPTIMIZE_STREAMING_LATENCY`
 
 AI provider:
 - Google AI is primary for live call conversation, copilot, and transcript analysis.

@@ -16,6 +16,29 @@ interface ElevenLabsVoicesResponse {
   voices: ElevenLabsVoice[];
 }
 
+function getFloatEnv(name: string, fallback: number): number {
+  const raw = process.env[name];
+  if (!raw) return fallback;
+  const parsed = Number(raw);
+  if (!Number.isFinite(parsed)) return fallback;
+  return parsed;
+}
+
+function getBooleanEnv(name: string, fallback: boolean): boolean {
+  const raw = String(process.env[name] || '').trim().toLowerCase();
+  if (!raw) return fallback;
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return fallback;
+}
+
+function normalizeTtsText(input: string): string {
+  return String(input || '')
+    .replace(/[*_`#>-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 // Get available voices
 export async function getVoices(): Promise<ElevenLabsVoice[]> {
   const settings = await getSettings();
@@ -64,8 +87,16 @@ export async function generateSpeech(
   }
   
   const modelId = process.env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2';
+  const stability = getFloatEnv('ELEVENLABS_VOICE_STABILITY', 0.32);
+  const similarityBoost = getFloatEnv('ELEVENLABS_VOICE_SIMILARITY_BOOST', 0.9);
+  const style = getFloatEnv('ELEVENLABS_VOICE_STYLE', 0.55);
+  const speed = getFloatEnv('ELEVENLABS_VOICE_SPEED', 1);
+  const useSpeakerBoost = getBooleanEnv('ELEVENLABS_USE_SPEAKER_BOOST', true);
+  const optimizeLatency = Math.max(0, Math.min(4, Math.round(getFloatEnv('ELEVENLABS_OPTIMIZE_STREAMING_LATENCY', 3))));
+  const outputFormat = process.env.ELEVENLABS_OUTPUT_FORMAT || 'mp3_44100_128';
+  const normalizedText = normalizeTtsText(text);
 
-  const response = await fetch(`${ELEVENLABS_API_URL}/text-to-speech/${voiceId}`, {
+  const response = await fetch(`${ELEVENLABS_API_URL}/text-to-speech/${voiceId}?optimize_streaming_latency=${optimizeLatency}&output_format=${encodeURIComponent(outputFormat)}`, {
     method: 'POST',
     headers: {
       'xi-api-key': settings.elevenLabsApiKey,
@@ -73,12 +104,14 @@ export async function generateSpeech(
       'Accept': 'audio/mpeg',
     },
     body: JSON.stringify({
-      text,
+      text: normalizedText,
       model_id: modelId,
       voice_settings: {
-        stability: 0.45,
-        similarity_boost: 0.85,
-        style: 0.35,
+        stability,
+        similarity_boost: similarityBoost,
+        style,
+        speed,
+        use_speaker_boost: useSpeakerBoost,
       },
     }),
   });

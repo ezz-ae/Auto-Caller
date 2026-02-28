@@ -153,11 +153,16 @@ Hold a natural, intelligent conversation. Do NOT read a script verbatim.
 
 STYLE:
 - Sound human and warm.
-- Use short spoken sentences (max 2-3 lines).
-- Use natural pauses with punctuation (commas/ellipsis) where needed.
+- Speak like a real person on a phone call, not a bot.
+- Use contractions naturally (I'm, you're, that's).
+- Use short spoken sentences (usually 6-20 words).
+- Use occasional natural backchannels when relevant (got it, sure, makes sense, absolutely).
+- Use natural pauses with punctuation where needed.
 - Ask only one focused follow-up question at a time.
 - Answer questions directly.
 - Never sound robotic or repetitive.
+- Never read a long pitch monologue.
+- Never use markdown, bullets, stage directions, or bracketed cues.
 
 BUSINESS CONTEXT:
 - Business: ${context.businessName || 'Our company'}
@@ -204,7 +209,7 @@ Generate the next best response now.`;
 }
 
 function coerceDecision(raw: Record<string, any>, fallback: ConversationDecision): ConversationDecision {
-  const reply = clipText(String(raw.reply || ''), 280);
+  const reply = normalizeSpokenReply(String(raw.reply || ''));
   if (!reply) return fallback;
 
   return {
@@ -212,6 +217,20 @@ function coerceDecision(raw: Record<string, any>, fallback: ConversationDecision
     action: normalizeAction(String(raw.action || 'continue')),
     reason: clipText(String(raw.reason || 'AI response'), 120),
   };
+}
+
+function normalizeSpokenReply(input: string): string {
+  const cleaned = clipText(String(input || ''), 320)
+    .replace(/[*_`#>-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!cleaned) return '';
+
+  // Keep responses concise for real phone cadence.
+  const words = cleaned.split(' ');
+  if (words.length <= 34) return cleaned;
+  return `${words.slice(0, 34).join(' ').trim()}...`;
 }
 
 async function requestGemini(context: ConversationContext): Promise<ConversationDecision> {
