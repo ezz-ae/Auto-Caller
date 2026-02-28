@@ -264,7 +264,6 @@ export default function Dashboard() {
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [teamForm, setTeamForm] = useState({ name: '', email: '', role: 'Agent' })
   const [teamLoading, setTeamLoading] = useState(false)
-  const [showOnboarding, setShowOnboarding] = useState(true)
   const [billingProducts, setBillingProducts] = useState<Record<string, BillingProduct>>(DEFAULT_BILLING_PRODUCTS)
   const initRef = useRef(false)
 
@@ -708,11 +707,6 @@ export default function Dashboard() {
   }, [fetchCampaigns, fetchRecordings, fetchTeamMembers, fetchBillingProducts, fetchCallerIdentities])
 
   useEffect(() => {
-    const onboardingDone = window.localStorage.getItem('acp_onboarding_done')
-    setShowOnboarding(onboardingDone !== 'true')
-  }, [])
-
-  useEffect(() => {
     const hasLiveCampaign = isCalling || currentCampaign?.status === 'scheduled'
     if (!hasLiveCampaign) return
 
@@ -1117,35 +1111,24 @@ export default function Dashboard() {
     },
   ]
   const readinessScore = Math.round((readinessItems.filter(item => item.ready).length / readinessItems.length) * 100)
-  const onboardingSteps = [
+  const startSteps = [
     {
-      label: 'Set business profile and forwarding number',
-      done: !!settings.businessName?.trim() && !!settings.forwardToNumber?.trim(),
-      tab: 'settings',
+      label: 'Create a caller identity',
+      done: callerIdentities.length > 0,
+      tab: 'callers',
     },
     {
-      label: 'Activate billing (number + credits)',
-      done: managedMode ? (credits > 0 && callerNumbersActive > 0) : credits > 0,
-      tab: managedMode ? 'callers' : 'settings',
+      label: managedMode ? 'Buy number + credits' : 'Set calling and billing',
+      done: managedMode ? (credits > 0 && callerNumbersActive > 0) : isConfigured,
+      tab: managedMode ? 'billing' : 'settings',
     },
     {
-      label: 'Upload a lead list and script',
-      done: preparedNumbers > 0 && script.trim().length >= 20,
-      tab: 'call',
-    },
-    {
-      label: 'Run first campaign',
+      label: 'Launch first campaign',
       done: campaigns.length > 0,
       tab: 'call',
     },
   ]
-  const onboardingProgress = Math.round((onboardingSteps.filter(step => step.done).length / onboardingSteps.length) * 100)
-
-  const completeOnboarding = () => {
-    window.localStorage.setItem('acp_onboarding_done', 'true')
-    setShowOnboarding(false)
-    toast.success('Onboarding checklist completed')
-  }
+  const nextStep = startSteps.find(step => !step.done)
 
   const filteredRecordings = recordings.filter(recording => {
     const query = recordingSearch.trim().toLowerCase()
@@ -1175,18 +1158,33 @@ export default function Dashboard() {
 
   const activeTabTitle =
     activeTab === 'overview'
-      ? 'Platform Overview'
+      ? 'Overview'
       : activeTab === 'call'
-      ? 'Call Operations'
+        ? 'Call Center'
       : activeTab === 'callers'
-        ? 'Caller Identity Hub'
+        ? 'Callers'
       : activeTab === 'recordings'
-        ? 'Conversation Intelligence'
-        : activeTab === 'history'
-          ? 'Campaign Activity'
-          : activeTab === 'billing'
-            ? 'Billing & Growth'
-          : 'Workspace Settings'
+        ? 'Recordings'
+      : activeTab === 'history'
+        ? 'History'
+      : activeTab === 'billing'
+        ? 'Billing'
+      : 'Settings'
+
+  const activeTabHint =
+    activeTab === 'overview'
+      ? 'Use this page to follow the next step.'
+      : activeTab === 'call'
+        ? 'Upload numbers and start or schedule campaigns.'
+      : activeTab === 'callers'
+        ? 'Create and manage caller identities.'
+      : activeTab === 'recordings'
+        ? 'Review recordings and transcripts.'
+      : activeTab === 'history'
+        ? 'Reuse previous campaign setups.'
+      : activeTab === 'billing'
+        ? 'Buy credits and dedicated caller numbers.'
+      : 'Update account and forwarding settings.'
 
   const callerIdentityManager = (
     <Card className="bg-zinc-900 border-zinc-800">
@@ -1538,38 +1536,47 @@ export default function Dashboard() {
             <div>
               <p className="text-xs uppercase tracking-wide text-zinc-500">Workspace</p>
               <h2 className="text-xl font-semibold tracking-tight">{activeTabTitle}</h2>
-              <p className="text-sm text-zinc-400 mt-1">Run campaigns, review conversations, and operate your outbound pipeline.</p>
+              <p className="text-sm text-zinc-400 mt-1">{activeTabHint}</p>
+              {activeTab === 'overview' && nextStep && (
+                <button
+                  type="button"
+                  onClick={() => setActiveTab(nextStep.tab)}
+                  className="mt-2 text-xs text-emerald-300 hover:text-emerald-200 underline underline-offset-2"
+                >
+                  Next step: {nextStep.label}
+                </button>
+              )}
             </div>
             <div className="text-xs text-zinc-400">
               {isCalling ? 'Campaign currently running' : 'No active campaign'}
             </div>
           </div>
           <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-2 h-auto bg-transparent p-0">
-            <TabsTrigger value="overview" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
+            <TabsTrigger value="overview" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <LayoutDashboard className="w-4 h-4 mr-2" />
               Overview
             </TabsTrigger>
-            <TabsTrigger value="call" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
+            <TabsTrigger value="call" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <Phone className="w-4 h-4 mr-2" />
               Call Center
             </TabsTrigger>
-            <TabsTrigger value="callers" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
+            <TabsTrigger value="callers" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <Users className="w-4 h-4 mr-2" />
               Callers
             </TabsTrigger>
-            <TabsTrigger value="recordings" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
+            <TabsTrigger value="recordings" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <Mic className="w-4 h-4 mr-2" />
               Recordings
             </TabsTrigger>
-            <TabsTrigger value="history" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
+            <TabsTrigger value="history" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <History className="w-4 h-4 mr-2" />
               History
             </TabsTrigger>
-            <TabsTrigger value="billing" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
+            <TabsTrigger value="billing" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <Wallet className="w-4 h-4 mr-2" />
               Billing
             </TabsTrigger>
-            <TabsTrigger value="settings" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
+            <TabsTrigger value="settings" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <Settings className="w-4 h-4 mr-2" />
               Settings
             </TabsTrigger>
@@ -1577,66 +1584,37 @@ export default function Dashboard() {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6 animate-in fade-in-50 duration-200">
-            {showOnboarding && (
-              <Card className="bg-zinc-900 border-zinc-800">
+            <div className="grid gap-6 xl:grid-cols-3">
+              <Card className="xl:col-span-2 bg-zinc-900 border-zinc-800">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <UserPlus className="w-5 h-5 text-emerald-400" />
-                    Launch Onboarding Wizard
+                    <Target className="w-5 h-5 text-emerald-400" />
+                    Start Here
                   </CardTitle>
                   <CardDescription>
-                    Follow these 4 steps to launch the platform with real users today.
+                    Follow these steps in order.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex items-center justify-between text-sm">
-                    <span className="text-zinc-400">Progress</span>
-                    <span className="text-emerald-400 font-semibold">{onboardingProgress}%</span>
-                  </div>
-                  <Progress value={onboardingProgress} className="h-2" />
-                  <div className="grid gap-3 md:grid-cols-2">
-                    {onboardingSteps.map(step => (
+                  <div className="grid gap-3 md:grid-cols-3">
+                    {startSteps.map((step, index) => (
                       <button
                         key={step.label}
                         type="button"
                         onClick={() => setActiveTab(step.tab)}
-                        className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 text-left hover:border-zinc-700 transition"
+                        className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 text-left hover:border-zinc-700 transition"
                       >
-                        <span className="text-sm text-zinc-200">{step.label}</span>
-                        <Badge className={step.done ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'}>
+                        <p className="text-xs text-zinc-500">Step {index + 1}</p>
+                        <p className="text-sm text-zinc-200 mt-1">{step.label}</p>
+                        <Badge className={`mt-2 ${step.done ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'}`}>
                           {step.done ? 'Done' : 'Pending'}
                         </Badge>
                       </button>
                     ))}
                   </div>
-                  <div className="flex justify-end">
-                    <Button
-                      variant="secondary"
-                      className="bg-zinc-800 hover:bg-zinc-700"
-                      onClick={completeOnboarding}
-                    >
-                      Mark Onboarding Complete
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-
-            <div className="grid gap-6 xl:grid-cols-3">
-              <Card className="xl:col-span-2 bg-zinc-900 border-zinc-800">
-                <CardHeader>
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <ShieldCheck className="w-5 h-5 text-emerald-400" />
-                    Launch Readiness
-                  </CardTitle>
-                  <CardDescription>
-                    Complete these checks to run dependable campaigns for customers.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
                   <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-4">
                     <div className="flex items-center justify-between mb-3">
-                      <p className="text-sm text-zinc-300">Readiness Score</p>
+                      <p className="text-sm text-zinc-300">Readiness</p>
                       <p className="text-sm font-semibold text-emerald-400">{readinessScore}%</p>
                     </div>
                     <Progress value={readinessScore} className="h-2" />
@@ -1664,36 +1642,26 @@ export default function Dashboard() {
               <Card className="bg-zinc-900 border-zinc-800">
                 <CardHeader>
                   <CardTitle className="text-lg flex items-center gap-2">
-                    <Target className="w-5 h-5 text-emerald-400" />
+                    <Sparkles className="w-5 h-5 text-emerald-400" />
                     Quick Actions
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <Button className="w-full justify-start" onClick={() => setActiveTab('call')}>
-                    <Phone className="w-4 h-4 mr-2" />
-                    Start New Campaign
+                  <Button variant="secondary" className="w-full justify-start bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('callers')}>
+                    <Users className="w-4 h-4 mr-2" />
+                    Open Callers
                   </Button>
                   <Button variant="secondary" className="w-full justify-start bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('billing')}>
                     <Wallet className="w-4 h-4 mr-2" />
-                    Buy Credits / Number
+                    Open Billing (Paid Checkout)
                   </Button>
-                  <Button variant="secondary" className="w-full justify-start bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('recordings')}>
-                    <Mic className="w-4 h-4 mr-2" />
-                    Review Conversations
+                  <Button className="w-full justify-start" onClick={() => setActiveTab('call')}>
+                    <Phone className="w-4 h-4 mr-2" />
+                    Open Call Center
                   </Button>
-	                  <Button variant="secondary" className="w-full justify-start bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('callers')}>
-	                    <Users className="w-4 h-4 mr-2" />
-	                    Manage Caller Identities
-	                  </Button>
-	                  <Button variant="secondary" asChild className="w-full justify-start bg-zinc-800 hover:bg-zinc-700">
-	                    <Link href="/docs">
-	                      <FileText className="w-4 h-4 mr-2" />
-	                      Open Launch Docs
-	                    </Link>
-	                  </Button>
-	                </CardContent>
-	              </Card>
-	            </div>
+                </CardContent>
+              </Card>
+            </div>
 
             <div className="grid gap-6 lg:grid-cols-3">
               <Card className="bg-zinc-900 border-zinc-800">
@@ -1753,7 +1721,7 @@ export default function Dashboard() {
 
               <Card className="bg-zinc-900 border-zinc-800">
                 <CardHeader>
-                  <CardTitle className="text-lg">Revenue Inputs</CardTitle>
+                  <CardTitle className="text-lg">Billing Snapshot</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3 text-sm">
                   <div className="flex justify-between">
@@ -1769,7 +1737,7 @@ export default function Dashboard() {
                     <span className="font-semibold">{callerNumbersActive}/{callerIdentities.length}</span>
                   </div>
                   <Button variant="secondary" className="w-full bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('billing')}>
-                    Open Billing Workspace
+                    Open Billing (Paid)
                   </Button>
                 </CardContent>
               </Card>
@@ -1778,6 +1746,13 @@ export default function Dashboard() {
 
           {/* Call Center Tab */}
           <TabsContent value="call" className="space-y-6 animate-in fade-in-50 duration-200">
+            <Card className="bg-zinc-900 border-zinc-800">
+              <CardContent className="pt-6">
+                <p className="text-sm text-zinc-300">
+                  Steps: 1) add numbers, 2) assign a caller identity, 3) choose schedule, 4) start campaign.
+                </p>
+              </CardContent>
+            </Card>
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2 space-y-6">
                 {/* Numbers Input */}
@@ -2451,10 +2426,10 @@ export default function Dashboard() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Wallet className="w-5 h-5 text-emerald-400" />
-                      Billing Workspace
+                      Billing & Recharge
                     </CardTitle>
                     <CardDescription>
-                      Start free, then buy a dedicated number per caller identity and top up usage credits.
+                      All purchases are paid in PayPal checkout.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
@@ -2462,7 +2437,7 @@ export default function Dashboard() {
                       <div className="rounded-xl border border-zinc-700 bg-zinc-800/60 p-4 space-y-3">
                         <p className="text-sm font-semibold">Caller Number Activation</p>
                         <p className="text-xs text-zinc-400">
-                          Numbers are activated per caller identity. New identity = new number.
+                          Each caller identity needs one dedicated number.
                         </p>
                         <div className="grid grid-cols-2 gap-3 text-sm">
                           <div className="rounded-lg border border-zinc-700 bg-zinc-900/60 px-3 py-2">
@@ -2478,7 +2453,7 @@ export default function Dashboard() {
                           onClick={() => setActiveTab('callers')}
                           className="w-full bg-blue-600 hover:bg-blue-700"
                         >
-                          Open Callers Tab
+                          Open Callers
                         </Button>
                       </div>
 
@@ -2490,7 +2465,7 @@ export default function Dashboard() {
                     </div>
 
                     <div className="space-y-3">
-                      <p className="text-sm font-semibold">Top Up Credits</p>
+                      <p className="text-sm font-semibold">Recharge Credits (Paid)</p>
                       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                         {creditProducts.map((product, index) => (
                           <button
@@ -2505,10 +2480,11 @@ export default function Dashboard() {
                             <p className="text-xs text-zinc-500 mt-2">
                               {index === 0 ? 'Starter calls' : index === creditProducts.length - 1 ? 'High-volume usage' : 'Growth usage'}
                             </p>
+                            <p className="text-xs text-emerald-300 mt-2">Buy now with PayPal</p>
                           </button>
                         ))}
                       </div>
-                      <p className="text-xs text-zinc-500">Secure checkout is processed via PayPal. Credits are applied automatically after payment.</p>
+                      <p className="text-xs text-zinc-500">You are charged in PayPal checkout. Credits are applied automatically after successful payment.</p>
                     </div>
                   </CardContent>
                 </Card>

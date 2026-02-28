@@ -23,13 +23,6 @@ const outcomes = [
   },
 ]
 
-const checkpoints = [
-  'Caller identity cards with voice/language selection',
-  'Number upload, caller assignment, and campaign scheduling',
-  'Live forwarding to your team number when leads engage',
-  'Recording + transcript intelligence for every call',
-]
-
 const faqs = [
   {
     q: 'Do customers need Twilio, ElevenLabs, or AI accounts?',
@@ -80,18 +73,21 @@ export default function MarketingHomePage() {
 
           <Card className="bg-zinc-900/80 border-zinc-800 shadow-xl shadow-black/30">
             <CardHeader>
-              <CardTitle className="text-lg">Go-Live Checklist</CardTitle>
+              <CardTitle className="text-lg">Simple Workflow</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              {checkpoints.map(item => (
-                <p key={item} className="flex items-start gap-2 text-sm text-zinc-200">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
-                  {item}
-                </p>
-              ))}
-              <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 mt-4 text-xs text-zinc-400">
-                Best for real estate, financing, insurance, clinics, and appointment-heavy teams.
-              </div>
+              <p className="flex items-start gap-2 text-sm text-zinc-200">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+                Create caller identities
+              </p>
+              <p className="flex items-start gap-2 text-sm text-zinc-200">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+                Upload numbers and assign a caller
+              </p>
+              <p className="flex items-start gap-2 text-sm text-zinc-200">
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+                Start campaigns and track results
+              </p>
             </CardContent>
           </Card>
         </section>
@@ -168,8 +164,8 @@ export default function MarketingHomePage() {
 
         <section className="rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
-            <h3 className="text-2xl md:text-3xl font-semibold tracking-tight">Ready To Go Live This Week?</h3>
-            <p className="text-zinc-300 mt-2">Set your APIs once, deploy on Vercel, and onboard your first customers.</p>
+            <h3 className="text-2xl md:text-3xl font-semibold tracking-tight">Ready To Start?</h3>
+            <p className="text-zinc-300 mt-2">Open the dashboard and launch your first campaign.</p>
           </div>
           <div className="flex flex-wrap gap-3">
             <Button asChild className="bg-emerald-500 hover:bg-emerald-600">

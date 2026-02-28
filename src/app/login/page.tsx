@@ -111,16 +111,14 @@ export default function LoginPage() {
                 <LockKeyhole className="w-3.5 h-3.5 mr-1" />
                 Secure Access
               </Badge>
-              <CardTitle className="text-xl">Before You Launch</CardTitle>
+              <CardTitle className="text-xl">Welcome Back</CardTitle>
               <CardDescription className="text-zinc-400">
-                Quick reminders for production reliability and customer onboarding.
+                Sign in to continue to your workspace.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-zinc-300">
-              <p>1. Verify Twilio callbacks and forwarding number in settings.</p>
-              <p>2. Confirm PayPal mode and billing products in production.</p>
-              <p>3. Ensure Google AI and ElevenLabs keys are set in server env.</p>
-              <p>4. Test one scheduled campaign and one immediate campaign.</p>
+              <p>Manage callers, campaigns, billing, and recordings in one place.</p>
+              <p>If you are new, start from the dashboard overview tab.</p>
               <div className="pt-2 flex gap-2">
                 <Button variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
                   <Link href="/docs">Open Docs</Link>
