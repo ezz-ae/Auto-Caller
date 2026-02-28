@@ -31,6 +31,15 @@ export interface ConversationDecision {
 
 type LeadMood = 'positive' | 'skeptical' | 'neutral' | 'decline';
 
+interface TargetBlueprint {
+  goal: string;
+  audience: string;
+  offer: string;
+  qualification: string[];
+  cta: string;
+  constraints: string;
+}
+
 function clipText(input: string, max = 320): string {
   const cleaned = String(input || '').replace(/\s+/g, ' ').trim();
   if (cleaned.length <= max) return cleaned;
@@ -62,6 +71,45 @@ function hasAny(text: string, patterns: string[]): boolean {
   return patterns.some(pattern => text.includes(pattern));
 }
 
+function parseTargetBlueprint(raw: string): TargetBlueprint {
+  const value = String(raw || '');
+  const read = (field: string) => {
+    const regex = new RegExp(`^\\s*${field}\\s*:\\s*(.+)$`, 'im');
+    const match = value.match(regex);
+    return (match?.[1] || '').trim();
+  };
+
+  const qualificationRaw =
+    read('Qualification') ||
+    read('Qualify') ||
+    read('Qualification Signals');
+
+  const qualification = qualificationRaw
+    .split(/[,\n+]/)
+    .map(item => item.trim())
+    .filter(Boolean);
+
+  return {
+    goal: read('Goal'),
+    audience: read('Audience'),
+    offer: read('Offer'),
+    qualification,
+    cta: read('CTA'),
+    constraints: read('Avoid Saying') || read('Constraints') || '',
+  };
+}
+
+function formatTargetBlueprint(blueprint: TargetBlueprint): string {
+  return [
+    `Goal: ${blueprint.goal || 'not specified'}`,
+    `Audience: ${blueprint.audience || 'not specified'}`,
+    `Offer: ${blueprint.offer || 'not specified'}`,
+    `Qualification: ${blueprint.qualification.length > 0 ? blueprint.qualification.join(', ') : 'not specified'}`,
+    `CTA: ${blueprint.cta || 'not specified'}`,
+    `Constraints: ${blueprint.constraints || 'none'}`,
+  ].join('\n');
+}
+
 function detectLeadMood(utterance: string): LeadMood {
   const text = String(utterance || '').toLowerCase();
   if (!text) return 'neutral';
@@ -82,6 +130,7 @@ function detectLeadMood(utterance: string): LeadMood {
 }
 
 function deriveSmartQuestion(context: ConversationContext): string {
+  const blueprint = parseTargetBlueprint(context.campaignBrief);
   const corpus = `${context.campaignBrief}\n${context.history.map(h => h.text).join('\n')}\n${context.leadUtterance}`.toLowerCase();
   const industry = String(context.industry || '').toLowerCase();
 
@@ -90,6 +139,14 @@ function deriveSmartQuestion(context: ConversationContext): string {
   const hasNeed = hasAny(corpus, ['need', 'looking for', 'interested in', 'want', 'goal']);
   const hasLocation = hasAny(corpus, ['location', 'area', 'city', 'neighborhood', 'where']);
   const hasDecisionMaker = hasAny(corpus, ['my wife', 'my husband', 'my partner', 'team', 'boss', 'manager', 'decision']);
+
+  for (const signal of blueprint.qualification) {
+    const normalizedSignal = signal.toLowerCase();
+    if (!normalizedSignal) continue;
+    if (!corpus.includes(normalizedSignal)) {
+      return `Quick one so I can tailor this well: how would you describe your ${signal.toLowerCase()}?`;
+    }
+  }
 
   if (industry.includes('real estate') || industry.includes('property')) {
     if (!hasNeed) return 'Just so I can tailor this, are you focused on living in it or investment returns?';
@@ -102,6 +159,7 @@ function deriveSmartQuestion(context: ConversationContext): string {
   if (!hasBudget) return 'Do you already have a budget range in mind?';
   if (!hasTiming) return 'What timeline works best for you?';
   if (!hasDecisionMaker) return 'Will you be deciding on this yourself or with someone else?';
+  if (blueprint.cta) return `Would you like me to ${blueprint.cta.toLowerCase()} now?`;
 
   return 'Would it help if I connect you now for exact next steps?';
 }
@@ -310,6 +368,7 @@ function buildSystemPrompt(context: ConversationContext): string {
 
 GOAL:
 Hold a natural, intelligent conversation. Do NOT read a script verbatim.
+Use the target blueprint as strategy (goal, audience, offer, qualification, CTA).
 
 STYLE:
 - Sound human and warm.
@@ -349,13 +408,17 @@ Return STRICT JSON only:
 }
 
 function buildUserPrompt(context: ConversationContext): string {
+  const blueprint = parseTargetBlueprint(context.campaignBrief);
   const history = context.history
     .slice(-6)
     .map(turn => `${turn.role === 'lead' ? 'Lead' : 'Agent'}: ${turn.text}`)
     .join('\n');
 
   return `Language for reply: ${context.language || 'en-US'}
-Campaign brief (reference only, do not read literally):
+Target blueprint (reference only, do not read literally):
+${formatTargetBlueprint(blueprint)}
+
+Raw target notes:
 ${clipText(context.campaignBrief, 900)}
 
 Company details:

@@ -123,6 +123,15 @@ interface CopilotMessage {
   content: string
   script?: string
   objections?: string[]
+  discoveryQuestions?: string[]
+}
+
+interface AgentMessage {
+  id: string
+  role: 'user' | 'assistant'
+  content: string
+  action?: 'none' | 'open_billing' | 'open_call' | 'open_callers' | 'open_settings'
+  checklist?: string[]
 }
 
 interface TeamMember {
@@ -275,7 +284,13 @@ export default function Dashboard() {
   // Call state
   const [numbers, setNumbers] = useState('')
   const [scheduledAt, setScheduledAt] = useState('')
-  const [script, setScript] = useState('Hi, this is a call about an exciting property opportunity in your area. I\'d love to share more details with you. Are you available to talk?')
+  const [script, setScript] = useState([
+    'Goal: qualify lead and transfer to human agent',
+    'Audience: potential buyers',
+    'Offer: relevant update about our latest launch',
+    'Qualification: need, budget, timeline, decision maker',
+    'CTA: connect now with specialist',
+  ].join('\n'))
   const [selectedVoice, setSelectedVoice] = useState('21m00Tcm4TlvDq8ikWAM')
   const [selectedLanguage, setSelectedLanguage] = useState('en-US')
   const [voices, setVoices] = useState<Voice[]>([])
@@ -322,6 +337,14 @@ export default function Dashboard() {
   const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>([])
   const [copilotInput, setCopilotInput] = useState('')
   const [copilotLoading, setCopilotLoading] = useState(false)
+  const [agentProfiles, setAgentProfiles] = useState([
+    { id: 'sara', name: 'Sara' },
+    { id: 'alex', name: 'Alex' },
+  ])
+  const [activeAgentId, setActiveAgentId] = useState('sara')
+  const [agentMessages, setAgentMessages] = useState<AgentMessage[]>([])
+  const [agentInput, setAgentInput] = useState('')
+  const [agentLoading, setAgentLoading] = useState(false)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [teamForm, setTeamForm] = useState({ name: '', email: '', role: 'Agent' })
   const [teamLoading, setTeamLoading] = useState(false)
@@ -870,6 +893,7 @@ export default function Dashboard() {
             businessName: settings.businessName || 'Auto Caller',
             industry: settings.industry || selectedCallerIdentity?.industry || '',
             companyDetails: settings.companyDetails || '',
+            targetProfile: script,
             objective: selectedCallerIdentity
               ? `Run ${selectedCallerIdentity.position} outreach and qualify lead before transfer`
               : 'Qualify lead and forward to agent',
@@ -888,21 +912,97 @@ export default function Dashboard() {
       const data = await res.json()
 
       if (!res.ok || !data.success) {
-        toast.error(data.error || 'Failed to generate script')
+        toast.error(data.error || 'Failed to generate target')
         return
       }
 
+      const generatedTarget = String(data.targetBrief || data.script || '').trim()
+
       const assistantMessage: CopilotMessage = {
         role: 'assistant',
-        content: data.reply || 'I generated a script for you.',
-        script: data.script || '',
+        content: data.reply || 'I generated a target blueprint for you.',
+        script: generatedTarget,
         objections: data.objections || [],
+        discoveryQuestions: data.discoveryQuestions || [],
       }
       setCopilotMessages(prev => [...prev, assistantMessage])
     } catch {
-      toast.error('Script assistant is unavailable')
+      toast.error('Target copilot is unavailable')
     } finally {
       setCopilotLoading(false)
+    }
+  }
+
+  const speakAgentMessage = (text: string) => {
+    if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
+      toast.error('Voice playback is not supported in this browser')
+      return
+    }
+    window.speechSynthesis.cancel()
+    const utterance = new SpeechSynthesisUtterance(text)
+    utterance.rate = 1
+    utterance.pitch = 1
+    window.speechSynthesis.speak(utterance)
+  }
+
+  const applyAgentAction = (action?: AgentMessage['action']) => {
+    if (!action || action === 'none') return
+    if (action === 'open_billing') setActiveTab('billing')
+    if (action === 'open_call') setActiveTab('call')
+    if (action === 'open_callers') setActiveTab('callers')
+    if (action === 'open_settings') setActiveTab('settings')
+  }
+
+  const askAgent = async () => {
+    const prompt = agentInput.trim()
+    if (!prompt) return
+
+    const messageId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const userMessage: AgentMessage = { id: messageId, role: 'user', content: prompt, action: 'none' }
+    const nextMessages = [...agentMessages, userMessage]
+    setAgentMessages(nextMessages)
+    setAgentInput('')
+    setAgentLoading(true)
+
+    try {
+      const selectedIdentity = callerIdentities.find(item => item.id === selectedCallerIdentityId)
+      const selectedAgentName = agentProfiles.find(agent => agent.id === activeAgentId)?.name || 'Sara'
+      const res = await fetch('/api/agent-assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          messages: nextMessages.map(msg => ({ role: msg.role, content: msg.content })),
+          context: {
+            selectedAgentName,
+            credits,
+            numbersCount: extractNumbers(numbers).length,
+            callerIdentityName: selectedIdentity?.name || '',
+            currentTab: activeTab,
+            targetBlueprint: script,
+          },
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        toast.error(data.error || 'Agent is unavailable')
+        return
+      }
+
+      const assistantMessage: AgentMessage = {
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        role: 'assistant',
+        content: String(data.reply || 'I reviewed your setup and prepared the next step.'),
+        action: (data.action || 'none') as AgentMessage['action'],
+        checklist: Array.isArray(data.checklist) ? data.checklist : [],
+      }
+      setAgentMessages(prev => [...prev, assistantMessage])
+      applyAgentAction(assistantMessage.action)
+    } catch {
+      toast.error('Agent is unavailable')
+    } finally {
+      setAgentLoading(false)
     }
   }
 
@@ -959,6 +1059,7 @@ export default function Dashboard() {
           language: selectedLanguage,
           callerIdentityId: selectedCallerIdentityId || undefined,
           scheduledAt: scheduledAt || undefined,
+          target: script,
           script,
           record: settings.recordCalls,
           transcribe: settings.transcribeCalls,
@@ -1165,7 +1266,7 @@ export default function Dashboard() {
   const readinessItems = [
     { label: 'Forwarding number configured', ready: !!settings.forwardToNumber?.trim(), tab: 'settings' },
     { label: 'Credits available', ready: credits > 0, tab: 'billing' },
-    { label: 'Conversation brief prepared', ready: script.trim().length >= 20, tab: 'call' },
+    { label: 'Target blueprint prepared', ready: script.trim().length >= 20, tab: 'call' },
     { label: 'Lead list imported', ready: preparedNumbers > 0, tab: 'call' },
     {
       label: managedMode ? 'At least one caller has a dedicated number' : 'Calling setup active',
@@ -1192,6 +1293,7 @@ export default function Dashboard() {
     },
   ]
   const nextStep = startSteps.find(step => !step.done)
+  const activeAgentName = agentProfiles.find(agent => agent.id === activeAgentId)?.name || 'Sara'
 
   const filteredRecordings = recordings.filter(recording => {
     const query = recordingSearch.trim().toLowerCase()
@@ -1222,6 +1324,8 @@ export default function Dashboard() {
   const activeTabTitle =
     activeTab === 'overview'
       ? 'Overview'
+      : activeTab === 'agent'
+        ? 'Agent Desk'
       : activeTab === 'call'
         ? 'Call Center'
       : activeTab === 'callers'
@@ -1237,10 +1341,12 @@ export default function Dashboard() {
   const activeTabHint =
     activeTab === 'overview'
       ? 'Use this page to follow the next step.'
+      : activeTab === 'agent'
+        ? 'Chat with your AI agent to configure targets and next actions.'
       : activeTab === 'call'
         ? 'Upload numbers and start or schedule campaigns.'
       : activeTab === 'callers'
-        ? 'Create and manage caller identities.'
+        ? 'Create and manage caller identities and target blueprints.'
       : activeTab === 'recordings'
         ? 'Review recordings and transcripts.'
       : activeTab === 'history'
@@ -1257,7 +1363,7 @@ export default function Dashboard() {
           Caller Identities
         </CardTitle>
         <CardDescription>
-          Create and manage caller profiles. Assign every campaign to a caller identity with voice, language, and script behavior.
+          Create and manage caller profiles. Assign every campaign to a caller identity with voice, language, and target behavior.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
@@ -1377,9 +1483,9 @@ export default function Dashboard() {
           />
         </div>
         <div className="space-y-2">
-          <Label>Identity Script</Label>
+          <Label>Identity Target Blueprint</Label>
           <Textarea
-            placeholder="Script for this caller identity. Leave blank to auto-generate from profile and goal."
+            placeholder={"Goal: qualify and transfer\nAudience: first-time buyers\nOffer: new launch with flexible plan\nQualification: need, budget, timeline\nCTA: connect to specialist"}
             value={identityForm.script}
             onChange={e => setIdentityForm(prev => ({ ...prev, script: e.target.value }))}
             className="min-h-[96px] bg-zinc-800 border-zinc-700"
@@ -1629,10 +1735,14 @@ export default function Dashboard() {
               {isCalling ? 'Campaign currently running' : 'No active campaign'}
             </div>
           </div>
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 xl:grid-cols-7 gap-2 h-auto bg-transparent p-0">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2 h-auto bg-transparent p-0">
             <TabsTrigger value="overview" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <LayoutDashboard className="w-4 h-4 mr-2" />
               Overview
+            </TabsTrigger>
+            <TabsTrigger value="agent" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
+              <MessageSquare className="w-4 h-4 mr-2" />
+              Agent Desk
             </TabsTrigger>
             <TabsTrigger value="call" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <Phone className="w-4 h-4 mr-2" />
@@ -1725,6 +1835,10 @@ export default function Dashboard() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-3">
+                  <Button variant="secondary" className="w-full justify-start bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('agent')}>
+                    <MessageSquare className="w-4 h-4 mr-2" />
+                    Open Agent Desk
+                  </Button>
                   <Button variant="secondary" className="w-full justify-start bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('callers')}>
                     <Users className="w-4 h-4 mr-2" />
                     Open Callers
@@ -1820,6 +1934,126 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          {/* Agent Desk Tab */}
+          <TabsContent value="agent" className="space-y-6 animate-in fade-in-50 duration-200">
+            <Card className="bg-zinc-900 border-zinc-800">
+              <CardHeader>
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Bot className="w-5 h-5 text-emerald-400" />
+                  Conversational Agent Control
+                </CardTitle>
+                <CardDescription>
+                  Talk to your agent in plain language. Describe goals, list strategy, and required report output.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 md:grid-cols-2">
+                  {agentProfiles.map(profile => (
+                    <div key={profile.id} className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-zinc-300">Agent {profile.id === 'sara' ? 'A' : 'B'}</p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant={activeAgentId === profile.id ? 'default' : 'secondary'}
+                          className={activeAgentId === profile.id ? '' : 'bg-zinc-800 hover:bg-zinc-700'}
+                          onClick={() => setActiveAgentId(profile.id)}
+                        >
+                          {activeAgentId === profile.id ? 'Active' : 'Use'}
+                        </Button>
+                      </div>
+                      <Input
+                        value={profile.name}
+                        onChange={(e) => {
+                          const value = e.target.value
+                          setAgentProfiles(prev =>
+                            prev.map(agent => (agent.id === profile.id ? { ...agent, name: value } : agent))
+                          )
+                        }}
+                        placeholder="Agent name"
+                        className="bg-zinc-800 border-zinc-700"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                  <p className="text-xs text-zinc-500">
+                    Active agent: <span className="text-zinc-200">{activeAgentName}</span> •
+                    Credits: <span className="text-emerald-400">{credits}</span> •
+                    Current list size: <span className="text-zinc-200">{extractNumbers(numbers).length}</span>
+                  </p>
+                </div>
+
+                <div className="max-h-80 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 space-y-3">
+                  {agentMessages.length === 0 ? (
+                    <p className="text-sm text-zinc-500">
+                      Example: "I need a target for 200 real estate leads, qualify budget + timeline, and give me a daily report template."
+                    </p>
+                  ) : (
+                    agentMessages.map(msg => (
+                      <div
+                        key={msg.id}
+                        className={`rounded-lg p-3 ${msg.role === 'user' ? 'bg-zinc-800/80' : 'bg-emerald-500/10 border border-emerald-500/20'}`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <p className="text-xs uppercase tracking-wide text-zinc-400">{msg.role === 'user' ? 'You' : activeAgentName}</p>
+                          {msg.role === 'assistant' && (
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              className="bg-zinc-800 hover:bg-zinc-700 text-xs"
+                              onClick={() => speakAgentMessage(msg.content)}
+                            >
+                              Voice
+                            </Button>
+                          )}
+                        </div>
+                        <p className="text-sm text-zinc-200 whitespace-pre-wrap">{msg.content}</p>
+                        {msg.checklist && msg.checklist.length > 0 && (
+                          <ul className="mt-2 text-xs text-zinc-300 space-y-1">
+                            {msg.checklist.map((item, idx) => (
+                              <li key={idx}>• {item}</li>
+                            ))}
+                          </ul>
+                        )}
+                        {msg.action && msg.action !== 'none' && (
+                          <Button
+                            type="button"
+                            size="sm"
+                            className="mt-2 bg-emerald-600 hover:bg-emerald-700"
+                            onClick={() => applyAgentAction(msg.action)}
+                          >
+                            Open Suggested Tab
+                          </Button>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="flex gap-2">
+                  <Input
+                    value={agentInput}
+                    onChange={(e) => setAgentInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !agentLoading) {
+                        e.preventDefault()
+                        askAgent()
+                      }
+                    }}
+                    placeholder="Tell agent your target, data structure, and report expectations..."
+                    className="bg-zinc-800 border-zinc-700"
+                  />
+                  <Button onClick={askAgent} disabled={agentLoading || !agentInput.trim()}>
+                    {agentLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Call Center Tab */}
@@ -1921,12 +2155,12 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Voice & Conversation Brief */}
+                {/* Voice & Target Blueprint */}
                 <Card className="bg-zinc-900 border-zinc-800">
 	                  <CardHeader>
 	                    <CardTitle className="text-lg flex items-center gap-2">
 	                      <Volume2 className="w-5 h-5 text-emerald-400" />
-	                      Voice & Conversation Brief
+	                      Voice & Target Blueprint
 	                    </CardTitle>
 	                  </CardHeader>
 	                  <CardContent className="space-y-4">
@@ -1963,9 +2197,9 @@ export default function Dashboard() {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label>Conversation Brief</Label>
+                      <Label>Campaign Target Blueprint</Label>
                       <Textarea
-                        placeholder="Give the AI context, objective, and key points to discuss."
+                        placeholder={"Goal: qualify lead and transfer\nAudience: investors in Dubai\nOffer: off-plan launch with payment plan\nQualification: budget, timeline, decision maker\nCTA: connect now with specialist"}
                         value={script}
                         onChange={(e) => setScript(e.target.value)}
                         disabled={isCalling}
@@ -2012,17 +2246,17 @@ export default function Dashboard() {
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Bot className="w-5 h-5 text-emerald-400" />
-                      AI Conversation Copilot
+                      AI Target Copilot
                     </CardTitle>
                     <CardDescription>
-                      Generate and refine a smart conversation brief with objection handling.
+                      Generate and refine a target blueprint with discovery and objection handling.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="max-h-48 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 space-y-3">
                       {copilotMessages.length === 0 ? (
                         <p className="text-sm text-zinc-500">
-                          Ask for a conversation brief, discovery questions, or objection handling lines.
+                          Ask for target setup, smart discovery questions, and objection handling lines.
                         </p>
                       ) : (
                         copilotMessages.map((msg, idx) => (
@@ -2031,17 +2265,17 @@ export default function Dashboard() {
                             <p className="text-sm text-zinc-200 whitespace-pre-wrap">{msg.content}</p>
                             {msg.script && (
                               <div className="mt-3 p-3 rounded-md bg-zinc-900 border border-zinc-700 space-y-2">
-                                <p className="text-xs text-zinc-400">Suggested Brief</p>
+                                <p className="text-xs text-zinc-400">Suggested Target Blueprint</p>
                                 <p className="text-sm text-zinc-200 whitespace-pre-wrap">{msg.script}</p>
                                 <Button
                                   size="sm"
                                   className="bg-emerald-500 hover:bg-emerald-600"
                                   onClick={() => {
                                     setScript(msg.script || '')
-                                    toast.success('Conversation brief applied')
+                                    toast.success('Target blueprint applied')
                                   }}
                                 >
-                                  Use This Brief
+                                  Use This Target
                                 </Button>
                               </div>
                             )}
@@ -2049,6 +2283,13 @@ export default function Dashboard() {
                               <ul className="mt-2 text-xs text-zinc-300 space-y-1">
                                 {msg.objections.map((item, objectionIdx) => (
                                   <li key={objectionIdx}>• {item}</li>
+                                ))}
+                              </ul>
+                            )}
+                            {msg.discoveryQuestions && msg.discoveryQuestions.length > 0 && (
+                              <ul className="mt-2 text-xs text-emerald-200 space-y-1">
+                                {msg.discoveryQuestions.map((item, qIdx) => (
+                                  <li key={qIdx}>Q: {item}</li>
                                 ))}
                               </ul>
                             )}
@@ -2067,7 +2308,7 @@ export default function Dashboard() {
                             askCopilot()
                           }
                         }}
-                        placeholder="Example: Build a natural brief for first-time home buyers in Dubai"
+                        placeholder="Example: Build a target for investors in Dubai with qualification questions"
                         className="bg-zinc-800 border-zinc-700"
                       />
                       <Button onClick={askCopilot} disabled={copilotLoading || !copilotInput.trim()}>

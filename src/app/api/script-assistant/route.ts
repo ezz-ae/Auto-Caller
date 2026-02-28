@@ -110,6 +110,7 @@ export async function POST(request: NextRequest) {
       businessName?: string;
       industry?: string;
       companyDetails?: string;
+      targetProfile?: string;
       audience?: string;
       objective?: string;
       tone?: string;
@@ -146,20 +147,24 @@ export async function POST(request: NextRequest) {
       .join('\n');
 
     const systemPrompt = `You are an expert outbound call strategist.
-Generate natural conversation briefs for live AI phone calls (not rigid script reading).
-You must personalize the brief using caller identity and company profile.
+Generate a target-driven conversation blueprint for live AI phone calls.
+Do NOT produce a rigid script reader flow.
+You must personalize the target using caller identity and company profile.
 If mentionAi is true, disclose AI clearly in the opening line.
 Respect "must say" and "avoid saying" rules strictly.
 Always return valid JSON with:
 - reply: brief assistant response
-- script: conversation brief with opening, discovery prompts, and objection responses
+- targetBrief: concise target blueprint text
+- targetProfile: object with keys goal, audience, offer, qualification (array), cta, constraints
 - objections: array of 3 objection handling lines
+- discoveryQuestions: array of 4 smart discovery questions
 - profileSummary: one short line about the caller identity you used`;
 
     const userPrompt = `Context:
 - Business: ${context.businessName || 'Not provided'}
 - Industry: ${context.industry || 'Not provided'}
 - Company details: ${context.companyDetails || 'Not provided'}
+- Existing target profile (if any): ${context.targetProfile || 'Not provided'}
 - Audience: ${context.audience || 'General leads'}
 - Objective: ${context.objective || 'Book a follow-up call'}
 - Tone: ${context.tone || 'Professional and friendly'}
@@ -185,16 +190,19 @@ ${prompt}`;
 
     return NextResponse.json({
       success: true,
-      reply: parsed.reply || 'I drafted a script for you.',
-      script: parsed.script || '',
+      reply: parsed.reply || 'I drafted a target blueprint for you.',
+      targetBrief: parsed.targetBrief || parsed.script || '',
+      targetProfile: parsed.targetProfile || null,
+      script: parsed.targetBrief || parsed.script || '',
       objections: Array.isArray(parsed.objections) ? parsed.objections : [],
+      discoveryQuestions: Array.isArray(parsed.discoveryQuestions) ? parsed.discoveryQuestions : [],
       profileSummary: parsed.profileSummary || '',
     });
   } catch (error) {
-    console.error('Script assistant error:', error);
+    console.error('Target assistant error:', error);
     return NextResponse.json(
       {
-        error: 'Failed to generate script suggestion',
+        error: 'Failed to generate target suggestion',
         details: error instanceof Error ? error.message : 'Unknown error',
       },
       { status: 500 }

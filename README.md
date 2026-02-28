@@ -11,14 +11,16 @@ Production-ready outbound AI calling platform with:
 
 ## What Is Included
 
-- Full multi-tab platform UI (`Overview`, `Call Center`, `Callers`, `Recordings`, `History`, `Billing`, `Settings`)
+- Full multi-tab platform UI (`Overview`, `Agent Desk`, `Call Center`, `Callers`, `Recordings`, `History`, `Billing`, `Settings`)
 - Guided onboarding wizard in `Overview` for first-launch setup
 - Team accounts directory in `Settings` (owner/agent/manager operational records)
 - Caller identities in dedicated `Callers` tab (name, position, voice, language, disclosure mode, conversation constraints, KPI counters)
 - Number upload flow with direct caller assignment + optional schedule in `Call Center`
+- Target blueprint-driven calling (goal, audience, offer, qualification, CTA) instead of fixed script reading
 - Natural call voice delivery via ElevenLabs TTS for identity voices (with gender/language filtering in identity setup)
 - Optional dashboard access protection with login (`/login`)
 - Managed billing flows (PayPal number activation + credit top-up)
+- Agent Desk can warn when credits are not enough for queued contacts and route user to Billing
 - Twilio callback handling (status, forwarding, recording, voicemail)
 - Google AI conversation engine + transcription analysis (OpenAI fallback optional)
 - Vercel cron dispatch endpoint for scheduled campaigns (`/api/cron/dispatch-scheduled`)
@@ -171,6 +173,7 @@ Natural voices (ElevenLabs):
 
 AI provider:
 - Google AI is primary for live call conversation, copilot, and transcript analysis.
+- Calls are target-driven by default (no rigid script reader flow).
 - Set `GOOGLE_AI_API_KEY` (and optional `GOOGLE_AI_MODEL`).
 - Live calls run in conversational mode (listen/respond per turn) by default.
 - Optional overrides:

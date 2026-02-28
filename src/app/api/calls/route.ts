@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { numbers, voiceId, language, script, name, record, transcribe, callerIdentityId, scheduledAt } = body;
+    const { numbers, voiceId, language, script, target, name, record, transcribe, callerIdentityId, scheduledAt } = body;
 
     if (!Array.isArray(numbers) || numbers.length === 0) {
       return NextResponse.json({
@@ -77,7 +77,18 @@ export async function POST(request: NextRequest) {
 
     const selectedLanguage = String(language || selectedIdentity?.language || 'en-US');
     const selectedVoiceId = String(voiceId || selectedIdentity?.voiceId || '21m00Tcm4TlvDq8ikWAM');
-    const baseScript = String(script || selectedIdentity?.script || 'Hi, this is a quick update call. Are you open to hearing the offer?').trim();
+    const baseScript = String(
+      target ||
+      script ||
+      selectedIdentity?.script ||
+      [
+        'Goal: qualify lead and connect to human agent',
+        `Audience: ${selectedIdentity?.industry || settings.industry || 'general'} prospects`,
+        `Offer: ${settings.businessName || 'our company'} update relevant to their needs`,
+        'Qualification: Need + budget + timeline + decision maker',
+        'CTA: connect now with our team',
+      ].join('\n')
+    ).trim();
     const ruleNotes = (selectedIdentity?.sayThisRules || settings.sayThisRules || '').trim();
     const finalScript = [baseScript, ruleNotes].filter(Boolean).join(' ');
     const parsedSchedule =

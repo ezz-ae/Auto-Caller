@@ -146,6 +146,7 @@ export async function makeCall(
   // Build the call URL with parameters
   const params = new URLSearchParams({
     script: script,
+    target: script,
     forward: forwardToNumber,
     record: String(options.record || settings.recordCalls || false),
     transcribe: String(options.transcribe || settings.transcribeCalls || false),

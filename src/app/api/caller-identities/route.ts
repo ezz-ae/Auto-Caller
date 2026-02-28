@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { deleteCallerIdentity, listCallerIdentities, saveCallerIdentity } from '@/lib/caller-identity-store';
 import { getSettings } from '@/lib/store';
 
-function buildDefaultIdentityScript(input: {
+function buildDefaultIdentityTargetBlueprint(input: {
   name: string;
   position: string;
   companyName: string;
@@ -14,14 +14,27 @@ function buildDefaultIdentityScript(input: {
 }): string {
   const company = input.companyName || 'our company';
   const role = input.position || 'specialist';
-  const industry = input.industry ? ` in ${input.industry}` : '';
-  const goal = input.campaignGoal || 'share an update and see if this is relevant for you';
-  const aiDisclosure = input.mentionAi
-    ? `Hi, this is ${input.name}, an AI assistant working with ${company}. `
-    : `Hi, this is ${input.name}, ${role} at ${company}. `;
+  const industry = input.industry || 'general';
+  const goal = input.campaignGoal || 'qualify lead and hand over to human agent';
+  const audience = `${industry} prospects who may benefit from our offer`;
+  const offer = `brief update about ${company} and how we can help`;
+  const qualify = 'Need + budget + timeline + decision maker';
+  const cta = 'connect now with our human team';
+  const disclosure = input.mentionAi ? 'yes' : 'no';
+  const mustSay = input.sayThisRules?.trim() || 'none';
+  const avoid = input.avoidThisRules?.trim() || 'none';
 
-  const sayRules = input.sayThisRules?.trim() ? `\nMust include: ${input.sayThisRules.trim()}` : '';
-  return `${aiDisclosure}I am reaching out regarding ${goal}.${industry ? ` We focus on solutions${industry}.` : ''} Are you open to a quick overview before I connect you with our team?${sayRules}`;
+  return [
+    `Identity: ${input.name}, ${role}`,
+    `AI Disclosure: ${disclosure}`,
+    `Goal: ${goal}`,
+    `Audience: ${audience}`,
+    `Offer: ${offer}`,
+    `Qualification: ${qualify}`,
+    `CTA: ${cta}`,
+    `Must Say: ${mustSay}`,
+    `Avoid Saying: ${avoid}`,
+  ].join('\n');
 }
 
 export async function GET() {
@@ -55,7 +68,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'name and position are required' }, { status: 400 });
     }
 
-    const script = String(body?.script || '').trim() || buildDefaultIdentityScript({
+    const script = String(body?.script || '').trim() || buildDefaultIdentityTargetBlueprint({
       name,
       position,
       companyName: settings.businessName || '',

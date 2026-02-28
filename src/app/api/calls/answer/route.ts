@@ -148,16 +148,26 @@ function buildOpeningLine(params: {
   mentionAi: boolean;
   brief: string;
 }) {
+  const extractField = (field: string) => {
+    const regex = new RegExp(`^\\s*${field}\\s*:\\s*(.+)$`, 'im');
+    const match = params.brief.match(regex);
+    return match?.[1]?.trim() || '';
+  };
+
+  const offer = extractField('Offer');
+  const goal = extractField('Goal');
+  const audience = extractField('Audience');
+
   const intro = params.mentionAi
     ? `Hi, this is ${params.callerName}, an AI assistant with ${params.businessName}.`
     : `Hi, this is ${params.callerName}, ${params.callerPosition} at ${params.businessName}.`;
 
-  const briefLine = clipText(params.brief, 170);
-  if (!briefLine) {
+  const topic = clipText(offer || goal || audience, 120);
+  if (!topic) {
     return `${intro} I wanted to quickly check if now is a good time for a short conversation.`;
   }
 
-  return `${intro} ${briefLine} Is this a good time for a quick discussion?`;
+  return `${intro} I’m reaching out about ${topic}. Is this a good time for a quick discussion?`;
 }
 
 function buildConversationTwiml(params: {
@@ -285,7 +295,7 @@ async function handleAnswer(request: NextRequest) {
     const callerIdentity = callerIdentityId ? await getCallerIdentity(callerIdentityId) : null;
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-    const legacyScript = pick('script') || callerIdentity?.script || 'Hello, this is a follow-up call.';
+    const legacyScript = pick('target') || pick('script') || callerIdentity?.script || 'Goal: qualify lead and connect to specialist';
     const forward = pick('forward') || settings.forwardToNumber;
     const language = pick('language') || callerIdentity?.language || 'en-US';
     const voiceId = pick('voiceId') || callerIdentity?.voiceId || 'alice';
