@@ -187,6 +187,67 @@ const DEFAULT_BILLING_PRODUCTS: Record<string, BillingProduct> = {
   number_activation: { id: 'number_activation', name: 'Dedicated Phone Number', price: 39, kind: 'number' },
 }
 
+const PREFERRED_ELEVENLABS_VOICES: Record<'female' | 'male', string[]> = {
+  female: ['21m00Tcm4TlvDq8ikWAM', 'AZnzlk1XvdvUeBnXmlld', 'EXAVITQu4vr4xnSDxMaL', 'MF3mGyEYCl7XYWbV9V6O'],
+  male: ['ErXwobaYiN019PkySvjV', 'TxGEqnHWrfWFT1GWmBXj', 'pNInz6obpgDQGcFmaJgB', 'VR6AewLTigWG4xSOukaG'],
+}
+
+function normalizeGender(gender?: string): 'female' | 'male' | 'any' {
+  const value = String(gender || '').trim().toLowerCase()
+  if (value.includes('female')) return 'female'
+  if (value.includes('male')) return 'male'
+  return 'any'
+}
+
+function languageBase(value?: string): string {
+  return String(value || '').trim().toLowerCase().split('-')[0] || ''
+}
+
+function scoreVoiceForIdentity(voice: Voice, targetGender: 'female' | 'male' | 'any', targetLanguage: string): number {
+  const voiceGender = normalizeGender(voice.labels?.gender)
+  const voiceLanguage = String(voice.language || voice.labels?.language || '').trim().toLowerCase()
+  const voiceLanguageBase = languageBase(voiceLanguage)
+  const targetLanguageNormalized = targetLanguage.trim().toLowerCase()
+  const targetLanguageBase = languageBase(targetLanguageNormalized)
+
+  let score = 0
+
+  if (voice.source === 'elevenlabs') score += 120
+  if (voice.category === 'premade') score += 25
+
+  if (targetGender === 'any') {
+    score += 20
+  } else if (voiceGender === targetGender) {
+    score += 200
+  } else if (voiceGender === 'any') {
+    score += 10
+  } else {
+    score -= 300
+  }
+
+  if (!voiceLanguage || voiceLanguage === 'multi') {
+    score += 20
+  } else if (voiceLanguage === targetLanguageNormalized) {
+    score += 120
+  } else if (voiceLanguageBase && voiceLanguageBase === targetLanguageBase) {
+    score += 80
+  } else {
+    score -= 120
+  }
+
+  const preferredForGender = targetGender === 'any' ? [] : PREFERRED_ELEVENLABS_VOICES[targetGender]
+  if (preferredForGender.includes(voice.id)) {
+    score += 120
+  }
+
+  const description = String(voice.labels?.description || '').toLowerCase()
+  if (description.includes('natural') || description.includes('realistic') || description.includes('warm')) {
+    score += 20
+  }
+
+  return score
+}
+
 export default function Dashboard() {
   // Settings state
   const [settings, setSettings] = useState<Settings>({
@@ -397,16 +458,17 @@ export default function Dashboard() {
   }, [voices])
 
   const filteredIdentityVoices = useMemo(() => {
-    const targetGender = identityForm.gender.toLowerCase()
+    const targetGender = normalizeGender(identityForm.gender)
     const targetLanguage = identityForm.language.toLowerCase()
     const targetLanguageBase = targetLanguage.split('-')[0]
 
-    return identityVoicePool.filter(voice => {
-      const voiceGender = (voice.labels?.gender || '').toLowerCase()
+    return identityVoicePool
+      .filter(voice => {
+      const voiceGender = normalizeGender(voice.labels?.gender)
       const voiceLanguage = String(voice.language || voice.labels?.language || '').toLowerCase()
       const voiceLanguageBase = voiceLanguage.split('-')[0]
 
-      const genderMatch = targetGender === 'any' || !voiceGender || voiceGender.includes(targetGender)
+      const genderMatch = targetGender === 'any' || voiceGender === 'any' || voiceGender === targetGender
       const languageMatch =
         !voiceLanguage ||
         voiceLanguage === 'multi' ||
@@ -415,6 +477,7 @@ export default function Dashboard() {
 
       return genderMatch && languageMatch
     })
+      .sort((a, b) => scoreVoiceForIdentity(b, targetGender, targetLanguage) - scoreVoiceForIdentity(a, targetGender, targetLanguage))
   }, [identityForm.gender, identityForm.language, identityVoicePool])
 
   const selectedIdentityVoice = useMemo(
@@ -1259,7 +1322,7 @@ export default function Dashboard() {
           />
         </div>
         <p className="text-xs text-zinc-500">
-          Voice list is filtered by selected gender + language and prioritizes natural voices.
+          Voice list is filtered by selected gender + language. Most human voices are listed first.
         </p>
         <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 space-y-3">
           <p className="text-sm font-medium text-zinc-200">Voice Quality Test</p>
@@ -1273,15 +1336,30 @@ export default function Dashboard() {
             <p className="text-xs text-zinc-500">
               Selected voice: {selectedIdentityVoice ? `${selectedIdentityVoice.name} (${selectedIdentityVoice.language || selectedIdentityVoice.labels?.language || 'multi'})` : 'None'}
             </p>
-            <Button
-              type="button"
-              variant="secondary"
-              className="bg-zinc-800 hover:bg-zinc-700"
-              onClick={() => previewIdentityVoice(identityForm.voiceId, identityForm.language)}
-              disabled={!identityForm.voiceId || !!previewingVoice}
-            >
-              {previewingVoice === identityForm.voiceId ? 'Playing...' : 'Test Voice'}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="bg-zinc-800 hover:bg-zinc-700"
+                onClick={() => {
+                  if (!filteredIdentityVoices[0]) return
+                  setIdentityForm(prev => ({ ...prev, voiceId: filteredIdentityVoices[0].id }))
+                  toast.success(`Auto-selected ${filteredIdentityVoices[0].name}`)
+                }}
+                disabled={filteredIdentityVoices.length === 0}
+              >
+                Pick Best Voice
+              </Button>
+              <Button
+                type="button"
+                variant="secondary"
+                className="bg-zinc-800 hover:bg-zinc-700"
+                onClick={() => previewIdentityVoice(identityForm.voiceId, identityForm.language)}
+                disabled={!identityForm.voiceId || !!previewingVoice}
+              >
+                {previewingVoice === identityForm.voiceId ? 'Playing...' : 'Test Voice'}
+              </Button>
+            </div>
           </div>
         </div>
         <div className="grid gap-3 md:grid-cols-2">

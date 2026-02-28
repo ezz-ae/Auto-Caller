@@ -35,7 +35,7 @@ export async function getVoices(): Promise<ElevenLabsVoice[]> {
     ];
   }
   
-  const response = await fetch(`${ELEVENLABS_API_URL}/voices`, {
+  const response = await fetch(`${ELEVENLABS_API_URL}/voices?show_legacy=true`, {
     headers: {
       'xi-api-key': settings.elevenLabsApiKey,
     },
