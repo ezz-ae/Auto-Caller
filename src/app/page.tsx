@@ -178,6 +178,9 @@ export default function Dashboard() {
   const fetchCampaigns = useCallback(async () => {
     try {
       const res = await fetch('/api/calls')
+      if (!res.ok) {
+        throw new Error('Failed to load campaigns')
+      }
       const data = await res.json()
       const loadedCampaigns = data.campaigns || []
       setCampaigns(loadedCampaigns)
@@ -193,6 +196,9 @@ export default function Dashboard() {
   const fetchRecordings = useCallback(async () => {
     try {
       const res = await fetch('/api/recordings')
+      if (!res.ok) {
+        throw new Error('Failed to load recordings')
+      }
       const data = await res.json()
       setRecordings(data.recordings || [])
     } catch {
@@ -203,6 +209,9 @@ export default function Dashboard() {
   const fetchTeamMembers = useCallback(async () => {
     try {
       const res = await fetch('/api/team-members')
+      if (!res.ok) {
+        throw new Error('Failed to load team members')
+      }
       const data = await res.json()
       setTeamMembers(data.members || [])
     } catch {
@@ -316,19 +325,28 @@ export default function Dashboard() {
       // Fetch settings
       try {
         const res = await fetch('/api/settings')
+        if (!res.ok) {
+          throw new Error('Failed to load settings')
+        }
         const data = await res.json()
+        if (!data?.settings) {
+          throw new Error('Settings payload missing')
+        }
         setSettings(data.settings)
-        setCredits(data.credits)
-        setIsConfigured(data.isConfigured)
+        setCredits(typeof data.credits === 'number' ? data.credits : 0)
+        setIsConfigured(!!data.isConfigured)
         setManagedMode(!!data.settings?.managedMode)
         setAssignedPhoneNumber(data.settings?.assignedPhoneNumber || '')
       } catch {
-        toast.error('Failed to load settings')
+        toast.error('Failed to load settings, using defaults')
       }
       
       // Fetch voices
       try {
         const res = await fetch('/api/voices')
+        if (!res.ok) {
+          throw new Error('Failed to load voices')
+        }
         const data = await res.json()
         setVoices(data.voices || [])
       } catch {

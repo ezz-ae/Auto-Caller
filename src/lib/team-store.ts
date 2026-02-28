@@ -12,7 +12,7 @@ export interface TeamMember {
   createdAt: Date;
 }
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const DATA_DIR = process.env.DATA_DIR || (process.env.VERCEL ? '/tmp/auto-caller-data' : path.join(process.cwd(), 'data'));
 const TEAM_MEMBERS_FILE = path.join(DATA_DIR, 'team-members.json');
 
 const STORE_DRIVER = (process.env.STORE_DRIVER || '').toLowerCase();

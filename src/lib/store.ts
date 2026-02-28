@@ -4,7 +4,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
 import { Campaign, CallResult, Recording, Transcript } from '@/lib/types';
 
-const DATA_DIR = path.join(process.cwd(), 'data');
+const DATA_DIR = process.env.DATA_DIR || (process.env.VERCEL ? '/tmp/auto-caller-data' : path.join(process.cwd(), 'data'));
 const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const CAMPAIGNS_DIR = path.join(DATA_DIR, 'campaigns');
 const CREDITS_FILE = path.join(DATA_DIR, 'credits.json');
