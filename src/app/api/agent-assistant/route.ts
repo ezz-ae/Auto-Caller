@@ -12,6 +12,20 @@ interface AgentContext {
   credits?: number;
   numbersCount?: number;
   callerIdentityName?: string;
+  callerIdentitiesCount?: number;
+  activeCallerNumbers?: number;
+  campaignCount?: number;
+  currentCampaignName?: string;
+  currentCampaignStatus?: string;
+  totalCalls?: number;
+  connectedCalls?: number;
+  scheduledCallbacks?: number;
+  dueCallbacks?: number;
+  isCalling?: boolean;
+  businessName?: string;
+  industry?: string;
+  companyDetails?: string;
+  managedMode?: boolean;
   currentTab?: string;
   targetBlueprint?: string;
 }
@@ -131,7 +145,20 @@ async function generateJsonWithGemini(payload: {
 function buildDeterministicReply(prompt: string, context: AgentContext) {
   const credits = Number(context.credits || 0);
   const numbersCount = Number(context.numbersCount || 0);
+  const callerIdentitiesCount = Number(context.callerIdentitiesCount || 0);
   const agent = context.selectedAgentName || 'Sara';
+
+  if (callerIdentitiesCount === 0) {
+    return {
+      reply: `${agent} here. Let’s create your first caller identity before launch. I recommend setting name, language, voice, and a clear target blueprint.`,
+      action: 'open_callers' as AgentAction,
+      checklist: [
+        'Create first caller identity',
+        'Set voice + language',
+        'Add target blueprint and call rules',
+      ],
+    };
+  }
 
   if (numbersCount > credits) {
     const shortfall = numbersCount - credits;
@@ -212,15 +239,28 @@ You help users configure:
 Always output strict JSON:
 {
   "reply": "natural response",
-  "action": "none|open_billing|open_call|open_callers|open_settings",
-  "checklist": ["short step", "short step"]
+      "action": "none|open_billing|open_call|open_callers|open_settings",
+      "checklist": ["short step", "short step"]
 }`;
 
     const userPrompt = `Context:
 - Agent name: ${context.selectedAgentName || 'Sara'}
+- Workspace business: ${context.businessName || 'Not set'}
+- Industry: ${context.industry || 'Not set'}
+- Company details: ${context.companyDetails || 'Not set'}
 - Credits: ${credits}
 - Contacts queued: ${numbersCount}
+- Caller identities count: ${Number(context.callerIdentitiesCount || 0)}
+- Caller numbers active: ${Number(context.activeCallerNumbers || 0)}
 - Caller identity selected: ${context.callerIdentityName || 'No'}
+- Campaign count: ${Number(context.campaignCount || 0)}
+- Current campaign: ${context.currentCampaignName || 'None'} (${context.currentCampaignStatus || 'none'})
+- Campaign running now: ${context.isCalling ? 'yes' : 'no'}
+- Total calls: ${Number(context.totalCalls || 0)}
+- Connected calls: ${Number(context.connectedCalls || 0)}
+- Scheduled callbacks: ${Number(context.scheduledCallbacks || 0)}
+- Due callbacks now: ${Number(context.dueCallbacks || 0)}
+- Managed mode: ${context.managedMode ? 'yes' : 'no'}
 - Current tab: ${context.currentTab || 'unknown'}
 - Target blueprint: ${context.targetBlueprint || 'Not set'}
 
@@ -232,22 +272,30 @@ ${prompt}
 
 Rules:
 - If credits < contacts queued, action must be open_billing.
+- If no caller identity exists yet, action must be open_callers.
 - Recommend practical next steps, not abstract advice.
-- Keep reply concise and conversational.`;
+- Keep reply concise and conversational.
+- Respond as an operations partner that is aware of the entire workspace.`;
 
-    const parsed = await generateJsonWithGemini({
-      apiKey,
-      model,
-      systemPrompt,
-      userPrompt,
-    });
+    try {
+      const parsed = await generateJsonWithGemini({
+        apiKey,
+        model,
+        systemPrompt,
+        userPrompt,
+      });
 
-    return NextResponse.json({
-      success: true,
-      reply: String(parsed.reply || buildDeterministicReply(prompt, context).reply),
-      action: sanitizeAction(String(parsed.action || 'none')),
-      checklist: Array.isArray(parsed.checklist) ? parsed.checklist.map((x: any) => String(x)).filter(Boolean).slice(0, 6) : [],
-    });
+      return NextResponse.json({
+        success: true,
+        reply: String(parsed.reply || buildDeterministicReply(prompt, context).reply),
+        action: sanitizeAction(String(parsed.action || 'none')),
+        checklist: Array.isArray(parsed.checklist) ? parsed.checklist.map((x: any) => String(x)).filter(Boolean).slice(0, 6) : [],
+      });
+    } catch (providerError) {
+      console.error('Agent assistant provider fallback:', providerError);
+      const deterministic = buildDeterministicReply(prompt, context);
+      return NextResponse.json({ success: true, ...deterministic });
+    }
   } catch (error) {
     console.error('Agent assistant error:', error);
     return NextResponse.json(
