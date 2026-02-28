@@ -103,6 +103,9 @@ Optional: seed demo workspace data after deployment:
 npm run seed:demo
 ```
 
+For exact copy-paste Vercel setup values, use:
+- [VERCEL_LAUNCH_CHECKLIST.md](/Users/mahmoudezz/Downloads/Auto%20Caller/VERCEL_LAUNCH_CHECKLIST.md)
+
 ## 5. Twilio + PayPal Production Checklist
 
 - Twilio phone number webhook URLs:
