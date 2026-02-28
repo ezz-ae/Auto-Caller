@@ -12,6 +12,7 @@ export async function POST(request: NextRequest) {
     const name = String(body?.name || '').trim();
     const email = String(body?.email || '').trim().toLowerCase();
     const password = String(body?.password || '');
+    const rememberDevice = body?.rememberDevice !== false;
 
     if (!name || !email || !password) {
       return NextResponse.json({ error: 'Name, email, and password are required' }, { status: 400 });
@@ -27,12 +28,12 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    response.cookies.set(SESSION_COOKIE_NAME, createSessionToken({ id: user.id, email: user.email }), {
+    response.cookies.set(SESSION_COOKIE_NAME, createSessionToken({ id: user.id, email: user.email }, rememberDevice ? 30 : 1), {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 30,
+      ...(rememberDevice ? { maxAge: 60 * 60 * 24 * 30 } : {}),
     });
     response.cookies.set(ACCESS_COOKIE_NAME, '', {
       httpOnly: true,

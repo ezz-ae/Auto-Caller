@@ -74,6 +74,7 @@ Edit `.env.local` and set at least:
 - `APP_SESSION_SECRET` (required in production for account sessions)
 - `ALLOW_LEGACY_AUTH=false` (recommended)
 - `APP_ACCESS_PASSWORD` (only for `AUTH_MODE=legacy`)
+- `RESEND_API_KEY` + `RESEND_FROM_EMAIL` (optional, enables forgot-password email delivery)
 
 ## 2. Neon DB Setup
 
@@ -165,6 +166,13 @@ Authentication modes:
 - `AUTH_MODE=legacy`: single shared login via `APP_ACCESS_USERNAME` / `APP_ACCESS_PASSWORD`.
 - `ALLOW_LEGACY_AUTH=false` (recommended): blocks shared legacy cookie fallback when using `AUTH_MODE=accounts`.
 - `APP_SESSION_SECRET`: strong random secret for signing account session cookies.
+- Remember device:
+  - checked: persistent auth cookie (30 days)
+  - unchecked: session cookie (expires when browser session ends)
+- Forgot password:
+  - `/forgot-password` requests a reset link
+  - `/reset-password?token=...` sets a new password
+  - configure `RESEND_API_KEY`, `RESEND_FROM_EMAIL`, and optional `RESEND_REPLY_TO` for email delivery
 
 Automatic number provisioning:
 - Set `MANAGED_AUTO_PROVISION_NUMBER=true` to auto-buy a Twilio number after successful number checkout.

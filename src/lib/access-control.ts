@@ -43,6 +43,8 @@ export function shouldSkipAuthPath(pathname: string) {
       '/api/auth/register',
       '/api/auth/session',
       '/api/auth/logout',
+      '/api/auth/forgot-password',
+      '/api/auth/reset-password',
       '/api/calls/answer',
       '/api/calls/status',
       '/api/calls/recording-complete',
@@ -60,6 +62,8 @@ export function shouldSkipAuthPath(pathname: string) {
   if (pathname.startsWith('/_next/')) return true;
   if (pathname.startsWith('/favicon')) return true;
   if (pathname.startsWith('/login')) return true;
+  if (pathname.startsWith('/forgot-password')) return true;
+  if (pathname.startsWith('/reset-password')) return true;
   if (pathname === '/') return true;
   if (pathname.startsWith('/features')) return true;
   if (pathname.startsWith('/how-it-works')) return true;

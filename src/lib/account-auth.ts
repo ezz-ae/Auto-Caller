@@ -5,6 +5,7 @@ import { isAccountAuthEnabled } from '@/lib/access-control';
 export const SESSION_COOKIE_NAME = 'acp_session';
 
 const SESSION_VERSION = 1;
+const PASSWORD_RESET_TTL_MINUTES = 30;
 
 interface SessionPayload {
   v: number;
@@ -148,6 +149,91 @@ export async function authenticateUserAccount(payload: {
 
   const valid = await verifyPassword(password, user.passwordHash);
   if (!valid) return null;
+
+  return { id: user.id, name: user.name, email: user.email };
+}
+
+export async function createPasswordResetRequest(
+  emailInput: string
+): Promise<{ email: string; resetToken: string } | null> {
+  const email = String(emailInput || '').trim().toLowerCase();
+  if (!email) return null;
+
+  const user = await prisma.userAccount.findUnique({ where: { email } });
+  if (!user) return null;
+
+  const now = new Date();
+  await prisma.passwordResetToken.deleteMany({
+    where: {
+      userId: user.id,
+      OR: [
+        { usedAt: { not: null } },
+        { expiresAt: { lt: now } },
+      ],
+    },
+  });
+
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  const tokenHash = crypto.createHash('sha256').update(resetToken).digest('hex');
+  const expiresAt = new Date(Date.now() + PASSWORD_RESET_TTL_MINUTES * 60 * 1000);
+
+  await prisma.passwordResetToken.create({
+    data: {
+      userId: user.id,
+      email: user.email,
+      tokenHash,
+      expiresAt,
+    },
+  });
+
+  return { email: user.email, resetToken };
+}
+
+export async function consumePasswordResetToken(payload: {
+  token: string;
+  newPassword: string;
+}): Promise<{ id: string; name: string; email: string } | null> {
+  const token = String(payload.token || '').trim();
+  const newPassword = String(payload.newPassword || '');
+  if (!token || !newPassword) return null;
+  if (newPassword.length < 8) {
+    throw new Error('Password must be at least 8 characters');
+  }
+
+  const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+  const now = new Date();
+
+  const reset = await prisma.passwordResetToken.findUnique({
+    where: { tokenHash },
+    include: { user: true },
+  });
+
+  if (!reset) return null;
+  if (reset.usedAt) return null;
+  if (reset.expiresAt.getTime() < now.getTime()) return null;
+
+  const passwordHash = await hashPassword(newPassword);
+
+  const user = await prisma.$transaction(async (tx) => {
+    const updated = await tx.userAccount.update({
+      where: { id: reset.userId },
+      data: { passwordHash },
+    });
+
+    await tx.passwordResetToken.update({
+      where: { id: reset.id },
+      data: { usedAt: now },
+    });
+
+    await tx.passwordResetToken.deleteMany({
+      where: {
+        userId: reset.userId,
+        id: { not: reset.id },
+      },
+    });
+
+    return updated;
+  });
 
   return { id: user.id, name: user.name, email: user.email };
 }

@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberDevice, setRememberDevice] = useState(true);
   const [loading, setLoading] = useState(false);
   const [nextPath, setNextPath] = useState('/dashboard');
 
@@ -49,8 +50,8 @@ export default function LoginPage() {
     try {
       const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
       const payload = isRegister
-        ? { name, email: username, password }
-        : (accountMode ? { email: username, password } : { username, password });
+        ? { name, email: username, password, rememberDevice }
+        : (accountMode ? { email: username, password, rememberDevice } : { username, password, rememberDevice });
 
       const res = await fetch(endpoint, {
         method: 'POST',
@@ -131,6 +132,22 @@ export default function LoginPage() {
                     placeholder="••••••••"
                     required
                   />
+                </div>
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <label className="flex items-center gap-2 text-zinc-300">
+                    <input
+                      type="checkbox"
+                      checked={rememberDevice}
+                      onChange={e => setRememberDevice(e.target.checked)}
+                      className="h-4 w-4 rounded border-zinc-600 bg-zinc-800"
+                    />
+                    Remember this device
+                  </label>
+                  {accountMode && !isRegister && (
+                    <Link href="/forgot-password" className="text-zinc-400 hover:text-emerald-300 transition">
+                      Forgot password?
+                    </Link>
+                  )}
                 </div>
                 <Button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-600" disabled={loading}>
                   {loading ? (isRegister ? 'Creating account...' : 'Signing in...') : (isRegister ? 'Create account' : 'Sign in')}

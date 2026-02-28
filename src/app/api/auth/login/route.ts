@@ -17,6 +17,7 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const username = String(body?.username || body?.email || '').trim();
     const password = String(body?.password || '');
+    const rememberDevice = body?.rememberDevice !== false;
     const accountMode = isAccountAuthEnabled();
 
     if (accountMode) {
@@ -33,12 +34,12 @@ export async function POST(request: NextRequest) {
           email: user.email,
         },
       });
-      response.cookies.set(SESSION_COOKIE_NAME, createSessionToken(user), {
+      response.cookies.set(SESSION_COOKIE_NAME, createSessionToken(user, rememberDevice ? 30 : 1), {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'lax',
         path: '/',
-        maxAge: 60 * 60 * 24 * 30,
+        ...(rememberDevice ? { maxAge: 60 * 60 * 24 * 30 } : {}),
       });
       response.cookies.set(ACCESS_COOKIE_NAME, '', {
         httpOnly: true,
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
       path: '/',
-      maxAge: 60 * 60 * 24 * 30,
+      ...(rememberDevice ? { maxAge: 60 * 60 * 24 * 30 } : {}),
     });
     response.cookies.set(SESSION_COOKIE_NAME, '', {
       httpOnly: true,
