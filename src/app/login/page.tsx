@@ -13,6 +13,9 @@ import { toast } from 'sonner';
 
 export default function LoginPage() {
   const router = useRouter();
+  const [accountMode, setAccountMode] = useState(true);
+  const [isRegister, setIsRegister] = useState(false);
+  const [name, setName] = useState('');
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -24,6 +27,16 @@ export default function LoginPage() {
     if (next && next.startsWith('/')) {
       setNextPath(next);
     }
+
+    fetch('/api/auth/session')
+      .then(async res => {
+        if (!res.ok) return null;
+        const data = await res.json();
+        if (typeof data?.accountMode === 'boolean') {
+          setAccountMode(data.accountMode);
+        }
+      })
+      .catch(() => null);
   }, []);
 
   const onSubmit = async (event: React.FormEvent) => {
@@ -31,10 +44,15 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/auth/login', {
+      const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
+      const payload = isRegister
+        ? { name, email: username, password }
+        : (accountMode ? { email: username, password } : { username, password });
+
+      const res = await fetch(endpoint, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password }),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -43,7 +61,7 @@ export default function LoginPage() {
         return;
       }
 
-      toast.success('Access granted');
+      toast.success(isRegister ? 'Account created' : 'Access granted');
       router.push(nextPath);
       router.refresh();
     } catch {
@@ -77,14 +95,27 @@ export default function LoginPage() {
             </CardHeader>
             <CardContent>
               <form className="space-y-4" onSubmit={onSubmit}>
+                {accountMode && isRegister && (
+                  <div className="space-y-2">
+                    <Label>Full Name</Label>
+                    <Input
+                      value={name}
+                      onChange={e => setName(e.target.value)}
+                      className="bg-zinc-800 border-zinc-700"
+                      placeholder="Your name"
+                      required
+                    />
+                  </div>
+                )}
                 <div className="space-y-2">
-                  <Label>Username</Label>
+                  <Label>{accountMode ? 'Email' : 'Username'}</Label>
                   <Input
                     value={username}
                     onChange={e => setUsername(e.target.value)}
                     className="bg-zinc-800 border-zinc-700"
-                    placeholder="admin"
+                    placeholder={accountMode ? 'you@company.com' : 'admin'}
                     required
+                    type={accountMode ? 'email' : 'text'}
                   />
                 </div>
                 <div className="space-y-2">
@@ -99,8 +130,17 @@ export default function LoginPage() {
                   />
                 </div>
                 <Button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-600" disabled={loading}>
-                  {loading ? 'Signing in...' : 'Sign in'}
+                  {loading ? (isRegister ? 'Creating account...' : 'Signing in...') : (isRegister ? 'Create account' : 'Sign in')}
                 </Button>
+                {accountMode && (
+                  <button
+                    type="button"
+                    onClick={() => setIsRegister(prev => !prev)}
+                    className="w-full text-sm text-zinc-400 hover:text-emerald-300 transition"
+                  >
+                    {isRegister ? 'Already have an account? Sign in' : 'New user? Create account'}
+                  </button>
+                )}
               </form>
             </CardContent>
           </Card>
@@ -113,7 +153,7 @@ export default function LoginPage() {
               </Badge>
               <CardTitle className="text-xl">Welcome Back</CardTitle>
               <CardDescription className="text-zinc-400">
-                Sign in to continue to your workspace.
+                {accountMode ? 'Sign in or create an account to access your isolated workspace.' : 'Sign in to continue to your workspace.'}
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm text-zinc-300">

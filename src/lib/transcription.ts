@@ -18,13 +18,13 @@ function getGoogleModel(): string {
   return process.env.GOOGLE_AI_MODEL || process.env.GEMINI_MODEL || 'gemini-1.5-flash';
 }
 
-async function getOpenAIApiKey(): Promise<string> {
-  const settings = await getSettings();
+async function getOpenAIApiKey(userId = 'default'): Promise<string> {
+  const settings = await getSettings(userId);
   return settings.openaiApiKey || process.env.OPENAI_API_KEY || process.env.MANAGED_OPENAI_API_KEY || '';
 }
 
-async function getOpenAIClient(): Promise<OpenAI> {
-  const apiKey = await getOpenAIApiKey();
+async function getOpenAIClient(userId = 'default'): Promise<OpenAI> {
+  const apiKey = await getOpenAIApiKey(userId);
   if (!apiKey) {
     throw new Error('OpenAI API key not configured');
   }
@@ -126,6 +126,7 @@ export async function transcribeAudio(
   options: {
     language?: string;
     prompt?: string;
+    userId?: string;
   } = {}
 ): Promise<{
   text: string;
@@ -177,7 +178,7 @@ Rules:
         duration,
       };
     } catch (error) {
-      const openAIApiKey = await getOpenAIApiKey();
+      const openAIApiKey = await getOpenAIApiKey(options.userId || 'default');
       if (!openAIApiKey) {
         throw error;
       }
@@ -185,7 +186,7 @@ Rules:
     }
   }
 
-  const client = await getOpenAIClient();
+  const client = await getOpenAIClient(options.userId || 'default');
   const file = new File([new Uint8Array(audioBuffer)], 'recording.mp3', { type: 'audio/mpeg' });
   const response = await client.audio.transcriptions.create({
     file,
@@ -217,6 +218,7 @@ export async function analyzeTranscript(
     script?: string;
     phoneNumber?: string;
     campaignName?: string;
+    userId?: string;
   }
 ): Promise<{
   summary: string;
@@ -262,7 +264,7 @@ Context:
         followUp: String(result.followUp || 'No follow-up needed'),
       };
     } catch (error) {
-      const openAIApiKey = await getOpenAIApiKey();
+      const openAIApiKey = await getOpenAIApiKey(context?.userId || 'default');
       if (!openAIApiKey) {
         throw error;
       }
@@ -270,7 +272,7 @@ Context:
     }
   }
 
-  const client = await getOpenAIClient();
+  const client = await getOpenAIClient(context?.userId || 'default');
   const systemPrompt = `You are an expert sales call analyst. Analyze phone call transcripts and extract insights.
 Always respond with valid JSON containing these fields:
 - summary: A 1-2 sentence summary of the call
@@ -315,9 +317,10 @@ export async function processRecording(
     script?: string;
     phoneNumber?: string;
     campaignName?: string;
+    userId?: string;
   }
 ): Promise<Transcript> {
-  const { text, segments } = await transcribeAudio(audioBuffer);
+  const { text, segments } = await transcribeAudio(audioBuffer, { userId: context?.userId });
   const analysis = await analyzeTranscript(text, context);
 
   return {

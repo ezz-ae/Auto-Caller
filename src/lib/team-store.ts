@@ -5,6 +5,7 @@ import { prisma } from './prisma';
 
 export interface TeamMember {
   id: string;
+  userId: string;
   name: string;
   email: string;
   role: string;
@@ -13,7 +14,6 @@ export interface TeamMember {
 }
 
 const DATA_DIR = process.env.DATA_DIR || (process.env.VERCEL ? '/tmp/auto-caller-data' : path.join(process.cwd(), 'data'));
-const TEAM_MEMBERS_FILE = path.join(DATA_DIR, 'team-members.json');
 
 const STORE_DRIVER = (process.env.STORE_DRIVER || '').toLowerCase();
 const usePostgresStore =
@@ -26,32 +26,46 @@ function ensureDataDir() {
   }
 }
 
-function fsReadAll(): TeamMember[] {
-  ensureDataDir();
+function normalizeUserId(userId?: string): string {
+  return String(userId || '').trim() || 'default';
+}
 
-  if (!fs.existsSync(TEAM_MEMBERS_FILE)) {
-    fs.writeFileSync(TEAM_MEMBERS_FILE, '[]');
+function getTeamMembersFile(userId: string): string {
+  return path.join(DATA_DIR, `team-members.${normalizeUserId(userId)}.json`);
+}
+
+function fsReadAll(userId = 'default'): TeamMember[] {
+  ensureDataDir();
+  const filePath = getTeamMembersFile(userId);
+
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, '[]');
     return [];
   }
 
-  const raw = fs.readFileSync(TEAM_MEMBERS_FILE, 'utf-8');
+  const raw = fs.readFileSync(filePath, 'utf-8');
   const data = JSON.parse(raw) as Array<Omit<TeamMember, 'createdAt'> & { createdAt: string }>;
 
   return data
-    .map(item => ({ ...item, createdAt: new Date(item.createdAt) }))
+    .map(item => ({ ...item, userId: normalizeUserId((item as any).userId), createdAt: new Date(item.createdAt) }))
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
-function fsWriteAll(members: TeamMember[]) {
+function fsWriteAll(members: TeamMember[], userId = 'default') {
   ensureDataDir();
-  fs.writeFileSync(TEAM_MEMBERS_FILE, JSON.stringify(members, null, 2));
+  fs.writeFileSync(getTeamMembersFile(userId), JSON.stringify(members, null, 2));
 }
 
-export async function listTeamMembers(): Promise<TeamMember[]> {
+export async function listTeamMembers(userId = 'default'): Promise<TeamMember[]> {
+  const scopedUserId = normalizeUserId(userId);
   if (usePostgresStore) {
-    const rows = await prisma.teamMember.findMany({ orderBy: { createdAt: 'desc' } });
+    const rows = await prisma.teamMember.findMany({
+      where: { userId: scopedUserId },
+      orderBy: { createdAt: 'desc' },
+    });
     return rows.map(row => ({
       id: row.id,
+      userId: row.userId,
       name: row.name,
       email: row.email,
       role: row.role,
@@ -60,24 +74,37 @@ export async function listTeamMembers(): Promise<TeamMember[]> {
     }));
   }
 
-  return fsReadAll();
+  return fsReadAll(scopedUserId);
 }
 
-export async function saveTeamMember(member: Partial<TeamMember> & { name: string; email: string; role: string }): Promise<TeamMember> {
+export async function saveTeamMember(
+  member: Partial<TeamMember> & { name: string; email: string; role: string },
+  userId = 'default'
+): Promise<TeamMember> {
   const now = new Date();
+  const scopedUserId = normalizeUserId(userId);
 
   if (usePostgresStore) {
     const id = member.id || uuidv4();
+    const existing = member.id
+      ? await prisma.teamMember.findUnique({ where: { id: member.id } })
+      : null;
+    if (existing && existing.userId !== scopedUserId) {
+      throw new Error('Team member does not belong to this user');
+    }
+
     const row = await prisma.teamMember.upsert({
       where: { id },
       create: {
         id,
+        userId: scopedUserId,
         name: member.name,
         email: member.email.toLowerCase(),
         role: member.role,
         active: typeof member.active === 'boolean' ? member.active : true,
       },
       update: {
+        userId: scopedUserId,
         name: member.name,
         email: member.email.toLowerCase(),
         role: member.role,
@@ -87,6 +114,7 @@ export async function saveTeamMember(member: Partial<TeamMember> & { name: strin
 
     return {
       id: row.id,
+      userId: row.userId,
       name: row.name,
       email: row.email,
       role: row.role,
@@ -95,12 +123,13 @@ export async function saveTeamMember(member: Partial<TeamMember> & { name: strin
     };
   }
 
-  const all = fsReadAll();
+  const all = fsReadAll(scopedUserId);
   const id = member.id || uuidv4();
   const existingIndex = all.findIndex(item => item.id === id || item.email.toLowerCase() === member.email.toLowerCase());
 
   const normalized: TeamMember = {
     id: existingIndex >= 0 ? all[existingIndex].id : id,
+    userId: scopedUserId,
     name: member.name,
     email: member.email.toLowerCase(),
     role: member.role,
@@ -114,16 +143,17 @@ export async function saveTeamMember(member: Partial<TeamMember> & { name: strin
     all.push(normalized);
   }
 
-  fsWriteAll(all);
+  fsWriteAll(all, scopedUserId);
   return normalized;
 }
 
-export async function deleteTeamMember(id: string): Promise<void> {
+export async function deleteTeamMember(id: string, userId = 'default'): Promise<void> {
+  const scopedUserId = normalizeUserId(userId);
   if (usePostgresStore) {
-    await prisma.teamMember.deleteMany({ where: { id } });
+    await prisma.teamMember.deleteMany({ where: { id, userId: scopedUserId } });
     return;
   }
 
-  const all = fsReadAll().filter(item => item.id !== id);
-  fsWriteAll(all);
+  const all = fsReadAll(scopedUserId).filter(item => item.id !== id);
+  fsWriteAll(all, scopedUserId);
 }

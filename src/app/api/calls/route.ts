@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Campaign } from '@/lib/types';
 import { runCampaign } from '@/lib/campaign-runner';
 import { dispatchDueScheduledCampaigns } from '@/lib/campaign-scheduler';
+import { requireUserIdFromRequest } from '@/lib/request-user';
 
 function normalizePhoneKey(raw: string): string {
   return String(raw || '').replace(/[^\d+]/g, '');
@@ -52,16 +53,17 @@ function parseLeadNotes(
 // Get all campaigns
 export async function GET(request: NextRequest) {
   try {
+    const userId = requireUserIdFromRequest(request);
     await dispatchDueScheduledCampaigns();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
     if (id) {
-      const campaign = await getCampaign(id);
+      const campaign = await getCampaign(id, userId);
       return NextResponse.json({ campaign });
     }
     
-    const campaigns = await getAllCampaigns();
+    const campaigns = await getAllCampaigns(userId);
     return NextResponse.json({ campaigns });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to get campaigns' }, { status: 500 });
@@ -71,6 +73,7 @@ export async function GET(request: NextRequest) {
 // Start a new campaign
 export async function POST(request: NextRequest) {
   try {
+    const userId = requireUserIdFromRequest(request);
     const body = await request.json();
     const { numbers, voiceId, language, script, target, leadNotes, name, record, transcribe, callerIdentityId, scheduledAt } = body;
 
@@ -81,7 +84,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Check credits
-    const credits = await getCredits();
+    const credits = await getCredits(userId);
     if (credits < numbers.length) {
       return NextResponse.json({ 
         error: `Not enough credits. Need ${numbers.length}, have ${credits}` 
@@ -89,7 +92,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Get settings
-    const settings = await getSettings();
+    const settings = await getSettings(userId);
     if (!settings.forwardToNumber) {
       return NextResponse.json({ 
         error: 'Forward number not configured. Go to Settings first.' 
@@ -103,7 +106,7 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const selectedIdentity = await getCallerIdentity(String(callerIdentityId));
+    const selectedIdentity = await getCallerIdentity(String(callerIdentityId), userId);
     if (!selectedIdentity) {
       return NextResponse.json({
         error: 'Selected caller identity was not found',
@@ -149,7 +152,7 @@ export async function POST(request: NextRequest) {
     // Create campaign
     const campaign: Campaign = {
       id: uuidv4(),
-      userId: 'default',
+      userId,
       name: name || `Campaign ${new Date().toLocaleDateString()}`,
       status: shouldSchedule ? 'scheduled' : 'running',
       voiceId: selectedVoiceId,
@@ -189,7 +192,7 @@ export async function POST(request: NextRequest) {
     if (selectedIdentity) {
       await applyCallerIdentityKpiDelta(selectedIdentity.id, {
         campaignsLaunched: 1,
-      });
+      }, userId);
     }
     
     if (shouldSchedule) {
@@ -218,6 +221,7 @@ export async function POST(request: NextRequest) {
 // Stop campaign
 export async function DELETE(request: NextRequest) {
   try {
+    const userId = requireUserIdFromRequest(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
@@ -225,7 +229,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Campaign ID required' }, { status: 400 });
     }
     
-    const campaign = await getCampaign(id);
+    const campaign = await getCampaign(id, userId);
     if (campaign) {
       campaign.status = 'stopped';
       await saveCampaign(campaign);

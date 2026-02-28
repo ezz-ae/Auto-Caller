@@ -2,11 +2,13 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSettings, saveSettings, getCredits, setCredits, updateCredits } from '@/lib/store';
 import { assignManagedNumber } from '@/lib/store';
 import { resetClient } from '@/lib/twilio';
+import { requireUserIdFromRequest } from '@/lib/request-user';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const settings = await getSettings();
-    const credits = await getCredits();
+    const userId = requireUserIdFromRequest(request);
+    const settings = await getSettings(userId);
+    const credits = await getCredits(userId);
     const managedMode = settings.managedMode;
     
     return NextResponse.json({
@@ -39,8 +41,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = requireUserIdFromRequest(request);
     const body = await request.json();
-    const current = await getSettings();
+    const current = await getSettings(userId);
     const managedMode = current.managedMode;
     const assignOnRegistration =
       (process.env.MANAGED_ASSIGN_NUMBER_ON_REGISTRATION || 'false').toLowerCase() === 'true';
@@ -97,21 +100,21 @@ export async function POST(request: NextRequest) {
     
     // Handle credit updates
     if (typeof body.addCredits === 'number') {
-      await updateCredits(body.addCredits);
+      await updateCredits(body.addCredits, userId);
     }
     
-    await saveSettings(toSave);
+    await saveSettings(toSave, userId);
 
     let assignedPhoneNumber = current.assignedPhoneNumber || '';
     if (managedMode && assignOnRegistration && !assignedPhoneNumber) {
-      assignedPhoneNumber = await assignManagedNumber();
+      assignedPhoneNumber = await assignManagedNumber(userId);
     }
 
     resetClient();
     
     return NextResponse.json({
       success: true,
-      credits: await getCredits(),
+      credits: await getCredits(userId),
       assignedPhoneNumber,
     });
   } catch (error) {
@@ -121,13 +124,14 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const userId = requireUserIdFromRequest(request);
     const body = await request.json();
     
     if (typeof body.credits === 'number') {
-      await setCredits(body.credits);
+      await setCredits(body.credits, userId);
     }
     
-    return NextResponse.json({ success: true, credits: await getCredits() });
+    return NextResponse.json({ success: true, credits: await getCredits(userId) });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to update credits' }, { status: 500 });
   }

@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteTeamMember, listTeamMembers, saveTeamMember } from '@/lib/team-store';
+import { requireUserIdFromRequest } from '@/lib/request-user';
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const members = await listTeamMembers();
+    const userId = requireUserIdFromRequest(request);
+    const members = await listTeamMembers(userId);
     return NextResponse.json({ members });
   } catch (error) {
     console.error('Failed to list team members:', error);
@@ -13,6 +15,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = requireUserIdFromRequest(request);
     const body = await request.json();
 
     if (!body?.name || !body?.email || !body?.role) {
@@ -25,7 +28,7 @@ export async function POST(request: NextRequest) {
       email: body.email,
       role: body.role,
       active: typeof body.active === 'boolean' ? body.active : true,
-    });
+    }, userId);
 
     return NextResponse.json({ success: true, member });
   } catch (error) {
@@ -36,6 +39,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const userId = requireUserIdFromRequest(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -43,7 +47,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    await deleteTeamMember(id);
+    await deleteTeamMember(id, userId);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Failed to delete team member:', error);

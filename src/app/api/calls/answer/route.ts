@@ -196,11 +196,15 @@ function buildTtsAudioUrl(params: {
   text: string;
   voiceId: string;
   language: string;
+  userId?: string;
 }): string {
   const url = new URL(`${params.appUrl}/api/calls/tts`);
   url.searchParams.set('script', clipText(params.text, 320));
   url.searchParams.set('voiceId', params.voiceId);
   url.searchParams.set('language', params.language || 'en-US');
+  if (params.userId) {
+    url.searchParams.set('userId', params.userId);
+  }
   return url.toString();
 }
 
@@ -211,6 +215,7 @@ function appendSpeech(
     appUrl: string;
     voiceId: string;
     language: string;
+    userId?: string;
   }
 ) {
   const spoken = clipText(text, 320);
@@ -222,6 +227,7 @@ function appendSpeech(
       text: spoken,
       voiceId: options.voiceId,
       language: options.language,
+      userId: options.userId,
     }));
     return;
   }
@@ -241,6 +247,7 @@ function buildActionUrl(params: {
   language: string;
   voiceId: string;
   callerIdentityId: string;
+  userId?: string;
   record: boolean;
   transcribe: boolean;
   state: ConversationState;
@@ -256,6 +263,9 @@ function buildActionUrl(params: {
 
   if (params.callerIdentityId) {
     url.searchParams.set('callerIdentityId', params.callerIdentityId);
+  }
+  if (params.userId) {
+    url.searchParams.set('userId', params.userId);
   }
 
   url.searchParams.set('ctx', encodeState(params.state));
@@ -298,6 +308,7 @@ function buildConversationTwiml(params: {
   language: string;
   voiceId: string;
   callerIdentityId: string;
+  userId?: string;
   record: boolean;
   transcribe: boolean;
   mode: string;
@@ -311,6 +322,7 @@ function buildConversationTwiml(params: {
     language: params.language,
     voiceId: params.voiceId,
     callerIdentityId: params.callerIdentityId,
+    userId: params.userId,
     record: params.record,
     transcribe: params.transcribe,
     mode: params.mode,
@@ -333,6 +345,7 @@ function buildConversationTwiml(params: {
     appUrl: params.appUrl,
     voiceId: params.voiceId,
     language: params.language,
+    userId: params.userId,
   });
 
   // If no speech is captured, loop back into the same route with current state.
@@ -346,6 +359,7 @@ function buildForwardTwiml(params: {
   forward: string;
   language: string;
   voiceId: string;
+  userId?: string;
   record: boolean;
   spokenText: string;
 }): string {
@@ -355,15 +369,19 @@ function buildForwardTwiml(params: {
     appUrl: params.appUrl,
     voiceId: params.voiceId,
     language: params.language,
+    userId: params.userId,
   });
 
   appendSpeech(response, 'Connecting you now to our team.', {
     appUrl: params.appUrl,
     voiceId: params.voiceId,
     language: params.language,
+    userId: params.userId,
   });
 
-  const actionBase = `${params.appUrl}/api/calls/handle-forward?callSid=${encodeURIComponent(params.callSid)}`;
+  const actionBase =
+    `${params.appUrl}/api/calls/handle-forward?callSid=${encodeURIComponent(params.callSid)}` +
+    (params.userId ? `&userId=${encodeURIComponent(params.userId)}` : '');
   const dialOptions: Record<string, unknown> = {
     timeout: 30,
     action: params.record ? `${actionBase}&record=true` : actionBase,
@@ -382,6 +400,7 @@ function buildEndTwiml(params: {
   appUrl: string;
   language: string;
   voiceId: string;
+  userId?: string;
   spokenText: string;
 }): string {
   const response = new twilio.twiml.VoiceResponse();
@@ -389,6 +408,7 @@ function buildEndTwiml(params: {
     appUrl: params.appUrl,
     voiceId: params.voiceId,
     language: params.language,
+    userId: params.userId,
   });
   response.hangup();
   return response.toString();
@@ -411,9 +431,10 @@ async function handleAnswer(request: NextRequest) {
     const speechResult = clipText(pick('SpeechResult'), 260);
     const mode = pick('mode') || 'conversation';
     const callerIdentityId = pick('callerIdentityId');
+    const callUserId = pick('userId') || 'default';
 
-    const settings = await getSettings();
-    const callerIdentity = callerIdentityId ? await getCallerIdentity(callerIdentityId) : null;
+    const settings = await getSettings(callUserId);
+    const callerIdentity = callerIdentityId ? await getCallerIdentity(callerIdentityId, callUserId) : null;
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
     const legacyScript = pick('target') || pick('script') || callerIdentity?.script || 'Goal: qualify lead and connect to specialist';
@@ -428,6 +449,7 @@ async function handleAnswer(request: NextRequest) {
         appUrl,
         language,
         voiceId,
+        userId: callUserId,
         spokenText: 'Thanks for answering. Our team line is currently unavailable. We will call you back shortly.',
       });
 
@@ -442,12 +464,12 @@ async function handleAnswer(request: NextRequest) {
       const twiml = generateCallTwiML(legacyScript, forward, callSid, {
         record,
         transcribe,
-        transcriptionCallback: `${appUrl}/api/calls/transcription`,
+        transcriptionCallback: `${appUrl}/api/calls/transcription?userId=${encodeURIComponent(callUserId)}`,
         webSocketUrl: settings.webSocketUrl,
         language,
         voiceId,
         ttsAudioUrl: !isTwilioNativeVoice(voiceId)
-          ? buildTtsAudioUrl({ appUrl, text: legacyScript, voiceId, language })
+          ? buildTtsAudioUrl({ appUrl, text: legacyScript, voiceId, language, userId: callUserId })
           : '',
       });
 
@@ -494,6 +516,7 @@ async function handleAnswer(request: NextRequest) {
           language,
           voiceId,
           callerIdentityId,
+          userId: callUserId,
           record,
           transcribe,
           mode: 'conversation',
@@ -513,6 +536,7 @@ async function handleAnswer(request: NextRequest) {
           appUrl,
           language,
           voiceId,
+          userId: callUserId,
           spokenText: 'No worries, I will let you go. Thanks for your time and have a great day.',
         });
 
@@ -531,6 +555,7 @@ async function handleAnswer(request: NextRequest) {
         language,
         voiceId,
         callerIdentityId,
+        userId: callUserId,
         record,
         transcribe,
         mode: 'conversation',
@@ -574,6 +599,7 @@ async function handleAnswer(request: NextRequest) {
         appUrl,
         language,
         voiceId,
+        userId: callUserId,
         spokenText: callbackText,
       });
 
@@ -633,6 +659,7 @@ async function handleAnswer(request: NextRequest) {
         forward,
         language,
         voiceId,
+        userId: callUserId,
         record,
         spokenText: reply || 'Great, I can connect you now with our team.',
       });
@@ -653,6 +680,7 @@ async function handleAnswer(request: NextRequest) {
         appUrl,
         language,
         voiceId,
+        userId: callUserId,
         spokenText: reply || 'Thank you for your time today. Have a great day.',
       });
 
@@ -668,6 +696,7 @@ async function handleAnswer(request: NextRequest) {
       language,
       voiceId,
       callerIdentityId,
+      userId: callUserId,
       record,
       transcribe,
       mode: 'conversation',

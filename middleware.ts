@@ -1,10 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import {
   ACCESS_COOKIE_NAME,
+  isAccountAuthEnabled,
   isAccessProtectionEnabled,
   isAuthorizedWithToken,
   shouldSkipAuthPath,
 } from './src/lib/access-control';
+
+const SESSION_COOKIE_NAME = 'acp_session';
 
 export function middleware(request: NextRequest) {
   if (!isAccessProtectionEnabled()) {
@@ -18,6 +21,12 @@ export function middleware(request: NextRequest) {
   }
 
   const token = request.cookies.get(ACCESS_COOKIE_NAME)?.value;
+  const sessionToken = request.cookies.get(SESSION_COOKIE_NAME)?.value;
+
+  if (isAccountAuthEnabled() && Boolean(sessionToken)) {
+    return NextResponse.next();
+  }
+
   if (isAuthorizedWithToken(token)) {
     return NextResponse.next();
   }

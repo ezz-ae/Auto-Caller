@@ -53,6 +53,7 @@ export interface CallResult {
 
 export interface Recording {
   id: string;
+  userId?: string;
   callSid: string;
   campaignId: string;
   phoneNumber: string;
@@ -66,6 +67,7 @@ export interface Recording {
 
 export interface Transcript {
   id: string;
+  userId?: string;
   recordingId: string;
   text: string;
   confidence: number;

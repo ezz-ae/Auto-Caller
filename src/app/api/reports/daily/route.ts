@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getAllCampaigns } from '@/lib/store';
 import { buildDailyReport } from '@/lib/call-center-intelligence';
+import { requireUserIdFromRequest } from '@/lib/request-user';
 
 export async function GET(request: NextRequest) {
   try {
+    const userId = requireUserIdFromRequest(request);
     const { searchParams } = new URL(request.url);
     const dateInput = String(searchParams.get('date') || '').trim();
     const requestedDate = dateInput ? new Date(dateInput) : new Date();
@@ -12,7 +14,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid date format' }, { status: 400 });
     }
 
-    const campaigns = await getAllCampaigns();
+    const campaigns = await getAllCampaigns(userId);
     const report = buildDailyReport(campaigns, requestedDate);
 
     return NextResponse.json({

@@ -7,7 +7,9 @@ import { CallResult } from '@/lib/types';
 // Handle call status updates from Twilio
 export async function POST(request: NextRequest) {
   try {
-    const callerIdentityId = new URL(request.url).searchParams.get('callerIdentityId') || '';
+    const url = new URL(request.url);
+    const callerIdentityId = url.searchParams.get('callerIdentityId') || '';
+    const userId = url.searchParams.get('userId') || undefined;
     const formData = await request.formData();
     
     const callSid = formData.get('CallSid') as string;
@@ -81,17 +83,17 @@ export async function POST(request: NextRequest) {
         await applyCallerIdentityKpiDelta(callerIdentityId, {
           connectedCalls: 1,
           lastCalledAt: new Date(),
-        });
+        }, userId);
       } else if (callStatus === 'no-answer' || callStatus === 'busy') {
         await applyCallerIdentityKpiDelta(callerIdentityId, {
           noAnswerCalls: 1,
           lastCalledAt: new Date(),
-        });
+        }, userId);
       } else if (callStatus === 'failed') {
         await applyCallerIdentityKpiDelta(callerIdentityId, {
           failedCalls: 1,
           lastCalledAt: new Date(),
-        });
+        }, userId);
       }
     }
     

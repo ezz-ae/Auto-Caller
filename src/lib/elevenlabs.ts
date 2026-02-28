@@ -40,8 +40,8 @@ function normalizeTtsText(input: string): string {
 }
 
 // Get available voices
-export async function getVoices(): Promise<ElevenLabsVoice[]> {
-  const settings = await getSettings();
+export async function getVoices(userId = 'default'): Promise<ElevenLabsVoice[]> {
+  const settings = await getSettings(userId);
   
   if (!settings.elevenLabsApiKey) {
     // Return default voices if no API key
@@ -78,9 +78,10 @@ export async function generateSpeech(
   voiceId: string = '21m00Tcm4TlvDq8ikWAM',
   options: {
     language?: string;
+    userId?: string;
   } = {}
 ): Promise<Buffer> {
-  const settings = await getSettings();
+  const settings = await getSettings(options.userId || 'default');
   
   if (!settings.elevenLabsApiKey) {
     throw new Error('ElevenLabs API key not configured');

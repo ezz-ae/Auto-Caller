@@ -11,6 +11,7 @@ import { Recording } from '@/lib/types';
 
 async function handleVoicemail(request: NextRequest) {
   const formData = await request.formData();
+  const userId = new URL(request.url).searchParams.get('userId') || undefined;
 
   const callSid = (formData.get('CallSid') || '') as string;
   const recordingSid = (formData.get('RecordingSid') || '') as string;
@@ -25,7 +26,7 @@ async function handleVoicemail(request: NextRequest) {
     await updateCampaignResultByCallSid(callSid, { status: 'voicemail' });
   }
 
-  const existingRecording = callSid ? await getRecordingByCallSid(callSid) : null;
+  const existingRecording = callSid ? await getRecordingByCallSid(callSid, userId) : null;
 
   if (existingRecording) {
     existingRecording.recordingSid = recordingSid || existingRecording.recordingSid;
@@ -36,10 +37,12 @@ async function handleVoicemail(request: NextRequest) {
     existingRecording.status = 'completed';
     existingRecording.campaignId = existingRecording.campaignId || campaignId;
     existingRecording.phoneNumber = existingRecording.phoneNumber || phoneNumber;
+    existingRecording.userId = existingRecording.userId || userId || matchedCall?.campaign.userId || 'default';
     await saveRecording(existingRecording);
   } else if (recordingSid && recordingUrl) {
     const recording: Recording = {
       id: uuidv4(),
+      userId: userId || matchedCall?.campaign.userId || 'default',
       callSid,
       campaignId,
       phoneNumber,

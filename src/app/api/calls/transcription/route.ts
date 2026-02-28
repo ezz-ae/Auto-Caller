@@ -6,6 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 // Handle transcription callback from Twilio
 export async function POST(request: NextRequest) {
   try {
+    const userId = new URL(request.url).searchParams.get('userId') || undefined;
     const formData = await request.formData();
     
     const callSid = formData.get('CallSid') as string;
@@ -26,7 +27,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Find the recording
-    const recording = await getRecordingByCallSid(callSid);
+    const recording = await getRecordingByCallSid(callSid, userId);
     
     if (!recording) {
       console.log('No recording found for call:', callSid);
@@ -36,6 +37,7 @@ export async function POST(request: NextRequest) {
     // Create transcript
     const transcript: Transcript = {
       id: uuidv4(),
+      userId: recording.userId || userId || 'default',
       recordingId: recording.id,
       text: transcriptionText,
       confidence: 0.85, // Twilio doesn't provide confidence
@@ -43,7 +45,7 @@ export async function POST(request: NextRequest) {
     };
     
     // Update recording with transcript
-    await updateRecordingTranscript(recording.id, transcript);
+    await updateRecordingTranscript(recording.id, transcript, transcript.userId);
     
     return NextResponse.json({ 
       success: true, 

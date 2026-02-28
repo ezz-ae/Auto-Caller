@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getVoices } from '@/lib/elevenlabs';
+import { NextRequest } from 'next/server';
+import { requireUserIdFromRequest } from '@/lib/request-user';
 
 const HUMAN_PREFERRED_IDS = new Set([
   '21m00Tcm4TlvDq8ikWAM', // Rachel
@@ -46,9 +48,10 @@ function qualityScore(input: { id: string; category: string; labels: Record<stri
   return score;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const voices = await getVoices();
+    const userId = requireUserIdFromRequest(request);
+    const voices = await getVoices(userId);
     const twilioVoices = [
       { id: 'alice', name: 'Twilio Alice', category: 'twilio', labels: { gender: 'female', language: 'multi' }, language: 'multi', source: 'twilio', previewUrl: '' },
       { id: 'Polly.Joanna', name: 'Polly Joanna', category: 'twilio', labels: { gender: 'female', language: 'en-US' }, language: 'en-US', source: 'twilio', previewUrl: '' },

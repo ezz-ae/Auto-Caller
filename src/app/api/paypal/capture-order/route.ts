@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { updateCredits } from '@/lib/store'
 import { assignManagedNumber } from '@/lib/store'
 import { assignDedicatedNumberToCallerIdentity } from '@/lib/caller-identity-store'
+import { requireUserIdFromRequest } from '@/lib/request-user'
 
 // PayPal API base URL
 const PAYPAL_API = process.env.PAYPAL_MODE === 'live' 
@@ -35,6 +36,7 @@ async function getAccessToken(): Promise<string> {
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = requireUserIdFromRequest(request)
     const body = await request.json()
     const { orderId } = body
     
@@ -71,6 +73,10 @@ export async function POST(request: NextRequest) {
         const kind = parsed.kind as 'credits' | 'number' | undefined
         const credits = Number(parsed.credits || 0)
         const productId = parsed.productId || parsed.tierId
+        const paymentUserId = String(parsed.userId || '').trim()
+        if (paymentUserId && paymentUserId !== userId) {
+          return NextResponse.json({ error: 'Order does not belong to current user' }, { status: 403 })
+        }
         const callerIdentityId =
           typeof parsed.callerIdentityId === 'string' && parsed.callerIdentityId.trim()
             ? parsed.callerIdentityId.trim()
@@ -78,7 +84,7 @@ export async function POST(request: NextRequest) {
 
         if (kind === 'number') {
           if (callerIdentityId) {
-            const identity = await assignDedicatedNumberToCallerIdentity(callerIdentityId)
+            const identity = await assignDedicatedNumberToCallerIdentity(callerIdentityId, userId)
             if (!identity?.dedicatedNumber) {
               return NextResponse.json({ error: 'Failed to assign dedicated number to caller identity' }, { status: 500 })
             }
@@ -90,22 +96,22 @@ export async function POST(request: NextRequest) {
               callerIdentityId: identity.id,
               callerIdentityName: identity.name,
               productId,
-              credits: await updateCredits(0),
+              credits: await updateCredits(0, userId),
             })
           }
 
-          const assignedPhoneNumber = await assignManagedNumber()
+          const assignedPhoneNumber = await assignManagedNumber(userId)
           return NextResponse.json({
             success: true,
             message: `Payment successful! Your dedicated number is ready: ${assignedPhoneNumber}`,
             assignedPhoneNumber,
             productId,
-            credits: await updateCredits(0),
+            credits: await updateCredits(0, userId),
           })
         }
 
         // Default behavior: add credits
-        const newCredits = await updateCredits(credits)
+        const newCredits = await updateCredits(credits, userId)
         
         return NextResponse.json({
           success: true,

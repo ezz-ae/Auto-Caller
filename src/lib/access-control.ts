@@ -1,7 +1,19 @@
 export const ACCESS_COOKIE_NAME = 'acp_auth';
 
 export function isAccessProtectionEnabled() {
+  const forced = String(process.env.AUTH_REQUIRED || '').trim().toLowerCase();
+  if (forced === 'false') return false;
+  if (forced === 'true') return true;
+
+  if (isAccountAuthEnabled()) return true;
   return Boolean(process.env.APP_ACCESS_PASSWORD);
+}
+
+export function isAccountAuthEnabled() {
+  const mode = String(process.env.AUTH_MODE || '').trim().toLowerCase();
+  if (mode === 'legacy') return false;
+  if (mode === 'accounts') return true;
+  return Boolean(process.env.DATABASE_URL);
 }
 
 export function getExpectedAuthToken() {
@@ -20,6 +32,8 @@ export function shouldSkipAuthPath(pathname: string) {
   if (pathname.startsWith('/api/')) {
     const publicApiPrefixes = [
       '/api/auth/login',
+      '/api/auth/register',
+      '/api/auth/session',
       '/api/auth/logout',
       '/api/calls/answer',
       '/api/calls/status',
@@ -28,6 +42,7 @@ export function shouldSkipAuthPath(pathname: string) {
       '/api/calls/voicemail-recorded',
       '/api/calls/transcription',
       '/api/calls/tts',
+      '/api/transcriptions',
       '/api/cron/dispatch-scheduled',
       '/api/paypal/webhook',
     ];

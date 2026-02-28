@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteCallerIdentity, listCallerIdentities, saveCallerIdentity } from '@/lib/caller-identity-store';
 import { getSettings } from '@/lib/store';
+import { requireUserIdFromRequest } from '@/lib/request-user';
 
 function buildDefaultIdentityTargetBlueprint(input: {
   name: string;
@@ -37,9 +38,10 @@ function buildDefaultIdentityTargetBlueprint(input: {
   ].join('\n');
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
-    const identities = await listCallerIdentities();
+    const userId = requireUserIdFromRequest(request);
+    const identities = await listCallerIdentities(userId);
     return NextResponse.json({ identities });
   } catch (error) {
     console.error('Failed to list caller identities:', error);
@@ -49,8 +51,9 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = requireUserIdFromRequest(request);
     const body = await request.json();
-    const settings = await getSettings();
+    const settings = await getSettings(userId);
 
     const name = String(body?.name || '').trim();
     const position = String(body?.position || '').trim();
@@ -91,7 +94,7 @@ export async function POST(request: NextRequest) {
       script,
       sayThisRules,
       avoidThisRules,
-    });
+    }, userId);
 
     return NextResponse.json({ success: true, identity });
   } catch (error) {
@@ -102,6 +105,7 @@ export async function POST(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const userId = requireUserIdFromRequest(request);
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -109,7 +113,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'id is required' }, { status: 400 });
     }
 
-    await deleteCallerIdentity(id);
+    await deleteCallerIdentity(id, userId);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Failed to delete caller identity:', error);

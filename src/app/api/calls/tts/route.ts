@@ -1,17 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSpeech } from '@/lib/elevenlabs';
+import { getUserIdFromRequest } from '@/lib/request-user';
 
 function getParamsFromRequest(request: NextRequest) {
   const url = new URL(request.url);
   const script = (url.searchParams.get('script') || '').trim();
   const voiceId = (url.searchParams.get('voiceId') || '').trim();
   const language = (url.searchParams.get('language') || 'en-US').trim();
-  return { script, voiceId, language };
+  const userId = (url.searchParams.get('userId') || '').trim();
+  return { script, voiceId, language, userId };
 }
 
 async function synthesize(request: NextRequest) {
   try {
-    const { script, voiceId, language } = getParamsFromRequest(request);
+    const { script, voiceId, language, userId: userIdFromQuery } = getParamsFromRequest(request);
+    const userId = userIdFromQuery || getUserIdFromRequest(request, { fallbackToDefault: true }) || 'default';
 
     if (!script) {
       return NextResponse.json({ error: 'script is required' }, { status: 400 });
@@ -23,7 +26,7 @@ async function synthesize(request: NextRequest) {
       return NextResponse.json({ error: 'script too long for single TTS request' }, { status: 400 });
     }
 
-    const audio = await generateSpeech(script, voiceId, { language });
+    const audio = await generateSpeech(script, voiceId, { language, userId });
     const payload = new Uint8Array(audio);
 
     return new NextResponse(payload, {

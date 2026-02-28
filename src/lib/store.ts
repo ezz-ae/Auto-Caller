@@ -6,9 +6,7 @@ import { tryProvisionManagedNumber } from './managed-number';
 import { Campaign, CallResult, Recording, Transcript } from '@/lib/types';
 
 const DATA_DIR = process.env.DATA_DIR || (process.env.VERCEL ? '/tmp/auto-caller-data' : path.join(process.cwd(), 'data'));
-const SETTINGS_FILE = path.join(DATA_DIR, 'settings.json');
 const CAMPAIGNS_DIR = path.join(DATA_DIR, 'campaigns');
-const CREDITS_FILE = path.join(DATA_DIR, 'credits.json');
 const RECORDINGS_DIR = path.join(DATA_DIR, 'recordings');
 const TRANSCRIPTS_DIR = path.join(DATA_DIR, 'transcripts');
 
@@ -34,6 +32,18 @@ interface StoredSettings {
   companyDetails: string;
   sayThisRules: string;
   avoidThisRules: string;
+}
+
+function normalizeUserId(userId?: string): string {
+  return String(userId || '').trim() || 'default';
+}
+
+function getSettingsFile(userId: string): string {
+  return path.join(DATA_DIR, `settings.${normalizeUserId(userId)}.json`);
+}
+
+function getCreditsFile(userId: string): string {
+  return path.join(DATA_DIR, `credits.${normalizeUserId(userId)}.json`);
 }
 
 function ensureDataDir() {
@@ -178,6 +188,7 @@ function deserializeCampaign(row: {
 
 function deserializeRecording(row: {
   id: string;
+  userId: string;
   callSid: string;
   campaignId: string;
   phoneNumber: string;
@@ -190,6 +201,7 @@ function deserializeRecording(row: {
 }): Recording {
   return {
     id: row.id,
+    userId: row.userId,
     callSid: row.callSid,
     campaignId: row.campaignId,
     phoneNumber: row.phoneNumber,
@@ -240,27 +252,28 @@ function deserializeSettings(row: {
   };
 }
 
-function fsGetSettings(): StoredSettings {
+function fsGetSettings(userId = 'default'): StoredSettings {
   ensureDataDir();
   const defaults = defaultSettings();
+  const settingsFile = getSettingsFile(userId);
 
-  if (!fs.existsSync(SETTINGS_FILE)) {
+  if (!fs.existsSync(settingsFile)) {
     return withManagedOverrides(defaults);
   }
 
-  const data = fs.readFileSync(SETTINGS_FILE, 'utf-8');
+  const data = fs.readFileSync(settingsFile, 'utf-8');
   return withManagedOverrides({ ...defaults, ...JSON.parse(data) });
 }
 
-function fsSaveSettings(settings: Partial<StoredSettings>): void {
+function fsSaveSettings(settings: Partial<StoredSettings>, userId = 'default'): void {
   ensureDataDir();
-  const current = fsGetSettings();
+  const current = fsGetSettings(userId);
   const updated = { ...current, ...settings };
-  fs.writeFileSync(SETTINGS_FILE, JSON.stringify(updated, null, 2));
+  fs.writeFileSync(getSettingsFile(userId), JSON.stringify(updated, null, 2));
 }
 
-async function fsAssignManagedNumber(): Promise<string> {
-  const settings = fsGetSettings();
+async function fsAssignManagedNumber(userId = 'default'): Promise<string> {
+  const settings = fsGetSettings(userId);
 
   if (settings.assignedPhoneNumber) {
     return settings.assignedPhoneNumber;
@@ -278,7 +291,7 @@ async function fsAssignManagedNumber(): Promise<string> {
     fsSaveSettings({
       assignedPhoneNumber,
       twilioPhoneNumber: assignedPhoneNumber,
-    });
+    }, userId);
 
     return assignedPhoneNumber;
   };
@@ -288,15 +301,15 @@ async function fsAssignManagedNumber(): Promise<string> {
     fsSaveSettings({
       assignedPhoneNumber: provisionedNumber,
       twilioPhoneNumber: provisionedNumber,
-    });
+    }, userId);
     return provisionedNumber;
   }
 
   return fallbackAssign();
 }
 
-async function dbAssignManagedNumber(): Promise<string> {
-  const settings = await dbGetSettings();
+async function dbAssignManagedNumber(userId = 'default'): Promise<string> {
+  const settings = await dbGetSettings(userId);
 
   if (settings.assignedPhoneNumber) {
     return settings.assignedPhoneNumber;
@@ -307,7 +320,7 @@ async function dbAssignManagedNumber(): Promise<string> {
     await dbSaveSettings({
       assignedPhoneNumber: provisionedNumber,
       twilioPhoneNumber: provisionedNumber,
-    });
+    }, userId);
     return provisionedNumber;
   }
 
@@ -322,34 +335,35 @@ async function dbAssignManagedNumber(): Promise<string> {
   await dbSaveSettings({
     assignedPhoneNumber,
     twilioPhoneNumber: assignedPhoneNumber,
-  });
+  }, userId);
 
   return assignedPhoneNumber;
 }
 
-function fsGetCredits(): number {
+function fsGetCredits(userId = 'default'): number {
   ensureDataDir();
+  const creditsFile = getCreditsFile(userId);
 
-  if (!fs.existsSync(CREDITS_FILE)) {
-    fs.writeFileSync(CREDITS_FILE, JSON.stringify({ credits: 100 }));
+  if (!fs.existsSync(creditsFile)) {
+    fs.writeFileSync(creditsFile, JSON.stringify({ credits: 100 }));
     return 100;
   }
 
-  const data = fs.readFileSync(CREDITS_FILE, 'utf-8');
+  const data = fs.readFileSync(creditsFile, 'utf-8');
   return JSON.parse(data).credits;
 }
 
-function fsUpdateCredits(delta: number): number {
+function fsUpdateCredits(delta: number, userId = 'default'): number {
   ensureDataDir();
-  const current = fsGetCredits();
+  const current = fsGetCredits(userId);
   const updated = Math.max(0, current + delta);
-  fs.writeFileSync(CREDITS_FILE, JSON.stringify({ credits: updated }));
+  fs.writeFileSync(getCreditsFile(userId), JSON.stringify({ credits: updated }));
   return updated;
 }
 
-function fsSetCredits(credits: number): void {
+function fsSetCredits(credits: number, userId = 'default'): void {
   ensureDataDir();
-  fs.writeFileSync(CREDITS_FILE, JSON.stringify({ credits }));
+  fs.writeFileSync(getCreditsFile(userId), JSON.stringify({ credits }));
 }
 
 function fsSaveCampaign(campaign: Campaign): void {
@@ -358,7 +372,7 @@ function fsSaveCampaign(campaign: Campaign): void {
   fs.writeFileSync(filePath, JSON.stringify(campaign, null, 2));
 }
 
-function fsGetCampaign(id: string): Campaign | null {
+function fsGetCampaign(id: string, userId?: string): Campaign | null {
   ensureDataDir();
   const filePath = path.join(CAMPAIGNS_DIR, `${id}.json`);
 
@@ -367,23 +381,28 @@ function fsGetCampaign(id: string): Campaign | null {
   }
 
   const data = fs.readFileSync(filePath, 'utf-8');
-  return JSON.parse(data);
+  const campaign = JSON.parse(data) as Campaign;
+  if (userId && normalizeUserId(campaign.userId) !== normalizeUserId(userId)) {
+    return null;
+  }
+  return campaign;
 }
 
-function fsGetAllCampaigns(): Campaign[] {
+function fsGetAllCampaigns(userId?: string): Campaign[] {
   ensureDataDir();
   const files = fs.readdirSync(CAMPAIGNS_DIR).filter(f => f.endsWith('.json'));
 
   return files
     .map(file => {
       const data = fs.readFileSync(path.join(CAMPAIGNS_DIR, file), 'utf-8');
-      return JSON.parse(data);
+      return JSON.parse(data) as Campaign;
     })
+    .filter(campaign => !userId || normalizeUserId(campaign.userId) === normalizeUserId(userId))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
-function fsUpdateCampaignResult(campaignId: string, result: CallResult): void {
-  const campaign = fsGetCampaign(campaignId);
+function fsUpdateCampaignResult(campaignId: string, result: CallResult, userId?: string): void {
+  const campaign = fsGetCampaign(campaignId, userId);
   if (!campaign) return;
 
   const existingIndex = campaign.results.findIndex(r => r.id === result.id);
@@ -442,21 +461,26 @@ function fsUpdateCampaignResultByCallSid(
   };
 }
 
-function fsDeleteCampaign(id: string): void {
+function fsDeleteCampaign(id: string, userId?: string): void {
+  const campaign = fsGetCampaign(id, userId);
+  if (!campaign) return;
+
   ensureDataDir();
   const filePath = path.join(CAMPAIGNS_DIR, `${id}.json`);
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-  }
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 }
 
 function fsSaveRecording(recording: Recording): void {
   ensureDataDir();
   const filePath = path.join(RECORDINGS_DIR, `${recording.id}.json`);
-  fs.writeFileSync(filePath, JSON.stringify(recording, null, 2));
+  const withUser = {
+    ...recording,
+    userId: normalizeUserId(recording.userId),
+  };
+  fs.writeFileSync(filePath, JSON.stringify(withUser, null, 2));
 }
 
-function fsGetRecording(id: string): Recording | null {
+function fsGetRecording(id: string, userId?: string): Recording | null {
   ensureDataDir();
   const filePath = path.join(RECORDINGS_DIR, `${id}.json`);
 
@@ -465,64 +489,79 @@ function fsGetRecording(id: string): Recording | null {
   }
 
   const data = fs.readFileSync(filePath, 'utf-8');
-  return JSON.parse(data);
+  const recording = JSON.parse(data) as Recording;
+  const recordingUserId = normalizeUserId(recording.userId);
+  if (userId && recordingUserId !== normalizeUserId(userId)) return null;
+  return { ...recording, userId: recordingUserId };
 }
 
-function fsGetRecordingByCallSid(callSid: string): Recording | null {
+function fsGetRecordingByCallSid(callSid: string, userId?: string): Recording | null {
   ensureDataDir();
   const files = fs.readdirSync(RECORDINGS_DIR).filter(f => f.endsWith('.json'));
 
   for (const file of files) {
     const data = fs.readFileSync(path.join(RECORDINGS_DIR, file), 'utf-8');
     const recording: Recording = JSON.parse(data);
+    const recordingUserId = normalizeUserId(recording.userId);
     if (recording.callSid === callSid) {
-      return recording;
+      if (userId && recordingUserId !== normalizeUserId(userId)) continue;
+      return { ...recording, userId: recordingUserId };
     }
   }
 
   return null;
 }
 
-function fsGetAllRecordings(): Recording[] {
+function fsGetAllRecordings(userId?: string): Recording[] {
   ensureDataDir();
   const files = fs.readdirSync(RECORDINGS_DIR).filter(f => f.endsWith('.json'));
 
   return files
     .map(file => {
       const data = fs.readFileSync(path.join(RECORDINGS_DIR, file), 'utf-8');
-      return JSON.parse(data);
+      const recording = JSON.parse(data) as Recording;
+      return {
+        ...recording,
+        userId: normalizeUserId(recording.userId),
+      };
     })
+    .filter(recording => !userId || normalizeUserId(recording.userId) === normalizeUserId(userId))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
-function fsGetRecordingsByCampaign(campaignId: string): Recording[] {
-  return fsGetAllRecordings().filter(r => r.campaignId === campaignId);
+function fsGetRecordingsByCampaign(campaignId: string, userId?: string): Recording[] {
+  return fsGetAllRecordings(userId).filter(r => r.campaignId === campaignId);
 }
 
-function fsUpdateRecordingTranscript(recordingId: string, transcript: Transcript): void {
-  const recording = fsGetRecording(recordingId);
+function fsUpdateRecordingTranscript(recordingId: string, transcript: Transcript, userId?: string): void {
+  const recording = fsGetRecording(recordingId, userId);
   if (!recording) return;
 
-  recording.transcript = transcript;
+  recording.transcript = { ...transcript, userId: normalizeUserId(recording.userId) };
   recording.status = 'completed';
   fsSaveRecording(recording);
 }
 
-function fsDeleteRecording(id: string): void {
+function fsDeleteRecording(id: string, userId?: string): void {
+  const recording = fsGetRecording(id, userId);
+  if (!recording) return;
+
   ensureDataDir();
   const filePath = path.join(RECORDINGS_DIR, `${id}.json`);
-  if (fs.existsSync(filePath)) {
-    fs.unlinkSync(filePath);
-  }
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
 }
 
 function fsSaveTranscript(transcript: Transcript): void {
   ensureDataDir();
   const filePath = path.join(TRANSCRIPTS_DIR, `${transcript.id}.json`);
-  fs.writeFileSync(filePath, JSON.stringify(transcript, null, 2));
+  const withUser = {
+    ...transcript,
+    userId: normalizeUserId(transcript.userId),
+  };
+  fs.writeFileSync(filePath, JSON.stringify(withUser, null, 2));
 }
 
-function fsGetTranscript(id: string): Transcript | null {
+function fsGetTranscript(id: string, userId?: string): Transcript | null {
   ensureDataDir();
   const filePath = path.join(TRANSCRIPTS_DIR, `${id}.json`);
 
@@ -531,28 +570,37 @@ function fsGetTranscript(id: string): Transcript | null {
   }
 
   const data = fs.readFileSync(filePath, 'utf-8');
-  return JSON.parse(data);
+  const transcript = JSON.parse(data) as Transcript;
+  const transcriptUserId = normalizeUserId(transcript.userId);
+  if (userId && transcriptUserId !== normalizeUserId(userId)) return null;
+  return { ...transcript, userId: transcriptUserId };
 }
 
-function fsGetAllTranscripts(): Transcript[] {
+function fsGetAllTranscripts(userId?: string): Transcript[] {
   ensureDataDir();
   const files = fs.readdirSync(TRANSCRIPTS_DIR).filter(f => f.endsWith('.json'));
 
   return files
     .map(file => {
       const data = fs.readFileSync(path.join(TRANSCRIPTS_DIR, file), 'utf-8');
-      return JSON.parse(data);
+      const transcript = JSON.parse(data) as Transcript;
+      return {
+        ...transcript,
+        userId: normalizeUserId(transcript.userId),
+      };
     })
+    .filter(transcript => !userId || normalizeUserId(transcript.userId) === normalizeUserId(userId))
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 }
 
-async function dbGetSettings(): Promise<StoredSettings> {
+async function dbGetSettings(userId = 'default'): Promise<StoredSettings> {
   const defaults = defaultSettings();
+  const scopedUserId = normalizeUserId(userId);
 
   const row = await prisma.appSettings.upsert({
-    where: { id: 'default' },
+    where: { id: scopedUserId },
     create: {
-      id: 'default',
+      id: scopedUserId,
       ...defaults,
     },
     update: {},
@@ -564,14 +612,15 @@ async function dbGetSettings(): Promise<StoredSettings> {
   });
 }
 
-async function dbSaveSettings(settings: Partial<StoredSettings>): Promise<void> {
-  const current = await dbGetSettings();
+async function dbSaveSettings(settings: Partial<StoredSettings>, userId = 'default'): Promise<void> {
+  const scopedUserId = normalizeUserId(userId);
+  const current = await dbGetSettings(scopedUserId);
   const updated = { ...current, ...settings };
 
   await prisma.appSettings.upsert({
-    where: { id: 'default' },
+    where: { id: scopedUserId },
     create: {
-      id: 'default',
+      id: scopedUserId,
       ...updated,
     },
     update: {
@@ -595,43 +644,47 @@ async function dbSaveSettings(settings: Partial<StoredSettings>): Promise<void> 
   });
 }
 
-async function dbGetCredits(): Promise<number> {
+async function dbGetCredits(userId = 'default'): Promise<number> {
+  const scopedUserId = normalizeUserId(userId);
   const row = await prisma.creditBalance.upsert({
-    where: { id: 'default' },
-    create: { id: 'default', credits: 100 },
+    where: { id: scopedUserId },
+    create: { id: scopedUserId, credits: 100 },
     update: {},
   });
 
   return row.credits;
 }
 
-async function dbUpdateCredits(delta: number): Promise<number> {
-  const current = await dbGetCredits();
+async function dbUpdateCredits(delta: number, userId = 'default'): Promise<number> {
+  const scopedUserId = normalizeUserId(userId);
+  const current = await dbGetCredits(scopedUserId);
   const updated = Math.max(0, current + delta);
 
   await prisma.creditBalance.upsert({
-    where: { id: 'default' },
-    create: { id: 'default', credits: updated },
+    where: { id: scopedUserId },
+    create: { id: scopedUserId, credits: updated },
     update: { credits: updated },
   });
 
   return updated;
 }
 
-async function dbSetCredits(credits: number): Promise<void> {
+async function dbSetCredits(credits: number, userId = 'default'): Promise<void> {
+  const scopedUserId = normalizeUserId(userId);
   await prisma.creditBalance.upsert({
-    where: { id: 'default' },
-    create: { id: 'default', credits },
+    where: { id: scopedUserId },
+    create: { id: scopedUserId, credits },
     update: { credits },
   });
 }
 
 async function dbSaveCampaign(campaign: Campaign): Promise<void> {
+  const scopedUserId = normalizeUserId(campaign.userId);
   await prisma.campaignRecord.upsert({
     where: { id: campaign.id },
     create: {
       id: campaign.id,
-      userId: campaign.userId,
+      userId: scopedUserId,
       name: campaign.name,
       status: campaign.status,
       voiceId: campaign.voiceId,
@@ -650,7 +703,7 @@ async function dbSaveCampaign(campaign: Campaign): Promise<void> {
       completedAt: toDate(campaign.completedAt) || null,
     },
     update: {
-      userId: campaign.userId,
+      userId: scopedUserId,
       name: campaign.name,
       status: campaign.status,
       voiceId: campaign.voiceId,
@@ -671,19 +724,23 @@ async function dbSaveCampaign(campaign: Campaign): Promise<void> {
   });
 }
 
-async function dbGetCampaign(id: string): Promise<Campaign | null> {
+async function dbGetCampaign(id: string, userId?: string): Promise<Campaign | null> {
   const row = await prisma.campaignRecord.findUnique({ where: { id } });
   if (!row) return null;
+  if (userId && normalizeUserId(row.userId) !== normalizeUserId(userId)) return null;
   return deserializeCampaign(row);
 }
 
-async function dbGetAllCampaigns(): Promise<Campaign[]> {
-  const rows = await prisma.campaignRecord.findMany({ orderBy: { createdAt: 'desc' } });
+async function dbGetAllCampaigns(userId?: string): Promise<Campaign[]> {
+  const rows = await prisma.campaignRecord.findMany({
+    where: userId ? { userId: normalizeUserId(userId) } : undefined,
+    orderBy: { createdAt: 'desc' },
+  });
   return rows.map(deserializeCampaign);
 }
 
-async function dbUpdateCampaignResult(campaignId: string, result: CallResult): Promise<void> {
-  const campaign = await dbGetCampaign(campaignId);
+async function dbUpdateCampaignResult(campaignId: string, result: CallResult, userId?: string): Promise<void> {
+  const campaign = await dbGetCampaign(campaignId, userId);
   if (!campaign) return;
 
   const existingIndex = campaign.results.findIndex(r => r.id === result.id);
@@ -742,15 +799,22 @@ async function dbUpdateCampaignResultByCallSid(
   };
 }
 
-async function dbDeleteCampaign(id: string): Promise<void> {
-  await prisma.campaignRecord.deleteMany({ where: { id } });
+async function dbDeleteCampaign(id: string, userId?: string): Promise<void> {
+  await prisma.campaignRecord.deleteMany({
+    where: {
+      id,
+      ...(userId ? { userId: normalizeUserId(userId) } : {}),
+    },
+  });
 }
 
 async function dbSaveRecording(recording: Recording): Promise<void> {
+  const scopedUserId = normalizeUserId(recording.userId);
   await prisma.recordingRecord.upsert({
     where: { id: recording.id },
     create: {
       id: recording.id,
+      userId: scopedUserId,
       callSid: recording.callSid,
       campaignId: recording.campaignId,
       phoneNumber: recording.phoneNumber,
@@ -764,6 +828,7 @@ async function dbSaveRecording(recording: Recording): Promise<void> {
       createdAt: toDate(recording.createdAt) || new Date(),
     },
     update: {
+      userId: scopedUserId,
       callSid: recording.callSid,
       campaignId: recording.campaignId,
       phoneNumber: recording.phoneNumber,
@@ -779,50 +844,65 @@ async function dbSaveRecording(recording: Recording): Promise<void> {
   });
 }
 
-async function dbGetRecording(id: string): Promise<Recording | null> {
+async function dbGetRecording(id: string, userId?: string): Promise<Recording | null> {
   const row = await prisma.recordingRecord.findUnique({ where: { id } });
   if (!row) return null;
+  if (userId && normalizeUserId(row.userId) !== normalizeUserId(userId)) return null;
   return deserializeRecording(row);
 }
 
-async function dbGetRecordingByCallSid(callSid: string): Promise<Recording | null> {
+async function dbGetRecordingByCallSid(callSid: string, userId?: string): Promise<Recording | null> {
   const row = await prisma.recordingRecord.findUnique({ where: { callSid } });
   if (!row) return null;
+  if (userId && normalizeUserId(row.userId) !== normalizeUserId(userId)) return null;
   return deserializeRecording(row);
 }
 
-async function dbGetAllRecordings(): Promise<Recording[]> {
-  const rows = await prisma.recordingRecord.findMany({ orderBy: { createdAt: 'desc' } });
-  return rows.map(deserializeRecording);
-}
-
-async function dbGetRecordingsByCampaign(campaignId: string): Promise<Recording[]> {
+async function dbGetAllRecordings(userId?: string): Promise<Recording[]> {
   const rows = await prisma.recordingRecord.findMany({
-    where: { campaignId },
+    where: userId ? { userId: normalizeUserId(userId) } : undefined,
     orderBy: { createdAt: 'desc' },
   });
   return rows.map(deserializeRecording);
 }
 
-async function dbUpdateRecordingTranscript(recordingId: string, transcript: Transcript): Promise<void> {
-  const recording = await dbGetRecording(recordingId);
-  if (!recording) return;
-
-  recording.transcript = transcript;
-  recording.status = 'completed';
-  await dbSaveRecording(recording);
-  await dbSaveTranscript(transcript);
+async function dbGetRecordingsByCampaign(campaignId: string, userId?: string): Promise<Recording[]> {
+  const rows = await prisma.recordingRecord.findMany({
+    where: {
+      campaignId,
+      ...(userId ? { userId: normalizeUserId(userId) } : {}),
+    },
+    orderBy: { createdAt: 'desc' },
+  });
+  return rows.map(deserializeRecording);
 }
 
-async function dbDeleteRecording(id: string): Promise<void> {
-  await prisma.recordingRecord.deleteMany({ where: { id } });
+async function dbUpdateRecordingTranscript(recordingId: string, transcript: Transcript, userId?: string): Promise<void> {
+  const recording = await dbGetRecording(recordingId, userId);
+  if (!recording) return;
+
+  recording.transcript = { ...transcript, userId: recording.userId };
+  recording.status = 'completed';
+  await dbSaveRecording(recording);
+  await dbSaveTranscript({ ...transcript, userId: recording.userId });
+}
+
+async function dbDeleteRecording(id: string, userId?: string): Promise<void> {
+  await prisma.recordingRecord.deleteMany({
+    where: {
+      id,
+      ...(userId ? { userId: normalizeUserId(userId) } : {}),
+    },
+  });
 }
 
 async function dbSaveTranscript(transcript: Transcript): Promise<void> {
+  const scopedUserId = normalizeUserId(transcript.userId);
   await prisma.transcriptRecord.upsert({
     where: { id: transcript.id },
     create: {
       id: transcript.id,
+      userId: scopedUserId,
       recordingId: transcript.recordingId,
       text: transcript.text,
       confidence: transcript.confidence,
@@ -834,6 +914,7 @@ async function dbSaveTranscript(transcript: Transcript): Promise<void> {
       createdAt: toDate(transcript.createdAt) || new Date(),
     },
     update: {
+      userId: scopedUserId,
       recordingId: transcript.recordingId,
       text: transcript.text,
       confidence: transcript.confidence,
@@ -847,11 +928,13 @@ async function dbSaveTranscript(transcript: Transcript): Promise<void> {
   });
 }
 
-async function dbGetTranscript(id: string): Promise<Transcript | null> {
+async function dbGetTranscript(id: string, userId?: string): Promise<Transcript | null> {
   const row = await prisma.transcriptRecord.findUnique({ where: { id } });
   if (!row) return null;
+  if (userId && normalizeUserId(row.userId) !== normalizeUserId(userId)) return null;
   return {
     id: row.id,
+    userId: row.userId,
     recordingId: row.recordingId,
     text: row.text,
     confidence: row.confidence,
@@ -864,10 +947,14 @@ async function dbGetTranscript(id: string): Promise<Transcript | null> {
   };
 }
 
-async function dbGetAllTranscripts(): Promise<Transcript[]> {
-  const rows = await prisma.transcriptRecord.findMany({ orderBy: { createdAt: 'desc' } });
+async function dbGetAllTranscripts(userId?: string): Promise<Transcript[]> {
+  const rows = await prisma.transcriptRecord.findMany({
+    where: userId ? { userId: normalizeUserId(userId) } : undefined,
+    orderBy: { createdAt: 'desc' },
+  });
   return rows.map(row => ({
     id: row.id,
+    userId: row.userId,
     recordingId: row.recordingId,
     text: row.text,
     confidence: row.confidence,
@@ -880,38 +967,38 @@ async function dbGetAllTranscripts(): Promise<Transcript[]> {
   }));
 }
 
-export async function getSettings(): Promise<StoredSettings> {
-  return usePostgresStore ? dbGetSettings() : fsGetSettings();
+export async function getSettings(userId = 'default'): Promise<StoredSettings> {
+  return usePostgresStore ? dbGetSettings(userId) : fsGetSettings(userId);
 }
 
-export async function saveSettings(settings: Partial<StoredSettings>): Promise<void> {
+export async function saveSettings(settings: Partial<StoredSettings>, userId = 'default'): Promise<void> {
   if (usePostgresStore) {
-    await dbSaveSettings(settings);
+    await dbSaveSettings(settings, userId);
     return;
   }
 
-  fsSaveSettings(settings);
+  fsSaveSettings(settings, userId);
 }
 
-export async function assignManagedNumber(): Promise<string> {
-  return usePostgresStore ? dbAssignManagedNumber() : await fsAssignManagedNumber();
+export async function assignManagedNumber(userId = 'default'): Promise<string> {
+  return usePostgresStore ? dbAssignManagedNumber(userId) : await fsAssignManagedNumber(userId);
 }
 
-export async function getCredits(): Promise<number> {
-  return usePostgresStore ? dbGetCredits() : fsGetCredits();
+export async function getCredits(userId = 'default'): Promise<number> {
+  return usePostgresStore ? dbGetCredits(userId) : fsGetCredits(userId);
 }
 
-export async function updateCredits(delta: number): Promise<number> {
-  return usePostgresStore ? dbUpdateCredits(delta) : fsUpdateCredits(delta);
+export async function updateCredits(delta: number, userId = 'default'): Promise<number> {
+  return usePostgresStore ? dbUpdateCredits(delta, userId) : fsUpdateCredits(delta, userId);
 }
 
-export async function setCredits(credits: number): Promise<void> {
+export async function setCredits(credits: number, userId = 'default'): Promise<void> {
   if (usePostgresStore) {
-    await dbSetCredits(credits);
+    await dbSetCredits(credits, userId);
     return;
   }
 
-  fsSetCredits(credits);
+  fsSetCredits(credits, userId);
 }
 
 export async function saveCampaign(campaign: Campaign): Promise<void> {
@@ -923,21 +1010,21 @@ export async function saveCampaign(campaign: Campaign): Promise<void> {
   fsSaveCampaign(campaign);
 }
 
-export async function getCampaign(id: string): Promise<Campaign | null> {
-  return usePostgresStore ? dbGetCampaign(id) : fsGetCampaign(id);
+export async function getCampaign(id: string, userId?: string): Promise<Campaign | null> {
+  return usePostgresStore ? dbGetCampaign(id, userId) : fsGetCampaign(id, userId);
 }
 
-export async function getAllCampaigns(): Promise<Campaign[]> {
-  return usePostgresStore ? dbGetAllCampaigns() : fsGetAllCampaigns();
+export async function getAllCampaigns(userId?: string): Promise<Campaign[]> {
+  return usePostgresStore ? dbGetAllCampaigns(userId) : fsGetAllCampaigns(userId);
 }
 
-export async function updateCampaignResult(campaignId: string, result: CallResult): Promise<void> {
+export async function updateCampaignResult(campaignId: string, result: CallResult, userId?: string): Promise<void> {
   if (usePostgresStore) {
-    await dbUpdateCampaignResult(campaignId, result);
+    await dbUpdateCampaignResult(campaignId, result, userId);
     return;
   }
 
-  fsUpdateCampaignResult(campaignId, result);
+  fsUpdateCampaignResult(campaignId, result, userId);
 }
 
 export async function findCampaignResultByCallSid(callSid: string): Promise<{
@@ -957,13 +1044,13 @@ export async function updateCampaignResultByCallSid(
     : fsUpdateCampaignResultByCallSid(callSid, patch);
 }
 
-export async function deleteCampaign(id: string): Promise<void> {
+export async function deleteCampaign(id: string, userId?: string): Promise<void> {
   if (usePostgresStore) {
-    await dbDeleteCampaign(id);
+    await dbDeleteCampaign(id, userId);
     return;
   }
 
-  fsDeleteCampaign(id);
+  fsDeleteCampaign(id, userId);
 }
 
 export async function saveRecording(recording: Recording): Promise<void> {
@@ -975,38 +1062,38 @@ export async function saveRecording(recording: Recording): Promise<void> {
   fsSaveRecording(recording);
 }
 
-export async function getRecording(id: string): Promise<Recording | null> {
-  return usePostgresStore ? dbGetRecording(id) : fsGetRecording(id);
+export async function getRecording(id: string, userId?: string): Promise<Recording | null> {
+  return usePostgresStore ? dbGetRecording(id, userId) : fsGetRecording(id, userId);
 }
 
-export async function getRecordingByCallSid(callSid: string): Promise<Recording | null> {
-  return usePostgresStore ? dbGetRecordingByCallSid(callSid) : fsGetRecordingByCallSid(callSid);
+export async function getRecordingByCallSid(callSid: string, userId?: string): Promise<Recording | null> {
+  return usePostgresStore ? dbGetRecordingByCallSid(callSid, userId) : fsGetRecordingByCallSid(callSid, userId);
 }
 
-export async function getAllRecordings(): Promise<Recording[]> {
-  return usePostgresStore ? dbGetAllRecordings() : fsGetAllRecordings();
+export async function getAllRecordings(userId?: string): Promise<Recording[]> {
+  return usePostgresStore ? dbGetAllRecordings(userId) : fsGetAllRecordings(userId);
 }
 
-export async function getRecordingsByCampaign(campaignId: string): Promise<Recording[]> {
-  return usePostgresStore ? dbGetRecordingsByCampaign(campaignId) : fsGetRecordingsByCampaign(campaignId);
+export async function getRecordingsByCampaign(campaignId: string, userId?: string): Promise<Recording[]> {
+  return usePostgresStore ? dbGetRecordingsByCampaign(campaignId, userId) : fsGetRecordingsByCampaign(campaignId, userId);
 }
 
-export async function updateRecordingTranscript(recordingId: string, transcript: Transcript): Promise<void> {
+export async function updateRecordingTranscript(recordingId: string, transcript: Transcript, userId?: string): Promise<void> {
   if (usePostgresStore) {
-    await dbUpdateRecordingTranscript(recordingId, transcript);
+    await dbUpdateRecordingTranscript(recordingId, transcript, userId);
     return;
   }
 
-  fsUpdateRecordingTranscript(recordingId, transcript);
+  fsUpdateRecordingTranscript(recordingId, transcript, userId);
 }
 
-export async function deleteRecording(id: string): Promise<void> {
+export async function deleteRecording(id: string, userId?: string): Promise<void> {
   if (usePostgresStore) {
-    await dbDeleteRecording(id);
+    await dbDeleteRecording(id, userId);
     return;
   }
 
-  fsDeleteRecording(id);
+  fsDeleteRecording(id, userId);
 }
 
 export async function saveTranscript(transcript: Transcript): Promise<void> {
@@ -1018,10 +1105,10 @@ export async function saveTranscript(transcript: Transcript): Promise<void> {
   fsSaveTranscript(transcript);
 }
 
-export async function getTranscript(id: string): Promise<Transcript | null> {
-  return usePostgresStore ? dbGetTranscript(id) : fsGetTranscript(id);
+export async function getTranscript(id: string, userId?: string): Promise<Transcript | null> {
+  return usePostgresStore ? dbGetTranscript(id, userId) : fsGetTranscript(id, userId);
 }
 
-export async function getAllTranscripts(): Promise<Transcript[]> {
-  return usePostgresStore ? dbGetAllTranscripts() : fsGetAllTranscripts();
+export async function getAllTranscripts(userId?: string): Promise<Transcript[]> {
+  return usePostgresStore ? dbGetAllTranscripts(userId) : fsGetAllTranscripts(userId);
 }

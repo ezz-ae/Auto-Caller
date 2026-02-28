@@ -9,15 +9,15 @@ function normalizePhoneKey(raw: string): string {
 }
 
 export async function runCampaign(campaign: Campaign): Promise<void> {
-  const settings = await getSettings();
+  const settings = await getSettings(campaign.userId);
   const selectedIdentity = campaign.callerIdentityId
-    ? await getCallerIdentity(campaign.callerIdentityId)
+    ? await getCallerIdentity(campaign.callerIdentityId, campaign.userId)
     : null;
   const fromNumber = selectedIdentity?.dedicatedNumber || settings.twilioPhoneNumber;
   const webhookUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 
   if (campaign.callerIdentityId && !selectedIdentity?.dedicatedNumber) {
-    const latest = await getCampaign(campaign.id);
+    const latest = await getCampaign(campaign.id, campaign.userId);
     if (latest && latest.status === 'running') {
       latest.status = 'stopped';
       await saveCampaign(latest);
@@ -26,7 +26,7 @@ export async function runCampaign(campaign: Campaign): Promise<void> {
   }
 
   for (let i = 0; i < campaign.numbers.length; i++) {
-    const currentCampaign = await getCampaign(campaign.id);
+    const currentCampaign = await getCampaign(campaign.id, campaign.userId);
     if (!currentCampaign || currentCampaign.status !== 'running') {
       break;
     }
@@ -69,16 +69,17 @@ export async function runCampaign(campaign: Campaign): Promise<void> {
           voiceId: campaign.voiceId,
           fromNumber,
           mode: 'conversation',
+          userId: campaign.userId,
         }
       );
 
-      await updateCredits(-1);
+      await updateCredits(-1, campaign.userId);
       if (campaign.callerIdentityId) {
         await applyCallerIdentityKpiDelta(campaign.callerIdentityId, {
           totalCalls: 1,
           creditsUsed: 1,
           lastCalledAt: new Date(),
-        });
+        }, campaign.userId);
       }
 
       result.callSid = call.sid;
@@ -99,7 +100,7 @@ export async function runCampaign(campaign: Campaign): Promise<void> {
     }
   }
 
-  const finalCampaign = await getCampaign(campaign.id);
+  const finalCampaign = await getCampaign(campaign.id, campaign.userId);
   if (finalCampaign && finalCampaign.status === 'running') {
     finalCampaign.status = 'completed';
     finalCampaign.completedAt = new Date();

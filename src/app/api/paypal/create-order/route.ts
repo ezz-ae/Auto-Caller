@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { requireUserIdFromRequest } from '@/lib/request-user'
 
 // PayPal API base URL (sandbox or live)
 const PAYPAL_API = process.env.PAYPAL_MODE === 'live'
@@ -85,6 +86,7 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    const userId = requireUserIdFromRequest(request)
     const body = await request.json()
     const { productId, callerIdentityId } = body
 
@@ -131,6 +133,7 @@ export async function POST(request: NextRequest) {
             kind: product.kind,
             credits: product.credits || 0,
             price: product.price,
+            userId,
             callerIdentityId: normalizedCallerIdentityId || undefined,
           }),
         }],

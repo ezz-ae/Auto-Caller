@@ -24,6 +24,7 @@ Production-ready outbound AI calling platform with:
 - Daily operations reporting (calls, connection metrics, callback performance, AI recommendations)
 - Natural call voice delivery via ElevenLabs TTS for identity voices (with gender/language filtering in identity setup)
 - Optional dashboard access protection with login (`/login`)
+- Multi-tenant account auth (`/api/auth/register`, `/api/auth/login`) with per-user data isolation
 - Managed billing flows (PayPal number activation + credit top-up)
 - Agent Desk can warn when credits are not enough for queued contacts and route user to Billing
 - Twilio callback handling (status, forwarding, recording, voicemail)
@@ -91,6 +92,9 @@ This creates tables:
 - `transcripts`
 - `team_members`
 - `caller_identities`
+- `users`
+
+After pulling the latest code, run `npm run db:push` again to apply multi-tenant schema updates.
 
 ## 3. Run Locally
 
@@ -152,6 +156,10 @@ In this mode customers only need to:
 - run campaigns from UI
 
 No customer API keys required.
+
+Authentication modes:
+- `AUTH_MODE=accounts` (recommended): per-user accounts and isolated workspaces.
+- `AUTH_MODE=legacy`: single shared login via `APP_ACCESS_USERNAME` / `APP_ACCESS_PASSWORD`.
 
 Automatic number provisioning:
 - Set `MANAGED_AUTO_PROVISION_NUMBER=true` to auto-buy a Twilio number after successful number checkout.

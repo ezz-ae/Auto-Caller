@@ -6,6 +6,7 @@ import { Recording } from '@/lib/types';
 // Handle recording completion from Twilio
 export async function POST(request: NextRequest) {
   try {
+    const userId = new URL(request.url).searchParams.get('userId') || undefined;
     const formData = await request.formData();
     
     const callSid = formData.get('CallSid') as string;
@@ -29,7 +30,7 @@ export async function POST(request: NextRequest) {
     });
     
     // Check if we already have a recording for this call
-    const existingRecording = await getRecordingByCallSid(callSid);
+    const existingRecording = await getRecordingByCallSid(callSid, userId);
     
     if (existingRecording) {
       // Update existing recording
@@ -38,6 +39,7 @@ export async function POST(request: NextRequest) {
       existingRecording.status = 'completed';
       existingRecording.campaignId = existingRecording.campaignId || campaignId;
       existingRecording.phoneNumber = existingRecording.phoneNumber || phoneNumber;
+      existingRecording.userId = existingRecording.userId || userId || matchedCall?.campaign.userId || 'default';
       await saveRecording(existingRecording);
       
       return NextResponse.json({ success: true, recording: existingRecording });
@@ -46,6 +48,7 @@ export async function POST(request: NextRequest) {
     // Create new recording record
     const recording: Recording = {
       id: uuidv4(),
+      userId: userId || matchedCall?.campaign.userId || 'default',
       callSid,
       campaignId,
       phoneNumber,
@@ -59,15 +62,18 @@ export async function POST(request: NextRequest) {
     await saveRecording(recording);
     
     // Trigger transcription if enabled
-    const settings = await getSettings();
+    const settings = await getSettings(recording.userId);
     if (settings.transcribeCalls) {
       const transcribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/transcriptions`;
 
       // Fire and forget transcription
       fetch(transcribeUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ recordingId: recording.id, useOpenAI: true }),
+        headers: {
+          'Content-Type': 'application/json',
+          'x-internal-secret': process.env.CRON_SECRET || '',
+        },
+        body: JSON.stringify({ recordingId: recording.id, useOpenAI: true, userId: recording.userId }),
       }).catch(err => console.error('Failed to start transcription:', err));
     }
     

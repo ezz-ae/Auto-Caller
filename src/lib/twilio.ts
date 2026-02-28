@@ -3,7 +3,7 @@
 import twilio from 'twilio';
 import { getSettings } from './store';
 
-let twilioClient: ReturnType<typeof twilio> | null = null;
+const twilioClients = new Map<string, ReturnType<typeof twilio>>();
 
 export function isTwilioNativeVoice(voiceId?: string): boolean {
   if (!voiceId) return true;
@@ -15,21 +15,24 @@ function resolveTwilioVoice(voiceId?: string): string {
   return isTwilioNativeVoice(voiceId) ? voiceId : 'alice';
 }
 
-async function getClient() {
-  if (twilioClient) return twilioClient;
-  
-  const settings = await getSettings();
+async function getClient(userId = 'default') {
+  const settings = await getSettings(userId);
+  const key = `${settings.twilioAccountSid}:${settings.twilioAuthToken}`;
+  if (twilioClients.has(key)) {
+    return twilioClients.get(key)!;
+  }
   
   if (!settings.twilioAccountSid || !settings.twilioAuthToken) {
     throw new Error('Twilio credentials not configured');
   }
   
-  twilioClient = twilio(settings.twilioAccountSid, settings.twilioAuthToken);
-  return twilioClient;
+  const client = twilio(settings.twilioAccountSid, settings.twilioAuthToken);
+  twilioClients.set(key, client);
+  return client;
 }
 
 export function resetClient() {
-  twilioClient = null;
+  twilioClients.clear();
 }
 
 // Generate TwiML for call with TTS, recording, and forwarding
@@ -132,10 +135,12 @@ export async function makeCall(
     voiceId?: string;
     fromNumber?: string;
     mode?: 'conversation' | 'legacy';
+    userId?: string;
   } = {}
 ): Promise<{ sid: string; status: string }> {
-  const client = await getClient();
-  const settings = await getSettings();
+  const scopedUserId = String(options.userId || '').trim() || 'default';
+  const client = await getClient(scopedUserId);
+  const settings = await getSettings(scopedUserId);
 
   const fromNumber = options.fromNumber || settings.twilioPhoneNumber;
 
@@ -153,6 +158,7 @@ export async function makeCall(
     language: options.language || 'en-US',
     voiceId: options.voiceId || 'alice',
     mode: options.mode || 'conversation',
+    userId: scopedUserId,
   });
 
   if (options.callerIdentityId) {
@@ -168,6 +174,7 @@ export async function makeCall(
   }
 
   const statusUrl = new URL(`${webhookUrl}/api/calls/status`);
+  statusUrl.searchParams.set('userId', scopedUserId);
   if (options.callerIdentityId) {
     statusUrl.searchParams.set('callerIdentityId', options.callerIdentityId);
   }
@@ -182,7 +189,7 @@ export async function makeCall(
     timeout: 30,
     // Record the call from the beginning
     record: options.record || settings.recordCalls || false,
-    recordingStatusCallback: `${webhookUrl}/api/calls/recording-complete`,
+    recordingStatusCallback: `${webhookUrl}/api/calls/recording-complete?userId=${encodeURIComponent(scopedUserId)}`,
     recordingStatusCallbackEvent: ['completed'],
     recordingStatusCallbackMethod: 'POST',
   });

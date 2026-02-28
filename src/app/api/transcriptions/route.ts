@@ -2,22 +2,27 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getRecording, updateRecordingTranscript, getSettings } from '@/lib/store';
 import { processRecording } from '@/lib/transcription';
 import { downloadRecording as downloadTwilioRecording } from '@/lib/twilio';
+import { getUserIdFromRequest } from '@/lib/request-user';
 
 // Get all transcriptions
 export async function GET(request: NextRequest) {
   try {
+    const userId = getUserIdFromRequest(request);
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     const { searchParams } = new URL(request.url);
     const recordingId = searchParams.get('recordingId');
     
     if (recordingId) {
-      const recording = await getRecording(recordingId);
+      const recording = await getRecording(recordingId, userId);
       return NextResponse.json({ 
         transcript: recording?.transcript || null 
       });
     }
     
     // Return all transcripts
-    const recordings = await import('@/lib/store').then(m => m.getAllRecordings());
+    const recordings = await import('@/lib/store').then(m => m.getAllRecordings(userId));
     const transcripts = recordings
       .filter(r => r.transcript)
       .map(r => ({
@@ -38,13 +43,21 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+    const authUserId = getUserIdFromRequest(request);
+    const internalSecret = request.headers.get('x-internal-secret') || '';
+    const trustedInternal = !!process.env.CRON_SECRET && internalSecret === process.env.CRON_SECRET;
+    const internalUserId = trustedInternal ? String(body?.userId || '').trim() : '';
+    const userId = authUserId || internalUserId;
     const { recordingId, useOpenAI, useAI } = body;
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     
     if (!recordingId) {
       return NextResponse.json({ error: 'Recording ID required' }, { status: 400 });
     }
     
-    const recording = await getRecording(recordingId);
+    const recording = await getRecording(recordingId, userId);
     
     if (!recording) {
       return NextResponse.json({ error: 'Recording not found' }, { status: 404 });
@@ -55,7 +68,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Check if we have AI provider for high-quality transcription + analysis
-    const settings = await getSettings();
+    const settings = await getSettings(userId);
     const googleApiKey =
       process.env.MANAGED_GOOGLE_AI_API_KEY ||
       process.env.GOOGLE_AI_API_KEY ||
@@ -77,11 +90,13 @@ export async function POST(request: NextRequest) {
       console.log('Transcribing with AI provider...');
       const transcript = await processRecording(audioBuffer, {
         phoneNumber: recording.phoneNumber,
+        userId,
       });
       
       // Update recording with transcript
       transcript.recordingId = recording.id;
-      await updateRecordingTranscript(recording.id, transcript);
+      transcript.userId = userId;
+      await updateRecordingTranscript(recording.id, transcript, userId);
       
       return NextResponse.json({ 
         success: true, 

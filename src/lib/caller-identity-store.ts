@@ -6,6 +6,7 @@ import { tryProvisionManagedNumber } from './managed-number';
 
 export interface CallerIdentity {
   id: string;
+  userId: string;
   name: string;
   position: string;
   gender: string;
@@ -38,7 +39,6 @@ export interface CallerIdentityKpiDelta {
 }
 
 const DATA_DIR = process.env.DATA_DIR || (process.env.VERCEL ? '/tmp/auto-caller-data' : path.join(process.cwd(), 'data'));
-const CALLER_IDENTITIES_FILE = path.join(DATA_DIR, 'caller-identities.json');
 
 const STORE_DRIVER = (process.env.STORE_DRIVER || '').toLowerCase();
 const usePostgresStore =
@@ -56,14 +56,24 @@ function toDate(value: string | Date | undefined | null): Date | undefined {
   return value instanceof Date ? value : new Date(value);
 }
 
+function normalizeUserId(userId?: string): string {
+  return String(userId || '').trim() || 'default';
+}
+
+function getCallerIdentitiesFile(userId: string): string {
+  return path.join(DATA_DIR, `caller-identities.${normalizeUserId(userId)}.json`);
+}
+
 function normalizeIdentity(
   input: Partial<CallerIdentity> & { name: string; position: string; language: string; voiceId: string; script: string },
-  existing?: CallerIdentity
+  existing?: CallerIdentity,
+  userId = 'default'
 ): CallerIdentity {
   const now = new Date();
 
   return {
     id: existing?.id || input.id || uuidv4(),
+    userId: normalizeUserId(input.userId || existing?.userId || userId),
     name: input.name.trim(),
     position: input.position.trim(),
     gender: (input.gender || existing?.gender || 'any').trim().toLowerCase(),
@@ -86,20 +96,22 @@ function normalizeIdentity(
   };
 }
 
-function fsReadAll(): CallerIdentity[] {
+function fsReadAll(userId = 'default'): CallerIdentity[] {
   ensureDataDir();
+  const filePath = getCallerIdentitiesFile(userId);
 
-  if (!fs.existsSync(CALLER_IDENTITIES_FILE)) {
-    fs.writeFileSync(CALLER_IDENTITIES_FILE, '[]');
+  if (!fs.existsSync(filePath)) {
+    fs.writeFileSync(filePath, '[]');
     return [];
   }
 
-  const raw = fs.readFileSync(CALLER_IDENTITIES_FILE, 'utf-8');
+  const raw = fs.readFileSync(filePath, 'utf-8');
   const data = JSON.parse(raw) as Array<Omit<CallerIdentity, 'createdAt' | 'lastCalledAt'> & { createdAt: string; lastCalledAt?: string }>;
 
   return data
     .map(item => ({
       ...item,
+      userId: normalizeUserId((item as any).userId),
       gender: (item as any).gender || 'any',
       dedicatedNumber: (item as any).dedicatedNumber || undefined,
       createdAt: new Date(item.createdAt),
@@ -108,16 +120,21 @@ function fsReadAll(): CallerIdentity[] {
     .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
 }
 
-function fsWriteAll(identities: CallerIdentity[]) {
+function fsWriteAll(identities: CallerIdentity[], userId = 'default') {
   ensureDataDir();
-  fs.writeFileSync(CALLER_IDENTITIES_FILE, JSON.stringify(identities, null, 2));
+  fs.writeFileSync(getCallerIdentitiesFile(userId), JSON.stringify(identities, null, 2));
 }
 
-export async function listCallerIdentities(): Promise<CallerIdentity[]> {
+export async function listCallerIdentities(userId = 'default'): Promise<CallerIdentity[]> {
+  const scopedUserId = normalizeUserId(userId);
   if (usePostgresStore) {
-    const rows = await prisma.callerIdentity.findMany({ orderBy: { createdAt: 'desc' } });
+    const rows = await prisma.callerIdentity.findMany({
+      where: { userId: scopedUserId },
+      orderBy: { createdAt: 'desc' },
+    });
     return rows.map(row => ({
       id: row.id,
+      userId: row.userId,
       name: row.name,
       position: row.position,
       gender: row.gender,
@@ -140,15 +157,18 @@ export async function listCallerIdentities(): Promise<CallerIdentity[]> {
     }));
   }
 
-  return fsReadAll();
+  return fsReadAll(scopedUserId);
 }
 
-export async function getCallerIdentity(id: string): Promise<CallerIdentity | null> {
+export async function getCallerIdentity(id: string, userId?: string): Promise<CallerIdentity | null> {
+  const scopedUserId = normalizeUserId(userId);
   if (usePostgresStore) {
     const row = await prisma.callerIdentity.findUnique({ where: { id } });
     if (!row) return null;
+    if (userId && normalizeUserId(row.userId) !== scopedUserId) return null;
     return {
       id: row.id,
+      userId: row.userId,
       name: row.name,
       position: row.position,
       gender: row.gender,
@@ -171,17 +191,23 @@ export async function getCallerIdentity(id: string): Promise<CallerIdentity | nu
     };
   }
 
-  const all = fsReadAll();
+  const all = fsReadAll(scopedUserId);
   return all.find(item => item.id === id) || null;
 }
 
 export async function saveCallerIdentity(
-  input: Partial<CallerIdentity> & { name: string; position: string; language: string; voiceId: string; script: string }
+  input: Partial<CallerIdentity> & { name: string; position: string; language: string; voiceId: string; script: string },
+  userId = 'default'
 ): Promise<CallerIdentity> {
+  const scopedUserId = normalizeUserId(userId);
   if (usePostgresStore) {
     const existing = input.id ? await prisma.callerIdentity.findUnique({ where: { id: input.id } }) : null;
+    if (existing && normalizeUserId(existing.userId) !== scopedUserId) {
+      throw new Error('Caller identity does not belong to this user');
+    }
     const normalized = normalizeIdentity(input, existing ? {
       id: existing.id,
+      userId: existing.userId,
       name: existing.name,
       position: existing.position,
       gender: existing.gender,
@@ -201,12 +227,13 @@ export async function saveCallerIdentity(
       creditsUsed: existing.creditsUsed,
       lastCalledAt: existing.lastCalledAt || undefined,
       createdAt: existing.createdAt,
-    } : undefined);
+    } : undefined, scopedUserId);
 
     const row = await prisma.callerIdentity.upsert({
       where: { id: normalized.id },
       create: {
         id: normalized.id,
+        userId: scopedUserId,
         name: normalized.name,
         position: normalized.position,
         gender: normalized.gender,
@@ -227,6 +254,7 @@ export async function saveCallerIdentity(
         lastCalledAt: normalized.lastCalledAt || null,
       },
       update: {
+        userId: scopedUserId,
         name: normalized.name,
         position: normalized.position,
         gender: normalized.gender,
@@ -250,6 +278,7 @@ export async function saveCallerIdentity(
 
     return {
       id: row.id,
+      userId: row.userId,
       name: row.name,
       position: row.position,
       gender: row.gender,
@@ -272,9 +301,9 @@ export async function saveCallerIdentity(
     };
   }
 
-  const all = fsReadAll();
+  const all = fsReadAll(scopedUserId);
   const existingIndex = input.id ? all.findIndex(item => item.id === input.id) : -1;
-  const normalized = normalizeIdentity(input, existingIndex >= 0 ? all[existingIndex] : undefined);
+  const normalized = normalizeIdentity(input, existingIndex >= 0 ? all[existingIndex] : undefined, scopedUserId);
 
   if (existingIndex >= 0) {
     all[existingIndex] = normalized;
@@ -282,26 +311,29 @@ export async function saveCallerIdentity(
     all.push(normalized);
   }
 
-  fsWriteAll(all);
+  fsWriteAll(all, scopedUserId);
   return normalized;
 }
 
-export async function deleteCallerIdentity(id: string): Promise<void> {
+export async function deleteCallerIdentity(id: string, userId = 'default'): Promise<void> {
+  const scopedUserId = normalizeUserId(userId);
   if (usePostgresStore) {
-    await prisma.callerIdentity.deleteMany({ where: { id } });
+    await prisma.callerIdentity.deleteMany({ where: { id, userId: scopedUserId } });
     return;
   }
 
-  const all = fsReadAll().filter(item => item.id !== id);
-  fsWriteAll(all);
+  const all = fsReadAll(scopedUserId).filter(item => item.id !== id);
+  fsWriteAll(all, scopedUserId);
 }
 
-export async function applyCallerIdentityKpiDelta(id: string, delta: CallerIdentityKpiDelta): Promise<CallerIdentity | null> {
+export async function applyCallerIdentityKpiDelta(id: string, delta: CallerIdentityKpiDelta, userId?: string): Promise<CallerIdentity | null> {
   if (!id) return null;
+  const scopedUserId = normalizeUserId(userId);
 
   if (usePostgresStore) {
     const existing = await prisma.callerIdentity.findUnique({ where: { id } });
     if (!existing) return null;
+    if (userId && normalizeUserId(existing.userId) !== scopedUserId) return null;
 
     const row = await prisma.callerIdentity.update({
       where: { id },
@@ -318,6 +350,7 @@ export async function applyCallerIdentityKpiDelta(id: string, delta: CallerIdent
 
     return {
       id: row.id,
+      userId: row.userId,
       name: row.name,
       position: row.position,
       gender: row.gender,
@@ -340,7 +373,7 @@ export async function applyCallerIdentityKpiDelta(id: string, delta: CallerIdent
     };
   }
 
-  const all = fsReadAll();
+  const all = fsReadAll(scopedUserId);
   const index = all.findIndex(item => item.id === id);
   if (index < 0) return null;
 
@@ -357,7 +390,7 @@ export async function applyCallerIdentityKpiDelta(id: string, delta: CallerIdent
   };
 
   all[index] = updated;
-  fsWriteAll(all);
+  fsWriteAll(all, scopedUserId);
   return updated;
 }
 
@@ -389,7 +422,14 @@ async function listUsedDedicatedNumbers(excludeIdentityId?: string): Promise<Set
   }
 
   return new Set(
-    fsReadAll()
+    fs
+      .readdirSync(DATA_DIR)
+      .filter(file => file.startsWith('caller-identities.') && file.endsWith('.json'))
+      .flatMap(file => {
+        const raw = fs.readFileSync(path.join(DATA_DIR, file), 'utf-8');
+        const list = JSON.parse(raw) as CallerIdentity[];
+        return list;
+      })
       .filter(identity => identity.id !== excludeIdentityId)
       .map(identity => String(identity.dedicatedNumber || '').trim())
       .filter(Boolean)
@@ -401,10 +441,11 @@ function isPrismaUniqueConstraintError(error: unknown): boolean {
   return code === 'P2002';
 }
 
-export async function assignDedicatedNumberToCallerIdentity(identityId: string): Promise<CallerIdentity | null> {
+export async function assignDedicatedNumberToCallerIdentity(identityId: string, userId = 'default'): Promise<CallerIdentity | null> {
   if (!identityId) return null;
+  const scopedUserId = normalizeUserId(userId);
 
-  const identity = await getCallerIdentity(identityId);
+  const identity = await getCallerIdentity(identityId, scopedUserId);
   if (!identity) return null;
   if (identity.dedicatedNumber) return identity;
 
@@ -420,7 +461,7 @@ export async function assignDedicatedNumberToCallerIdentity(identityId: string):
     return await saveCallerIdentity({
       ...identity,
       dedicatedNumber: normalized,
-    });
+    }, scopedUserId);
   };
 
   const provisionedNumber = await tryProvisionManagedNumber();

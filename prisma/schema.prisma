@@ -31,6 +31,17 @@ model AppSettings {
   @@map("app_settings")
 }
 
+model UserAccount {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
+}
+
 model CreditBalance {
   id        String   @id @default("default")
   credits   Int      @default(100)
@@ -65,6 +76,7 @@ model CampaignRecord {
 
 model RecordingRecord {
   id          String   @id
+  userId      String   @default("default")
   callSid     String   @unique
   campaignId  String   @default("")
   phoneNumber String   @default("")
@@ -76,10 +88,12 @@ model RecordingRecord {
   createdAt   DateTime @default(now())
 
   @@map("recordings")
+  @@index([userId])
 }
 
 model TranscriptRecord {
   id          String   @id
+  userId      String   @default("default")
   recordingId String
   text        String
   confidence  Float
@@ -91,22 +105,27 @@ model TranscriptRecord {
   createdAt   DateTime @default(now())
 
   @@map("transcripts")
+  @@index([userId])
 }
 
 model TeamMember {
   id        String   @id
+  userId    String   @default("default")
   name      String
-  email     String   @unique
+  email     String
   role      String
   active    Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("team_members")
+  @@index([userId])
+  @@unique([userId, email])
 }
 
 model CallerIdentity {
   id                  String   @id
+  userId              String   @default("default")
   name                String
   position            String
   gender              String   @default("any")
@@ -129,4 +148,5 @@ model CallerIdentity {
   updatedAt           DateTime @updatedAt
 
   @@map("caller_identities")
+  @@index([userId])
 }
