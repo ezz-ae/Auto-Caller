@@ -52,7 +52,10 @@ export async function getVoices(): Promise<ElevenLabsVoice[]> {
 // Generate speech audio
 export async function generateSpeech(
   text: string,
-  voiceId: string = '21m00Tcm4TlvDq8ikWAM'
+  voiceId: string = '21m00Tcm4TlvDq8ikWAM',
+  options: {
+    language?: string;
+  } = {}
 ): Promise<Buffer> {
   const settings = await getSettings();
   
@@ -60,6 +63,8 @@ export async function generateSpeech(
     throw new Error('ElevenLabs API key not configured');
   }
   
+  const modelId = process.env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2';
+
   const response = await fetch(`${ELEVENLABS_API_URL}/text-to-speech/${voiceId}`, {
     method: 'POST',
     headers: {
@@ -69,10 +74,11 @@ export async function generateSpeech(
     },
     body: JSON.stringify({
       text,
-      model_id: 'eleven_monolingual_v1',
+      model_id: modelId,
       voice_settings: {
-        stability: 0.5,
-        similarity_boost: 0.75,
+        stability: 0.45,
+        similarity_boost: 0.85,
+        style: 0.35,
       },
     }),
   });

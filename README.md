@@ -14,6 +14,7 @@ Production-ready outbound AI calling platform with:
 - Guided onboarding wizard in `Overview` for first-launch setup
 - Team accounts directory in `Settings` (owner/agent/manager operational records)
 - Caller identities in `Settings` (name, position, voice, language, disclosure mode, script constraints, KPI counters)
+- Natural call voice delivery via ElevenLabs TTS for identity voices (with gender/language filtering in identity setup)
 - Optional dashboard access protection with login (`/login`)
 - Managed billing flows (PayPal number activation + credit top-up)
 - Twilio callback handling (status, forwarding, recording, voicemail)
@@ -145,6 +146,11 @@ Credit pricing with margin:
 - `TWILIO_ESTIMATED_COST_PER_CALL_USD` (example `0.02`)
 - `CREDIT_MARGIN_MULTIPLIER` (example `2.0` for 100% markup)
 - Product prices are now computed server-side from these values.
+
+Natural voices (ElevenLabs):
+- Caller identities now filter voices by gender and language.
+- Non-Twilio voices are rendered with ElevenLabs TTS during live calls via `/api/calls/tts`.
+- Optional: set `ELEVENLABS_MODEL_ID` (default `eleven_multilingual_v2`).
 
 ## 7. Useful Commands
 

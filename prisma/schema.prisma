@@ -108,6 +108,7 @@ model CallerIdentity {
   id                  String   @id
   name                String
   position            String
+  gender              String   @default("any")
   language            String
   voiceId             String
   industry            String

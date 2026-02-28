@@ -68,6 +68,9 @@ interface Voice {
   name: string
   category: string
   labels: Record<string, string>
+  language?: string
+  source?: string
+  previewUrl?: string
 }
 
 interface Transcript {
@@ -141,6 +144,7 @@ interface CallerIdentity {
   id: string
   name: string
   position: string
+  gender: string
   language: string
   voiceId: string
   industry?: string
@@ -213,6 +217,7 @@ export default function Dashboard() {
   const [identityForm, setIdentityForm] = useState({
     name: '',
     position: '',
+    gender: 'any',
     language: 'en-US',
     voiceId: '21m00Tcm4TlvDq8ikWAM',
     industry: '',
@@ -375,6 +380,42 @@ export default function Dashboard() {
     [callerIdentities, selectedCallerIdentityId]
   )
 
+  const identityVoicePool = useMemo(() => {
+    const elevenVoices = voices.filter(voice => voice.source === 'elevenlabs')
+    return elevenVoices.length > 0 ? elevenVoices : voices
+  }, [voices])
+
+  const filteredIdentityVoices = useMemo(() => {
+    const targetGender = identityForm.gender.toLowerCase()
+    const targetLanguage = identityForm.language.toLowerCase()
+    const targetLanguageBase = targetLanguage.split('-')[0]
+
+    return identityVoicePool.filter(voice => {
+      const voiceGender = (voice.labels?.gender || '').toLowerCase()
+      const voiceLanguage = String(voice.language || voice.labels?.language || '').toLowerCase()
+      const voiceLanguageBase = voiceLanguage.split('-')[0]
+
+      const genderMatch = targetGender === 'any' || !voiceGender || voiceGender.includes(targetGender)
+      const languageMatch =
+        !voiceLanguage ||
+        voiceLanguage === 'multi' ||
+        voiceLanguage === targetLanguage ||
+        voiceLanguageBase === targetLanguageBase
+
+      return genderMatch && languageMatch
+    })
+  }, [identityForm.gender, identityForm.language, identityVoicePool])
+
+  useEffect(() => {
+    if (filteredIdentityVoices.length === 0) return
+    if (filteredIdentityVoices.some(voice => voice.id === identityForm.voiceId)) return
+
+    setIdentityForm(prev => ({
+      ...prev,
+      voiceId: filteredIdentityVoices[0].id,
+    }))
+  }, [filteredIdentityVoices, identityForm.voiceId])
+
   const applyIdentityToComposer = (identity: CallerIdentity) => {
     setSelectedCallerIdentityId(identity.id)
     setSelectedVoice(identity.voiceId || selectedVoice)
@@ -399,6 +440,7 @@ export default function Dashboard() {
         body: JSON.stringify({
           name: identityForm.name.trim(),
           position: identityForm.position.trim(),
+          gender: identityForm.gender,
           language: identityForm.language,
           voiceId: identityForm.voiceId,
           industry: identityForm.industry.trim(),
@@ -420,6 +462,7 @@ export default function Dashboard() {
       setIdentityForm({
         name: '',
         position: '',
+        gender: 'any',
         language: selectedLanguage,
         voiceId: selectedVoice,
         industry: settings.industry || '',
@@ -562,10 +605,10 @@ export default function Dashboard() {
         setVoices(data.voices || [])
       } catch {
         setVoices([
-          { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel', category: 'premade', labels: { gender: 'female' } },
-          { id: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi', category: 'premade', labels: { gender: 'female' } },
-          { id: 'ErXwobaYiN019PkySvjV', name: 'Antoni', category: 'premade', labels: { gender: 'male' } },
-          { id: 'TxGEqnHWrfWFT1GWmBXj', name: 'Josh', category: 'premade', labels: { gender: 'male' } },
+          { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel', category: 'premade', labels: { gender: 'female', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },
+          { id: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi', category: 'premade', labels: { gender: 'female', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },
+          { id: 'ErXwobaYiN019PkySvjV', name: 'Antoni', category: 'premade', labels: { gender: 'male', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },
+          { id: 'TxGEqnHWrfWFT1GWmBXj', name: 'Josh', category: 'premade', labels: { gender: 'male', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },
         ])
       }
       
@@ -2272,6 +2315,16 @@ export default function Dashboard() {
                       onChange={e => setIdentityForm(prev => ({ ...prev, position: e.target.value }))}
                       className="bg-zinc-800 border-zinc-700"
                     />
+                    <Select value={identityForm.gender} onValueChange={(value) => setIdentityForm(prev => ({ ...prev, gender: value }))}>
+                      <SelectTrigger className="bg-zinc-800 border-zinc-700">
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="any">Any</SelectItem>
+                        <SelectItem value="female">Female</SelectItem>
+                        <SelectItem value="male">Male</SelectItem>
+                      </SelectContent>
+                    </Select>
                     <Select value={identityForm.language} onValueChange={(value) => setIdentityForm(prev => ({ ...prev, language: value }))}>
                       <SelectTrigger className="bg-zinc-800 border-zinc-700">
                         <SelectValue placeholder="Select language" />
@@ -2289,9 +2342,9 @@ export default function Dashboard() {
                         <SelectValue placeholder="Select voice" />
                       </SelectTrigger>
                       <SelectContent>
-                        {voices.map(voice => (
+                        {filteredIdentityVoices.map(voice => (
                           <SelectItem key={voice.id} value={voice.id}>
-                            {voice.name} ({voice.labels?.gender || 'N/A'})
+                            {voice.name} ({voice.labels?.gender || 'N/A'}) • {voice.language || voice.labels?.language || 'multi'} {voice.source === 'elevenlabs' ? '• ElevenLabs' : ''}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -2309,6 +2362,9 @@ export default function Dashboard() {
                       className="bg-zinc-800 border-zinc-700"
                     />
                   </div>
+                  <p className="text-xs text-zinc-500">
+                    Voice list is filtered by selected gender + language and prioritizes ElevenLabs voices for natural delivery.
+                  </p>
                   <div className="grid gap-3 md:grid-cols-2">
                     <Textarea
                       placeholder='Identity "say this" rules'
@@ -2368,7 +2424,7 @@ export default function Dashboard() {
                                   {identity.name} <span className="text-zinc-500">({identity.position})</span>
                                 </p>
                                 <p className="text-xs text-zinc-400">
-                                  {identity.language} • {identity.industry || settings.industry || 'General'} • Voice {identity.voiceId}
+                                  {identity.gender} • {identity.language} • {identity.industry || settings.industry || 'General'} • Voice {identity.voiceId}
                                 </p>
                                 <p className="text-xs text-zinc-500 mt-1">
                                   Calls {identity.totalCalls} • Connected {identity.connectedCalls} • Success {successRate}% • Credits {identity.creditsUsed}

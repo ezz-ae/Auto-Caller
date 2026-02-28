@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import twilio from 'twilio';
 import { getSettings } from '@/lib/store';
-import { generateCallTwiML } from '@/lib/twilio';
+import { generateCallTwiML, isTwilioNativeVoice } from '@/lib/twilio';
 
 async function handleAnswer(request: NextRequest) {
   try {
@@ -41,19 +41,31 @@ async function handleAnswer(request: NextRequest) {
     }
     
     const settings = await getSettings();
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    let ttsAudioUrl = '';
+    const candidateScript = script || 'Hello, this is an automated call.';
+
+    if (!isTwilioNativeVoice(voiceId)) {
+      const ttsUrl = new URL(`${appUrl}/api/calls/tts`);
+      ttsUrl.searchParams.set('script', candidateScript);
+      ttsUrl.searchParams.set('voiceId', voiceId);
+      ttsUrl.searchParams.set('language', language || 'en-US');
+      ttsAudioUrl = ttsUrl.toString();
+    }
     
     // Generate TwiML response
     const twiml = generateCallTwiML(
-      script || 'Hello, this is an automated call.',
+      candidateScript,
       forward || settings.forwardToNumber,
       callSid,
       {
         record: record || settings.recordCalls,
         transcribe: transcribe || settings.transcribeCalls,
-        transcriptionCallback: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/calls/transcription`,
+        transcriptionCallback: `${appUrl}/api/calls/transcription`,
         webSocketUrl: settings.webSocketUrl,
         language,
         voiceId,
+        ttsAudioUrl,
       }
     );
     

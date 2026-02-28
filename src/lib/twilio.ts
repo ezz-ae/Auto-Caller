@@ -5,26 +5,14 @@ import { getSettings } from './store';
 
 let twilioClient: ReturnType<typeof twilio> | null = null;
 
+export function isTwilioNativeVoice(voiceId?: string): boolean {
+  if (!voiceId) return true;
+  return voiceId === 'alice' || voiceId.startsWith('Polly.');
+}
+
 function resolveTwilioVoice(voiceId?: string): string {
   if (!voiceId) return 'alice';
-
-  // Twilio-native voices
-  if (voiceId === 'alice' || voiceId.startsWith('Polly.')) {
-    return voiceId;
-  }
-
-  // Map popular preset IDs/names to Twilio Polly voices.
-  const map: Record<string, string> = {
-    '21m00Tcm4TlvDq8ikWAM': 'Polly.Joanna', // Rachel
-    'AZnzlk1XvdvUeBnXmlld': 'Polly.Salli', // Domi
-    'ErXwobaYiN019PkySvjV': 'Polly.Matthew', // Antoni
-    'TxGEqnHWrfWFT1GWmBXj': 'Polly.Joey', // Josh
-    'EXAVITQu4vr4xnSDxMaL': 'Polly.Amy', // Bella
-    'MF3mGyEYCl7XYWbV9V6O': 'Polly.Emma', // Elli
-    'pNInz6obpgDQGcFmaJgB': 'Polly.Brian', // Adam
-  };
-
-  return map[voiceId] || 'alice';
+  return isTwilioNativeVoice(voiceId) ? voiceId : 'alice';
 }
 
 async function getClient() {
@@ -56,6 +44,7 @@ export function generateCallTwiML(
     webSocketUrl?: string;
     language?: string;
     voiceId?: string;
+    ttsAudioUrl?: string;
   } = {}
 ): string {
   const VoiceResponse = twilio.twiml.VoiceResponse;
@@ -70,11 +59,14 @@ export function generateCallTwiML(
   // Pause slightly at start
   response.pause({ length: 1 });
   
-  // Speak the script
-  response.say({
-    voice: resolveTwilioVoice(options.voiceId) as any,
-    language: (options.language || 'en-US') as any,
-  }, script);
+  if (options.ttsAudioUrl) {
+    response.play(options.ttsAudioUrl);
+  } else {
+    response.say({
+      voice: resolveTwilioVoice(options.voiceId) as any,
+      language: (options.language || 'en-US') as any,
+    }, script);
+  }
   
   // Pause before forwarding
   response.pause({ length: 1 });

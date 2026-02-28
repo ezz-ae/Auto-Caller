@@ -7,6 +7,7 @@ export interface CallerIdentity {
   id: string;
   name: string;
   position: string;
+  gender: string;
   language: string;
   voiceId: string;
   industry: string;
@@ -63,6 +64,7 @@ function normalizeIdentity(
     id: existing?.id || input.id || uuidv4(),
     name: input.name.trim(),
     position: input.position.trim(),
+    gender: (input.gender || existing?.gender || 'any').trim().toLowerCase(),
     language: input.language.trim() || 'en-US',
     voiceId: input.voiceId.trim() || '21m00Tcm4TlvDq8ikWAM',
     industry: (input.industry || '').trim(),
@@ -95,6 +97,7 @@ function fsReadAll(): CallerIdentity[] {
   return data
     .map(item => ({
       ...item,
+      gender: (item as any).gender || 'any',
       createdAt: new Date(item.createdAt),
       lastCalledAt: item.lastCalledAt ? new Date(item.lastCalledAt) : undefined,
     }))
@@ -113,6 +116,7 @@ export async function listCallerIdentities(): Promise<CallerIdentity[]> {
       id: row.id,
       name: row.name,
       position: row.position,
+      gender: row.gender,
       language: row.language,
       voiceId: row.voiceId,
       industry: row.industry,
@@ -142,6 +146,7 @@ export async function getCallerIdentity(id: string): Promise<CallerIdentity | nu
       id: row.id,
       name: row.name,
       position: row.position,
+      gender: row.gender,
       language: row.language,
       voiceId: row.voiceId,
       industry: row.industry,
@@ -173,6 +178,7 @@ export async function saveCallerIdentity(
       id: existing.id,
       name: existing.name,
       position: existing.position,
+      gender: existing.gender,
       language: existing.language,
       voiceId: existing.voiceId,
       industry: existing.industry,
@@ -196,6 +202,7 @@ export async function saveCallerIdentity(
         id: normalized.id,
         name: normalized.name,
         position: normalized.position,
+        gender: normalized.gender,
         language: normalized.language,
         voiceId: normalized.voiceId,
         industry: normalized.industry,
@@ -214,6 +221,7 @@ export async function saveCallerIdentity(
       update: {
         name: normalized.name,
         position: normalized.position,
+        gender: normalized.gender,
         language: normalized.language,
         voiceId: normalized.voiceId,
         industry: normalized.industry,
@@ -235,6 +243,7 @@ export async function saveCallerIdentity(
       id: row.id,
       name: row.name,
       position: row.position,
+      gender: row.gender,
       language: row.language,
       voiceId: row.voiceId,
       industry: row.industry,
@@ -301,6 +310,7 @@ export async function applyCallerIdentityKpiDelta(id: string, delta: CallerIdent
       id: row.id,
       name: row.name,
       position: row.position,
+      gender: row.gender,
       language: row.language,
       voiceId: row.voiceId,
       industry: row.industry,

@@ -109,6 +109,7 @@ export interface CallerIdentity {
   id: string;
   name: string;
   position: string;
+  gender: string;
   language: string;
   voiceId: string;
   industry?: string;

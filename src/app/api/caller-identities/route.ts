@@ -41,6 +41,8 @@ export async function POST(request: NextRequest) {
 
     const name = String(body?.name || '').trim();
     const position = String(body?.position || '').trim();
+    const requestedGender = String(body?.gender || 'any').trim().toLowerCase();
+    const gender = ['male', 'female', 'any'].includes(requestedGender) ? requestedGender : 'any';
     const language = String(body?.language || 'en-US').trim();
     const voiceId = String(body?.voiceId || '21m00Tcm4TlvDq8ikWAM').trim();
     const industry = String(body?.industry || settings.industry || '').trim();
@@ -68,6 +70,7 @@ export async function POST(request: NextRequest) {
       id: body?.id,
       name,
       position,
+      gender,
       language,
       voiceId,
       industry,
