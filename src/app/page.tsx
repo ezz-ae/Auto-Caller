@@ -453,35 +453,56 @@ export default function Dashboard() {
     }
   }
 
+  const handleTabChange = (tab: string) => {
+    setActiveTab(tab)
+    if (tab === 'recordings') {
+      fetchRecordings()
+    }
+  }
+
+  const totalCalls = campaigns.reduce((sum, c) => sum + (c.results?.length || 0), 0)
+  const transcribedCount = recordings.filter(r => r.transcript).length
+  const successRate = totalCalls > 0
+    ? Math.round((campaigns.reduce((sum, c) => sum + (c.results?.filter(r => r.status === 'connected').length || 0), 0) / totalCalls) * 100)
+    : 0
+  const activeTabTitle =
+    activeTab === 'call'
+      ? 'Call Operations'
+      : activeTab === 'recordings'
+        ? 'Conversation Intelligence'
+        : activeTab === 'history'
+          ? 'Campaign Activity'
+          : 'Workspace Settings'
+
   return (
-    <div className="min-h-screen bg-zinc-950 text-white">
+    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#1a2b24_0%,#0a0a0b_40%,#09090b_100%)] text-white">
       {/* Hidden audio element */}
       <audio ref={audioRef} onEnded={() => setPlayingRecording(null)} />
       
       {/* Header */}
-      <header className="border-b border-zinc-800 bg-zinc-900/50 backdrop-blur">
-        <div className="container mx-auto px-4 py-4 flex items-center justify-between">
+      <header className="sticky top-0 z-20 border-b border-zinc-800/80 bg-zinc-950/70 backdrop-blur-xl">
+        <div className="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-emerald-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 ring-1 ring-emerald-300/30 flex items-center justify-center shadow-lg shadow-emerald-500/20">
               <Phone className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold">Auto Caller Pro</h1>
-              <p className="text-xs text-zinc-400">by <a href="https://1hundred.ai" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition">1hundred.ai</a></p>
+              <h1 className="text-xl font-semibold tracking-tight">Auto Caller Platform</h1>
+              <p className="text-xs text-zinc-400">Built by <a href="https://1hundred.ai" target="_blank" rel="noopener noreferrer" className="hover:text-emerald-400 transition">1hundred.ai</a></p>
             </div>
           </div>
           
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <a href={managedMode ? '#settings' : '/pricing'} className="text-xs text-zinc-400 hover:text-emerald-400 transition">
               {managedMode ? 'Billing' : 'Upgrade'}
             </a>
             {managedMode && assignedPhoneNumber && (
-              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800 border border-zinc-700">
+              <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-700">
                 <span className="text-xs text-zinc-400">Number:</span>
                 <span className="text-xs font-semibold text-emerald-400">{assignedPhoneNumber}</span>
               </div>
             )}
-            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800 border border-zinc-700">
+            <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-700">
               <span className="text-xs text-zinc-400">Credits:</span>
               <span className="text-sm font-bold text-emerald-400">{credits}</span>
             </div>
@@ -507,32 +528,66 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="container mx-auto px-4 py-8">
-        <Tabs value={activeTab} onValueChange={(tab) => {
-          setActiveTab(tab)
-          if (tab === 'recordings') fetchRecordings()
-        }} className="space-y-6">
-          <TabsList className="bg-zinc-900 border border-zinc-800">
-            <TabsTrigger value="call" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400">
+      <main className="mx-auto max-w-7xl px-4 py-6 space-y-6">
+        <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <Card className="bg-zinc-900/80 border-zinc-800 shadow-lg shadow-black/30">
+            <CardContent className="pt-6">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Total Calls</p>
+              <p className="text-2xl font-semibold mt-1">{totalCalls}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-zinc-900/80 border-zinc-800 shadow-lg shadow-black/30">
+            <CardContent className="pt-6">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Success Rate</p>
+              <p className="text-2xl font-semibold mt-1 text-emerald-400">{successRate}%</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-zinc-900/80 border-zinc-800 shadow-lg shadow-black/30">
+            <CardContent className="pt-6">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Transcribed</p>
+              <p className="text-2xl font-semibold mt-1">{transcribedCount}</p>
+            </CardContent>
+          </Card>
+          <Card className="bg-zinc-900/80 border-zinc-800 shadow-lg shadow-black/30">
+            <CardContent className="pt-6">
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Workspace</p>
+              <p className="text-base font-semibold mt-1 text-zinc-200">{activeTabTitle}</p>
+            </CardContent>
+          </Card>
+        </section>
+
+        <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
+          <div className="rounded-2xl border border-zinc-800 bg-zinc-900/70 px-4 py-4 sm:px-6 sm:py-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-zinc-500">Workspace</p>
+              <h2 className="text-xl font-semibold tracking-tight">{activeTabTitle}</h2>
+              <p className="text-sm text-zinc-400 mt-1">Run campaigns, review conversations, and operate your outbound pipeline.</p>
+            </div>
+            <div className="text-xs text-zinc-400">
+              {isCalling ? 'Campaign currently running' : 'No active campaign'}
+            </div>
+          </div>
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-2 h-auto bg-transparent p-0">
+            <TabsTrigger value="call" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
               <Phone className="w-4 h-4 mr-2" />
               Call Center
             </TabsTrigger>
-            <TabsTrigger value="recordings" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400">
+            <TabsTrigger value="recordings" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
               <Mic className="w-4 h-4 mr-2" />
               Recordings
             </TabsTrigger>
-            <TabsTrigger value="history" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400">
+            <TabsTrigger value="history" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
               <History className="w-4 h-4 mr-2" />
               History
             </TabsTrigger>
-            <TabsTrigger value="settings" className="data-[state=active]:bg-emerald-500/20 data-[state=active]:text-emerald-400">
+            <TabsTrigger value="settings" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
               <Settings className="w-4 h-4 mr-2" />
               Settings
             </TabsTrigger>
           </TabsList>
 
           {/* Call Center Tab */}
-          <TabsContent value="call" className="space-y-6">
+          <TabsContent value="call" className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="grid gap-6 lg:grid-cols-3">
               <div className="lg:col-span-2 space-y-6">
                 {/* Numbers Input */}
@@ -793,7 +848,7 @@ export default function Dashboard() {
           </TabsContent>
 
           {/* Recordings Tab */}
-          <TabsContent value="recordings" className="space-y-6">
+          <TabsContent value="recordings" className="space-y-6 animate-in fade-in-50 duration-200">
             <div className="grid gap-6 lg:grid-cols-3">
               {/* Recordings List */}
               <div className="lg:col-span-2 space-y-4">
@@ -984,7 +1039,7 @@ export default function Dashboard() {
           </TabsContent>
 
           {/* History Tab */}
-          <TabsContent value="history" className="space-y-6">
+          <TabsContent value="history" className="space-y-6 animate-in fade-in-50 duration-200">
             <Card className="bg-zinc-900 border-zinc-800">
               <CardHeader>
                 <CardTitle>Campaign History</CardTitle>
@@ -1024,7 +1079,7 @@ export default function Dashboard() {
           </TabsContent>
 
           {/* Settings Tab */}
-          <TabsContent value="settings" className="space-y-6">
+          <TabsContent value="settings" className="space-y-6 animate-in fade-in-50 duration-200" id="settings">
             <Card className="bg-zinc-900 border-zinc-800">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
