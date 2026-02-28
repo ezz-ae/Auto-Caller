@@ -83,3 +83,15 @@ model TranscriptRecord {
 
   @@map("transcripts")
 }
+
+model TeamMember {
+  id        String   @id
+  name      String
+  email     String   @unique
+  role      String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("team_members")
+}

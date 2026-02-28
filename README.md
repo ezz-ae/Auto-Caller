@@ -11,6 +11,9 @@ Production-ready outbound AI calling platform with:
 ## What Is Included
 
 - Full multi-tab platform UI (`Overview`, `Call Center`, `Recordings`, `History`, `Billing`, `Settings`)
+- Guided onboarding wizard in `Overview` for first-launch setup
+- Team accounts directory in `Settings` (owner/agent/manager operational records)
+- Optional dashboard access protection with login (`/login`)
 - Managed billing flows (PayPal number activation + credit top-up)
 - Twilio callback handling (status, forwarding, recording, voicemail)
 - OpenAI transcription + analysis pipeline
@@ -28,6 +31,14 @@ Production-ready outbound AI calling platform with:
 - OpenAI + ElevenLabs (AI)
 - PayPal (checkout)
 
+## Domain Recommendation
+
+Both are good and currently available:
+- `acall.ai` (short, premium feel)
+- `acaller.ai` (clearer intent for cold traffic and SEO)
+
+Recommended launch domain: **`acaller.ai`** for clarity and conversion on first visit.
+
 ## 1. Local Setup
 
 ```bash
@@ -42,6 +53,7 @@ Edit `.env.local` and set at least:
 - `STORE_DRIVER`
 - `DATABASE_URL` (if `STORE_DRIVER=postgres`)
 - Twilio / OpenAI / ElevenLabs / PayPal vars for your mode
+- `APP_ACCESS_PASSWORD` (optional, but recommended in production)
 
 ## 2. Neon DB Setup
 
@@ -61,6 +73,7 @@ This creates tables:
 - `campaigns`
 - `recordings`
 - `transcripts`
+- `team_members`
 
 ## 3. Run Locally
 
@@ -82,6 +95,12 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ```bash
 npm run db:push
+```
+
+Optional: seed demo workspace data after deployment:
+
+```bash
+npm run seed:demo
 ```
 
 ## 5. Twilio + PayPal Production Checklist
@@ -118,6 +137,20 @@ npx tsc --noEmit
 npm run build
 npm run db:generate
 npm run db:push
+npm run seed:demo
+npm run smoke:test
+```
+
+## 8. Smoke Test
+
+Run the API smoke test against local or deployed app:
+
+```bash
+# local
+APP_URL=http://localhost:3000 npm run smoke:test
+
+# production
+APP_URL=https://YOUR_DOMAIN npm run smoke:test
 ```
 
 ## Notes

@@ -38,7 +38,10 @@ import {
   Wallet,
   BarChart3,
   ShieldCheck,
-  Target
+  Target,
+  LogOut,
+  UserPlus,
+  Trash2
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -109,6 +112,15 @@ interface CopilotMessage {
   objections?: string[]
 }
 
+interface TeamMember {
+  id: string
+  name: string
+  email: string
+  role: string
+  active: boolean
+  createdAt: string
+}
+
 export default function Dashboard() {
   // Settings state
   const [settings, setSettings] = useState<Settings>({
@@ -157,6 +169,10 @@ export default function Dashboard() {
   const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>([])
   const [copilotInput, setCopilotInput] = useState('')
   const [copilotLoading, setCopilotLoading] = useState(false)
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
+  const [teamForm, setTeamForm] = useState({ name: '', email: '', role: 'Agent' })
+  const [teamLoading, setTeamLoading] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(true)
   const initRef = useRef(false)
 
   const fetchCampaigns = useCallback(async () => {
@@ -183,6 +199,108 @@ export default function Dashboard() {
       console.error('Failed to load recordings')
     }
   }, [])
+
+  const fetchTeamMembers = useCallback(async () => {
+    try {
+      const res = await fetch('/api/team-members')
+      const data = await res.json()
+      setTeamMembers(data.members || [])
+    } catch {
+      console.error('Failed to load team members')
+    }
+  }, [])
+
+  const addTeamMember = async () => {
+    if (!teamForm.name.trim() || !teamForm.email.trim() || !teamForm.role.trim()) {
+      toast.error('Name, email, and role are required')
+      return
+    }
+
+    setTeamLoading(true)
+    try {
+      const res = await fetch('/api/team-members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: teamForm.name.trim(),
+          email: teamForm.email.trim(),
+          role: teamForm.role.trim(),
+          active: true,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        toast.error(data.error || 'Failed to add team member')
+        return
+      }
+
+      setTeamForm({ name: '', email: '', role: 'Agent' })
+      await fetchTeamMembers()
+      toast.success('Team member added')
+    } catch {
+      toast.error('Failed to add team member')
+    } finally {
+      setTeamLoading(false)
+    }
+  }
+
+  const toggleTeamMember = async (member: TeamMember) => {
+    setTeamLoading(true)
+    try {
+      const res = await fetch('/api/team-members', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: member.id,
+          name: member.name,
+          email: member.email,
+          role: member.role,
+          active: !member.active,
+        }),
+      })
+
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        toast.error(data.error || 'Failed to update team member')
+        return
+      }
+
+      await fetchTeamMembers()
+    } catch {
+      toast.error('Failed to update team member')
+    } finally {
+      setTeamLoading(false)
+    }
+  }
+
+  const removeTeamMember = async (id: string) => {
+    setTeamLoading(true)
+    try {
+      const res = await fetch(`/api/team-members?id=${id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        toast.error(data.error || 'Failed to remove team member')
+        return
+      }
+
+      await fetchTeamMembers()
+      toast.success('Team member removed')
+    } catch {
+      toast.error('Failed to remove team member')
+    } finally {
+      setTeamLoading(false)
+    }
+  }
+
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' })
+      window.location.href = '/login'
+    } catch {
+      window.location.href = '/login'
+    }
+  }
 
   useEffect(() => {
     if (redirectUrl) {
@@ -222,11 +340,16 @@ export default function Dashboard() {
         ])
       }
       
-      await Promise.all([fetchCampaigns(), fetchRecordings()])
+      await Promise.all([fetchCampaigns(), fetchRecordings(), fetchTeamMembers()])
     }
     
     init()
-  }, [fetchCampaigns, fetchRecordings])
+  }, [fetchCampaigns, fetchRecordings, fetchTeamMembers])
+
+  useEffect(() => {
+    const onboardingDone = window.localStorage.getItem('acp_onboarding_done')
+    setShowOnboarding(onboardingDone !== 'true')
+  }, [])
 
   useEffect(() => {
     if (!isCalling) return
@@ -566,6 +689,36 @@ export default function Dashboard() {
     },
   ]
   const readinessScore = Math.round((readinessItems.filter(item => item.ready).length / readinessItems.length) * 100)
+  const onboardingSteps = [
+    {
+      label: 'Set business profile and forwarding number',
+      done: !!settings.businessName?.trim() && !!settings.forwardToNumber?.trim(),
+      tab: 'settings',
+    },
+    {
+      label: 'Activate billing (number + credits)',
+      done: credits > 0 && (!managedMode || !!assignedPhoneNumber),
+      tab: managedMode ? 'billing' : 'settings',
+    },
+    {
+      label: 'Upload a lead list and script',
+      done: preparedNumbers > 0 && script.trim().length >= 20,
+      tab: 'call',
+    },
+    {
+      label: 'Run first campaign',
+      done: campaigns.length > 0,
+      tab: 'call',
+    },
+  ]
+  const onboardingProgress = Math.round((onboardingSteps.filter(step => step.done).length / onboardingSteps.length) * 100)
+
+  const completeOnboarding = () => {
+    window.localStorage.setItem('acp_onboarding_done', 'true')
+    setShowOnboarding(false)
+    toast.success('Onboarding checklist completed')
+  }
+
   const filteredRecordings = recordings.filter(recording => {
     const query = recordingSearch.trim().toLowerCase()
     if (!query) return true
@@ -631,6 +784,16 @@ export default function Dashboard() {
             >
               {managedMode ? 'Billing' : 'Setup'}
             </button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="text-zinc-400 hover:text-white"
+              onClick={logout}
+            >
+              <LogOut className="w-4 h-4 mr-1" />
+              Logout
+            </Button>
             {managedMode && assignedPhoneNumber && (
               <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-700">
                 <span className="text-xs text-zinc-400">Number:</span>
@@ -731,6 +894,51 @@ export default function Dashboard() {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6 animate-in fade-in-50 duration-200">
+            {showOnboarding && (
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <UserPlus className="w-5 h-5 text-emerald-400" />
+                    Launch Onboarding Wizard
+                  </CardTitle>
+                  <CardDescription>
+                    Follow these 4 steps to launch the platform with real users today.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-zinc-400">Progress</span>
+                    <span className="text-emerald-400 font-semibold">{onboardingProgress}%</span>
+                  </div>
+                  <Progress value={onboardingProgress} className="h-2" />
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {onboardingSteps.map(step => (
+                      <button
+                        key={step.label}
+                        type="button"
+                        onClick={() => setActiveTab(step.tab)}
+                        className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 text-left hover:border-zinc-700 transition"
+                      >
+                        <span className="text-sm text-zinc-200">{step.label}</span>
+                        <Badge className={step.done ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border-amber-500/30'}>
+                          {step.done ? 'Done' : 'Pending'}
+                        </Badge>
+                      </button>
+                    ))}
+                  </div>
+                  <div className="flex justify-end">
+                    <Button
+                      variant="secondary"
+                      className="bg-zinc-800 hover:bg-zinc-700"
+                      onClick={completeOnboarding}
+                    >
+                      Mark Onboarding Complete
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid gap-6 xl:grid-cols-3">
               <Card className="xl:col-span-2 bg-zinc-900 border-zinc-800">
                 <CardHeader>
@@ -1699,6 +1907,79 @@ export default function Dashboard() {
                       />
                       <Label className="text-zinc-400">Auto-transcribe</Label>
                     </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="font-medium text-emerald-400">Team Accounts</h3>
+                  <p className="text-xs text-zinc-500">
+                    Add your internal operators (agent, manager, QA) so account ownership is documented before full RBAC rollout.
+                  </p>
+                  <div className="grid gap-3 md:grid-cols-4">
+                    <Input
+                      placeholder="Name"
+                      value={teamForm.name}
+                      onChange={e => setTeamForm(prev => ({ ...prev, name: e.target.value }))}
+                      className="bg-zinc-800 border-zinc-700"
+                    />
+                    <Input
+                      placeholder="Email"
+                      value={teamForm.email}
+                      onChange={e => setTeamForm(prev => ({ ...prev, email: e.target.value }))}
+                      className="bg-zinc-800 border-zinc-700"
+                    />
+                    <Input
+                      placeholder="Role (Agent, Manager...)"
+                      value={teamForm.role}
+                      onChange={e => setTeamForm(prev => ({ ...prev, role: e.target.value }))}
+                      className="bg-zinc-800 border-zinc-700"
+                    />
+                    <Button
+                      type="button"
+                      onClick={addTeamMember}
+                      disabled={teamLoading}
+                      className="bg-zinc-700 hover:bg-zinc-600"
+                    >
+                      <UserPlus className="w-4 h-4 mr-2" />
+                      Add Member
+                    </Button>
+                  </div>
+
+                  <div className="space-y-2">
+                    {teamMembers.length === 0 ? (
+                      <p className="text-sm text-zinc-500">No team members added yet.</p>
+                    ) : (
+                      teamMembers.map(member => (
+                        <div key={member.id} className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                          <div>
+                            <p className="text-sm font-medium">{member.name} <span className="text-zinc-500">({member.role})</span></p>
+                            <p className="text-xs text-zinc-400">{member.email}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="secondary"
+                              className="bg-zinc-800 hover:bg-zinc-700"
+                              onClick={() => toggleTeamMember(member)}
+                              disabled={teamLoading}
+                            >
+                              {member.active ? 'Disable' : 'Enable'}
+                            </Button>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="ghost"
+                              className="text-red-300 hover:text-red-200"
+                              onClick={() => removeTeamMember(member.id)}
+                              disabled={teamLoading}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))
+                    )}
                   </div>
                 </div>
 
