@@ -5,6 +5,12 @@ interface ChatMessage {
   content: string;
 }
 
+function normalizeGeminiModel(rawModel: string): string {
+  const trimmed = String(rawModel || '').trim();
+  if (!trimmed) return 'gemini-1.5-flash';
+  return trimmed.replace(/^models\//i, '');
+}
+
 function extractJsonObject(raw: string): Record<string, any> {
   const cleaned = raw
     .replace(/^```json\s*/i, '')
@@ -27,48 +33,72 @@ async function generateJsonWithGemini(payload: {
   systemPrompt: string;
   userPrompt: string;
 }) {
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(payload.model)}:generateContent?key=${encodeURIComponent(payload.apiKey)}`,
+  const normalizedModel = normalizeGeminiModel(payload.model);
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${normalizedModel}:generateContent?key=${encodeURIComponent(payload.apiKey)}`;
+
+  const requestBodies = [
     {
+      systemInstruction: {
+        parts: [{ text: payload.systemPrompt }],
+      },
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: payload.userPrompt }],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.4,
+        responseMimeType: 'application/json',
+        maxOutputTokens: 2048,
+      },
+    },
+    // Fallback for accounts/models that reject responseMimeType or systemInstruction.
+    {
+      contents: [
+        {
+          role: 'user',
+          parts: [{ text: `${payload.systemPrompt}\n\n${payload.userPrompt}` }],
+        },
+      ],
+      generationConfig: {
+        temperature: 0.4,
+        maxOutputTokens: 2048,
+      },
+    },
+  ];
+
+  let lastError = '';
+  for (const body of requestBodies) {
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: payload.systemPrompt }],
-        },
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: payload.userPrompt }],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.4,
-          responseMimeType: 'application/json',
-          maxOutputTokens: 2048,
-        },
-      }),
+      body: JSON.stringify(body),
+    });
+
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      lastError = data?.error?.message || `Google AI request failed: ${response.status}`;
+      continue;
     }
-  );
 
-  const data = await response.json();
-  if (!response.ok) {
-    throw new Error(data?.error?.message || `Google AI request failed: ${response.status}`);
+    const text = (data?.candidates || [])
+      .flatMap((candidate: any) => candidate?.content?.parts || [])
+      .map((part: any) => part?.text || '')
+      .join('\n')
+      .trim();
+
+    if (!text) {
+      lastError = 'Google AI returned an empty response';
+      continue;
+    }
+
+    return extractJsonObject(text);
   }
 
-  const text = (data?.candidates || [])
-    .flatMap((candidate: any) => candidate?.content?.parts || [])
-    .map((part: any) => part?.text || '')
-    .join('\n')
-    .trim();
-
-  if (!text) {
-    throw new Error('Google AI returned an empty response');
-  }
-
-  return extractJsonObject(text);
+  throw new Error(lastError || 'Google AI request failed');
 }
 
 export async function POST(request: NextRequest) {
@@ -101,7 +131,7 @@ export async function POST(request: NextRequest) {
       process.env.GEMINI_API_KEY ||
       '';
     const model =
-      process.env.GOOGLE_AI_MODEL ||
+      normalizeGeminiModel(process.env.GOOGLE_AI_MODEL || process.env.GEMINI_MODEL || '') ||
       process.env.GEMINI_MODEL ||
       'gemini-1.5-flash';
 
