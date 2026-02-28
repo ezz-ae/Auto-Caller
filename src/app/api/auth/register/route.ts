@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { isAccountAuthEnabled } from '@/lib/access-control';
+import { ACCESS_COOKIE_NAME, isAccountAuthEnabled } from '@/lib/access-control';
 import { createSessionToken, createUserAccount, SESSION_COOKIE_NAME } from '@/lib/account-auth';
 
 export async function POST(request: NextRequest) {
@@ -33,6 +33,13 @@ export async function POST(request: NextRequest) {
       sameSite: 'lax',
       path: '/',
       maxAge: 60 * 60 * 24 * 30,
+    });
+    response.cookies.set(ACCESS_COOKIE_NAME, '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 0,
     });
 
     return response;

@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { prisma } from '@/lib/prisma';
+import { isAccountAuthEnabled } from '@/lib/access-control';
 
 export const SESSION_COOKIE_NAME = 'acp_session';
 
@@ -13,12 +14,19 @@ interface SessionPayload {
 }
 
 function getSessionSecret(): string {
-  return (
-    process.env.APP_SESSION_SECRET ||
-    process.env.APP_ACCESS_PASSWORD ||
-    process.env.CRON_SECRET ||
-    'change-me-session-secret'
-  );
+  const explicitSecret = String(process.env.APP_SESSION_SECRET || '').trim();
+  if (explicitSecret) return explicitSecret;
+
+  const fallbackSecret = String(process.env.APP_ACCESS_PASSWORD || process.env.CRON_SECRET || '').trim();
+  if (fallbackSecret) return fallbackSecret;
+
+  if (isAccountAuthEnabled() && process.env.NODE_ENV === 'production') {
+    const dbUrl = String(process.env.DATABASE_URL || '').trim();
+    if (dbUrl) return dbUrl;
+    return 'change-me-session-secret';
+  }
+
+  return 'dev-only-session-secret';
 }
 
 function base64url(input: Buffer | string): string {

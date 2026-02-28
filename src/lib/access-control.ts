@@ -1,5 +1,12 @@
 export const ACCESS_COOKIE_NAME = 'acp_auth';
 
+export function isLegacyAuthAllowed() {
+  const forced = String(process.env.ALLOW_LEGACY_AUTH || '').trim().toLowerCase();
+  if (forced === 'true') return true;
+  if (forced === 'false') return false;
+  return !isAccountAuthEnabled();
+}
+
 export function isAccessProtectionEnabled() {
   const forced = String(process.env.AUTH_REQUIRED || '').trim().toLowerCase();
   if (forced === 'false') return false;
@@ -24,6 +31,7 @@ export function getExpectedAuthToken() {
 
 export function isAuthorizedWithToken(token?: string | null) {
   if (!isAccessProtectionEnabled()) return true;
+  if (!isLegacyAuthAllowed()) return false;
   return token === getExpectedAuthToken();
 }
 

@@ -70,7 +70,10 @@ Edit `.env.local` and set at least:
 - `STORE_DRIVER`
 - `DATABASE_URL` (if `STORE_DRIVER=postgres`)
 - Twilio / Google AI / ElevenLabs / PayPal vars for your mode
-- `APP_ACCESS_PASSWORD` (optional, but recommended in production)
+- `AUTH_MODE=accounts` (recommended)
+- `APP_SESSION_SECRET` (required in production for account sessions)
+- `ALLOW_LEGACY_AUTH=false` (recommended)
+- `APP_ACCESS_PASSWORD` (only for `AUTH_MODE=legacy`)
 
 ## 2. Neon DB Setup
 
@@ -160,6 +163,8 @@ No customer API keys required.
 Authentication modes:
 - `AUTH_MODE=accounts` (recommended): per-user accounts and isolated workspaces.
 - `AUTH_MODE=legacy`: single shared login via `APP_ACCESS_USERNAME` / `APP_ACCESS_PASSWORD`.
+- `ALLOW_LEGACY_AUTH=false` (recommended): blocks shared legacy cookie fallback when using `AUTH_MODE=accounts`.
+- `APP_SESSION_SECRET`: strong random secret for signing account session cookies.
 
 Automatic number provisioning:
 - Set `MANAGED_AUTO_PROVISION_NUMBER=true` to auto-buy a Twilio number after successful number checkout.

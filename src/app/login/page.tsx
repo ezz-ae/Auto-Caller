@@ -35,9 +35,12 @@ export default function LoginPage() {
         if (typeof data?.accountMode === 'boolean') {
           setAccountMode(data.accountMode);
         }
+        if (data?.authenticated) {
+          router.replace(next || '/dashboard');
+        }
       })
       .catch(() => null);
-  }, []);
+  }, [router]);
 
   const onSubmit = async (event: React.FormEvent) => {
     event.preventDefault();

@@ -30,6 +30,9 @@ NEXT_PUBLIC_APP_URL=https://acaller.ai
 
 APP_ACCESS_USERNAME=admin
 APP_ACCESS_PASSWORD=CHANGE_TO_STRONG_PASSWORD
+AUTH_MODE=accounts
+ALLOW_LEGACY_AUTH=false
+APP_SESSION_SECRET=LONG_RANDOM_SESSION_SECRET
 
 STORE_DRIVER=postgres
 DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB_NAME?sslmode=require
@@ -80,6 +83,9 @@ Add same keys for `Preview`, but with safer values:
 NEXT_PUBLIC_APP_URL=https://YOUR_PREVIEW_DOMAIN
 APP_ACCESS_USERNAME=admin
 APP_ACCESS_PASSWORD=PREVIEW_PASSWORD
+AUTH_MODE=accounts
+ALLOW_LEGACY_AUTH=false
+APP_SESSION_SECRET=LONG_RANDOM_SESSION_SECRET
 STORE_DRIVER=postgres
 DATABASE_URL=postgresql://USER:PASSWORD@HOST/PREVIEW_DB?sslmode=require
 PAYPAL_MODE=sandbox
@@ -152,7 +158,7 @@ Expected result:
 ## 9. Go-Live Checks
 
 Before accepting customers:
-1. Verify login gate works (`/login`) with `APP_ACCESS_PASSWORD`.
+1. Verify account login works (`/login`) with email/password and that logout clears session.
 2. Verify caller identities can buy number (one number per caller identity).
 3. Verify calls can start and callbacks update campaign status.
 4. Verify recordings appear and transcription analysis runs with Google AI.

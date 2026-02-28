@@ -4,6 +4,7 @@ import { SESSION_COOKIE_NAME, verifySessionToken } from '@/lib/account-auth';
 
 export async function GET(request: NextRequest) {
   try {
+    const accountMode = isAccountAuthEnabled();
     const token = request.cookies.get(SESSION_COOKIE_NAME)?.value;
     const session = verifySessionToken(token);
     if (session?.userId) {
@@ -18,7 +19,7 @@ export async function GET(request: NextRequest) {
     }
 
     const legacyToken = request.cookies.get(ACCESS_COOKIE_NAME)?.value;
-    if (isAuthorizedWithToken(legacyToken)) {
+    if (!accountMode && isAuthorizedWithToken(legacyToken)) {
       return NextResponse.json({
         authenticated: true,
         accountMode: false,
@@ -31,7 +32,7 @@ export async function GET(request: NextRequest) {
 
     return NextResponse.json({
       authenticated: false,
-      accountMode: isAccountAuthEnabled(),
+      accountMode,
     });
   } catch (error) {
     return NextResponse.json({ authenticated: false, accountMode: isAccountAuthEnabled() });

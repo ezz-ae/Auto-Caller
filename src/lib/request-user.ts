@@ -1,5 +1,5 @@
 import { NextRequest } from 'next/server';
-import { ACCESS_COOKIE_NAME, isAuthorizedWithToken } from '@/lib/access-control';
+import { ACCESS_COOKIE_NAME, isAuthorizedWithToken, isAccountAuthEnabled } from '@/lib/access-control';
 import { SESSION_COOKIE_NAME, verifySessionToken } from '@/lib/account-auth';
 
 export function getUserIdFromRequest(
@@ -10,8 +10,10 @@ export function getUserIdFromRequest(
   const session = verifySessionToken(sessionToken);
   if (session?.userId) return session.userId;
 
-  const legacyToken = request.cookies.get(ACCESS_COOKIE_NAME)?.value;
-  if (isAuthorizedWithToken(legacyToken)) return 'default';
+  if (!isAccountAuthEnabled()) {
+    const legacyToken = request.cookies.get(ACCESS_COOKIE_NAME)?.value;
+    if (isAuthorizedWithToken(legacyToken)) return 'default';
+  }
 
   if (options.allowQuery) {
     const url = new URL(request.url);
