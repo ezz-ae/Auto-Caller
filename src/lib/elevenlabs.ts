@@ -87,9 +87,9 @@ export async function generateSpeech(
   }
   
   const modelId = process.env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2';
-  const stability = getFloatEnv('ELEVENLABS_VOICE_STABILITY', 0.32);
+  const stability = getFloatEnv('ELEVENLABS_VOICE_STABILITY', 0.26);
   const similarityBoost = getFloatEnv('ELEVENLABS_VOICE_SIMILARITY_BOOST', 0.9);
-  const style = getFloatEnv('ELEVENLABS_VOICE_STYLE', 0.55);
+  const style = getFloatEnv('ELEVENLABS_VOICE_STYLE', 0.68);
   const speed = getFloatEnv('ELEVENLABS_VOICE_SPEED', 1);
   const useSpeakerBoost = getBooleanEnv('ELEVENLABS_USE_SPEAKER_BOOST', true);
   const optimizeLatency = Math.max(0, Math.min(4, Math.round(getFloatEnv('ELEVENLABS_OPTIMIZE_STREAMING_LATENCY', 3))));

@@ -11,6 +11,7 @@ export interface ConversationContext {
   leadUtterance: string;
   campaignBrief: string;
   language: string;
+  turn: number;
   callerName: string;
   callerPosition: string;
   businessName: string;
@@ -28,6 +29,8 @@ export interface ConversationDecision {
   reason: string;
 }
 
+type LeadMood = 'positive' | 'skeptical' | 'neutral' | 'decline';
+
 function clipText(input: string, max = 320): string {
   const cleaned = String(input || '').replace(/\s+/g, ' ').trim();
   if (cleaned.length <= max) return cleaned;
@@ -39,6 +42,155 @@ function normalizeAction(value: string): ConversationAction {
   if (normalized === 'forward') return 'forward';
   if (normalized === 'end') return 'end';
   return 'continue';
+}
+
+function getHumanizationLevel(): 'low' | 'medium' | 'high' {
+  const raw = String(process.env.AI_CALL_HUMANIZATION_LEVEL || 'high').trim().toLowerCase();
+  if (raw === 'low' || raw === 'medium' || raw === 'high') return raw;
+  return 'high';
+}
+
+function getBooleanEnv(name: string, fallback: boolean): boolean {
+  const raw = String(process.env[name] || '').trim().toLowerCase();
+  if (!raw) return fallback;
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return fallback;
+}
+
+function hasAny(text: string, patterns: string[]): boolean {
+  return patterns.some(pattern => text.includes(pattern));
+}
+
+function detectLeadMood(utterance: string): LeadMood {
+  const text = String(utterance || '').toLowerCase();
+  if (!text) return 'neutral';
+
+  if (hasAny(text, ['not interested', "don't call", 'do not call', 'stop calling', 'wrong number', 'no thanks'])) {
+    return 'decline';
+  }
+
+  if (hasAny(text, ['great', 'awesome', 'yes', 'sure', 'sounds good', 'perfect', 'cool', 'love that', 'haha', 'lol'])) {
+    return 'positive';
+  }
+
+  if (hasAny(text, ['not sure', 'maybe', 'concern', 'worried', 'expensive', 'too much', 'busy', 'later'])) {
+    return 'skeptical';
+  }
+
+  return 'neutral';
+}
+
+function deriveSmartQuestion(context: ConversationContext): string {
+  const corpus = `${context.campaignBrief}\n${context.history.map(h => h.text).join('\n')}\n${context.leadUtterance}`.toLowerCase();
+  const industry = String(context.industry || '').toLowerCase();
+
+  const hasBudget = hasAny(corpus, ['budget', 'price', 'cost', 'how much', '$', 'aed']);
+  const hasTiming = hasAny(corpus, ['timeline', 'when', 'this month', 'next month', 'urgent', 'soon']);
+  const hasNeed = hasAny(corpus, ['need', 'looking for', 'interested in', 'want', 'goal']);
+  const hasLocation = hasAny(corpus, ['location', 'area', 'city', 'neighborhood', 'where']);
+  const hasDecisionMaker = hasAny(corpus, ['my wife', 'my husband', 'my partner', 'team', 'boss', 'manager', 'decision']);
+
+  if (industry.includes('real estate') || industry.includes('property')) {
+    if (!hasNeed) return 'Just so I can tailor this, are you focused on living in it or investment returns?';
+    if (!hasLocation) return 'What area are you most interested in right now?';
+    if (!hasBudget) return 'What budget range would feel comfortable for you?';
+    if (!hasTiming) return 'What timeline are you targeting to move forward?';
+  }
+
+  if (!hasNeed) return 'What outcome are you hoping to achieve from this?';
+  if (!hasBudget) return 'Do you already have a budget range in mind?';
+  if (!hasTiming) return 'What timeline works best for you?';
+  if (!hasDecisionMaker) return 'Will you be deciding on this yourself or with someone else?';
+
+  return 'Would it help if I connect you now for exact next steps?';
+}
+
+function startsWithHumanCue(text: string): boolean {
+  const normalized = text.toLowerCase();
+  return (
+    normalized.startsWith('yeah') ||
+    normalized.startsWith('yep') ||
+    normalized.startsWith('aha') ||
+    normalized.startsWith('ah,') ||
+    normalized.startsWith('hmm') ||
+    normalized.startsWith('got it') ||
+    normalized.startsWith('makes sense') ||
+    normalized.startsWith('i hear you') ||
+    normalized.startsWith('totally')
+  );
+}
+
+function chooseBySeed<T>(items: T[], seed: number): T {
+  return items[Math.abs(seed) % items.length];
+}
+
+function withBreathingPauses(text: string, level: 'low' | 'medium' | 'high', seed: number): string {
+  if (level === 'low') return text;
+  if (text.length < 24) return text;
+
+  if (seed % 3 === 0 && text.includes('. ')) {
+    return text.replace('. ', '... ');
+  }
+
+  if (level === 'high' && seed % 4 === 0 && text.includes(', ')) {
+    return text.replace(', ', ', ... ');
+  }
+
+  return text;
+}
+
+function maybeAddLaughCue(text: string, mood: LeadMood, seed: number): string {
+  if (mood !== 'positive') return text;
+  if (seed % 5 !== 0) return text;
+
+  if (text.toLowerCase().includes('haha')) return text;
+  return `Haha, ${text.charAt(0).toLowerCase()}${text.slice(1)}`;
+}
+
+function injectHumanTexture(
+  reply: string,
+  action: ConversationAction,
+  context: ConversationContext,
+  mood: LeadMood
+): string {
+  const level = getHumanizationLevel();
+  const expressive = getBooleanEnv('AI_CALL_EXPRESSIVE_MODE', true);
+  if (!expressive) return reply;
+
+  let text = String(reply || '').replace(/\s+/g, ' ').trim();
+  if (!text) return text;
+
+  const seed = context.turn + context.leadUtterance.length + context.history.length;
+
+  if (!startsWithHumanCue(text) && action !== 'end') {
+    const positiveCues = ['Yeah, ', 'Aha, ', 'Got it, ', 'Makes sense, '];
+    const skepticalCues = ['I hear you, ', "That's fair, ", 'Yeah, totally get that, '];
+    const neutralCues = ['Yeah, ', 'Got it, ', 'Mm-hmm, ', 'Aha, '];
+
+    const cue = mood === 'positive'
+      ? chooseBySeed(positiveCues, seed)
+      : mood === 'skeptical'
+        ? chooseBySeed(skepticalCues, seed)
+        : chooseBySeed(neutralCues, seed);
+
+    text = `${cue}${text.charAt(0).toLowerCase()}${text.slice(1)}`;
+  }
+
+  text = withBreathingPauses(text, level, seed);
+
+  if (getBooleanEnv('AI_CALL_ALLOW_LAUGH', true)) {
+    text = maybeAddLaughCue(text, mood, seed);
+  }
+
+  if (action === 'continue' && !text.includes('?')) {
+    const question = deriveSmartQuestion(context);
+    if (question) {
+      text = `${text} ${question}`;
+    }
+  }
+
+  return text;
 }
 
 function extractJsonObject(raw: string): Record<string, any> {
@@ -102,10 +254,18 @@ function heuristicDecision(context: ConversationContext): ConversationDecision {
     };
   }
 
+  const mood = detectLeadMood(context.leadUtterance);
+  const smartQuestion = deriveSmartQuestion(context);
+
   return {
     action: 'continue',
     reason: 'Continue discovery',
-    reply: 'Thanks for sharing. In one sentence, what matters most to you so I can tailor this for you?',
+    reply: injectHumanTexture(
+      smartQuestion || 'Thanks for sharing. In one sentence, what matters most to you so I can tailor this for you?',
+      'continue',
+      context,
+      mood
+    ),
   };
 }
 
@@ -156,8 +316,9 @@ STYLE:
 - Speak like a real person on a phone call, not a bot.
 - Use contractions naturally (I'm, you're, that's).
 - Use short spoken sentences (usually 6-20 words).
-- Use occasional natural backchannels when relevant (got it, sure, makes sense, absolutely).
-- Use natural pauses with punctuation where needed.
+- Use occasional natural backchannels when relevant (got it, sure, makes sense, absolutely, yeah, aha).
+- Use natural pauses with punctuation where needed (brief pauses like "..." are allowed sparingly).
+- You may occasionally use very light social cues when appropriate (for example "haha" in a friendly moment).
 - Ask only one focused follow-up question at a time.
 - Answer questions directly.
 - Never sound robotic or repetitive.
@@ -182,7 +343,8 @@ Return STRICT JSON only:
 {
   "reply": "short spoken response",
   "action": "continue|forward|end",
-  "reason": "very short reason"
+  "reason": "very short reason",
+  "nextQuestion": "optional single follow-up question"
 }`;
 }
 
@@ -205,23 +367,33 @@ ${history || 'No previous turns'}
 Latest lead message:
 ${clipText(context.leadUtterance, 500)}
 
+Recommended discovery angle:
+${deriveSmartQuestion(context)}
+
 Generate the next best response now.`;
 }
 
-function coerceDecision(raw: Record<string, any>, fallback: ConversationDecision): ConversationDecision {
-  const reply = normalizeSpokenReply(String(raw.reply || ''));
+function coerceDecision(raw: Record<string, any>, fallback: ConversationDecision, context: ConversationContext): ConversationDecision {
+  const mood = detectLeadMood(context.leadUtterance);
+  const action = normalizeAction(String(raw.action || 'continue'));
+  const nextQuestion = String(raw.nextQuestion || '').trim();
+  const rawReply = String(raw.reply || '');
+  const mergedReply = action === 'continue' && nextQuestion && !rawReply.includes('?')
+    ? `${rawReply} ${nextQuestion}`
+    : rawReply;
+  const reply = normalizeSpokenReply(injectHumanTexture(mergedReply, action, context, mood));
   if (!reply) return fallback;
 
   return {
     reply,
-    action: normalizeAction(String(raw.action || 'continue')),
+    action,
     reason: clipText(String(raw.reason || 'AI response'), 120),
   };
 }
 
 function normalizeSpokenReply(input: string): string {
   const cleaned = clipText(String(input || ''), 320)
-    .replace(/[*_`#>-]/g, ' ')
+    .replace(/[*_`#>\[\]{}()]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 
@@ -229,8 +401,8 @@ function normalizeSpokenReply(input: string): string {
 
   // Keep responses concise for real phone cadence.
   const words = cleaned.split(' ');
-  if (words.length <= 34) return cleaned;
-  return `${words.slice(0, 34).join(' ').trim()}...`;
+  if (words.length <= 42) return cleaned;
+  return `${words.slice(0, 42).join(' ').trim()}...`;
 }
 
 async function requestGemini(context: ConversationContext): Promise<ConversationDecision> {
@@ -302,7 +474,7 @@ async function requestGemini(context: ConversationContext): Promise<Conversation
     }
 
     const parsed = extractJsonObject(text);
-    return coerceDecision(parsed, fallback);
+    return coerceDecision(parsed, fallback, context);
   }
 
   throw new Error(lastError);
@@ -355,7 +527,7 @@ async function requestOpenAI(context: ConversationContext): Promise<Conversation
       }
 
       const parsed = extractJsonObject(raw);
-      return coerceDecision(parsed, fallback);
+      return coerceDecision(parsed, fallback, context);
     } catch (error) {
       lastError = error instanceof Error ? error.message : 'OpenAI request failed';
     }

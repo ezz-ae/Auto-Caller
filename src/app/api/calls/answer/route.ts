@@ -419,6 +419,7 @@ async function handleAnswer(request: NextRequest) {
       leadUtterance: speechResult,
       campaignBrief: conversationState.brief,
       language,
+      turn: conversationState.turn,
       callerName,
       callerPosition,
       businessName,

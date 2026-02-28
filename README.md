@@ -176,6 +176,10 @@ AI provider:
 - Optional overrides:
   - `AI_CALL_MODEL` to use a dedicated Gemini model for live calls
   - `AI_CONVERSATION_MODE=false` to force legacy one-shot script playback
+- Humanization controls:
+  - `AI_CALL_HUMANIZATION_LEVEL=high` for stronger human-like style
+  - `AI_CALL_EXPRESSIVE_MODE=true` to allow natural cues (yeah, aha, mm-hmm)
+  - `AI_CALL_ALLOW_LAUGH=true` to permit occasional light laughter cues when context is positive
 - Optional fallback: `OPENAI_API_KEY`.
 - Optional OpenAI live-call model override: `OPENAI_CALL_MODEL`.
 
