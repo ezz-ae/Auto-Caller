@@ -228,6 +228,8 @@ export default function Dashboard() {
     avoidThisRules: '',
   })
   const [identityLoading, setIdentityLoading] = useState(false)
+  const [voicePreviewText, setVoicePreviewText] = useState('Hi, this is Sara from Acaller. I wanted to share a quick update about our latest launch and see if this is relevant for you.')
+  const [previewingVoice, setPreviewingVoice] = useState<string | null>(null)
   
   // Campaign state
   const [isCalling, setIsCalling] = useState(false)
@@ -241,6 +243,7 @@ export default function Dashboard() {
   const [transcribing, setTranscribing] = useState<string | null>(null)
   const [recordingSearch, setRecordingSearch] = useState('')
   const audioRef = useRef<HTMLAudioElement>(null)
+  const voicePreviewAudioRef = useRef<HTMLAudioElement>(null)
   const csvInputRef = useRef<HTMLInputElement>(null)
   
   // UI state
@@ -406,6 +409,11 @@ export default function Dashboard() {
     })
   }, [identityForm.gender, identityForm.language, identityVoicePool])
 
+  const selectedIdentityVoice = useMemo(
+    () => filteredIdentityVoices.find(voice => voice.id === identityForm.voiceId) || null,
+    [filteredIdentityVoices, identityForm.voiceId]
+  )
+
   useEffect(() => {
     if (filteredIdentityVoices.length === 0) return
     if (filteredIdentityVoices.some(voice => voice.id === identityForm.voiceId)) return
@@ -499,6 +507,49 @@ export default function Dashboard() {
       toast.error('Failed to delete caller identity')
     } finally {
       setIdentityLoading(false)
+    }
+  }
+
+  const previewIdentityVoice = async (voiceId?: string, language?: string) => {
+    const chosenVoiceId = voiceId || identityForm.voiceId
+    const chosenLanguage = language || identityForm.language || selectedLanguage
+    const text = voicePreviewText.trim()
+
+    if (!chosenVoiceId) {
+      toast.error('Select a voice first')
+      return
+    }
+    if (!text) {
+      toast.error('Add preview text first')
+      return
+    }
+
+    const voice = voices.find(v => v.id === chosenVoiceId)
+    if (!voice) {
+      toast.error('Voice not found')
+      return
+    }
+
+    if (voice.source !== 'elevenlabs') {
+      toast.error('Preview is available for ElevenLabs voices. Choose an ElevenLabs voice for natural quality testing.')
+      return
+    }
+
+    if (voicePreviewAudioRef.current) {
+      voicePreviewAudioRef.current.pause()
+      voicePreviewAudioRef.current.currentTime = 0
+    }
+
+    setPreviewingVoice(chosenVoiceId)
+    try {
+      const url = `/api/calls/tts?script=${encodeURIComponent(text)}&voiceId=${encodeURIComponent(chosenVoiceId)}&language=${encodeURIComponent(chosenLanguage)}`
+      if (voicePreviewAudioRef.current) {
+        voicePreviewAudioRef.current.src = url
+        await voicePreviewAudioRef.current.play()
+      }
+    } catch {
+      toast.error('Failed to play voice preview')
+      setPreviewingVoice(null)
     }
   }
 
@@ -1056,6 +1107,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#1a2b24_0%,#0a0a0b_40%,#09090b_100%)] text-white">
       {/* Hidden audio element */}
       <audio ref={audioRef} onEnded={() => setPlayingRecording(null)} />
+      <audio ref={voicePreviewAudioRef} onEnded={() => setPreviewingVoice(null)} />
       
       {/* Header */}
       <header className="sticky top-0 z-20 border-b border-zinc-800/80 bg-zinc-950/70 backdrop-blur-xl">
@@ -2365,6 +2417,29 @@ export default function Dashboard() {
                   <p className="text-xs text-zinc-500">
                     Voice list is filtered by selected gender + language and prioritizes ElevenLabs voices for natural delivery.
                   </p>
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 space-y-3">
+                    <p className="text-sm font-medium text-zinc-200">Voice Quality Test</p>
+                    <Textarea
+                      placeholder="Sample text for voice preview"
+                      value={voicePreviewText}
+                      onChange={e => setVoicePreviewText(e.target.value)}
+                      className="min-h-[88px] bg-zinc-900 border-zinc-700"
+                    />
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                      <p className="text-xs text-zinc-500">
+                        Selected voice: {selectedIdentityVoice ? `${selectedIdentityVoice.name} (${selectedIdentityVoice.language || selectedIdentityVoice.labels?.language || 'multi'})` : 'None'}
+                      </p>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="bg-zinc-800 hover:bg-zinc-700"
+                        onClick={() => previewIdentityVoice(identityForm.voiceId, identityForm.language)}
+                        disabled={!identityForm.voiceId || !!previewingVoice}
+                      >
+                        {previewingVoice === identityForm.voiceId ? 'Playing...' : 'Test Voice'}
+                      </Button>
+                    </div>
+                  </div>
                   <div className="grid gap-3 md:grid-cols-2">
                     <Textarea
                       placeholder='Identity "say this" rules'
@@ -2439,6 +2514,16 @@ export default function Dashboard() {
                                   onClick={() => applyIdentityToComposer(identity)}
                                 >
                                   Use
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  className="bg-zinc-800 hover:bg-zinc-700"
+                                  onClick={() => previewIdentityVoice(identity.voiceId, identity.language)}
+                                  disabled={!!previewingVoice}
+                                >
+                                  {previewingVoice === identity.voiceId ? 'Playing...' : 'Preview'}
                                 </Button>
                                 <Button
                                   type="button"
