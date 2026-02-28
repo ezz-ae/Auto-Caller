@@ -2,7 +2,7 @@
 
 Production-ready outbound AI calling platform with:
 - campaign orchestration
-- AI script copilot
+- AI conversation copilot
 - call forwarding
 - call recordings + transcription
 - scheduled campaign dispatch
@@ -14,13 +14,13 @@ Production-ready outbound AI calling platform with:
 - Full multi-tab platform UI (`Overview`, `Call Center`, `Callers`, `Recordings`, `History`, `Billing`, `Settings`)
 - Guided onboarding wizard in `Overview` for first-launch setup
 - Team accounts directory in `Settings` (owner/agent/manager operational records)
-- Caller identities in dedicated `Callers` tab (name, position, voice, language, disclosure mode, script constraints, KPI counters)
+- Caller identities in dedicated `Callers` tab (name, position, voice, language, disclosure mode, conversation constraints, KPI counters)
 - Number upload flow with direct caller assignment + optional schedule in `Call Center`
 - Natural call voice delivery via ElevenLabs TTS for identity voices (with gender/language filtering in identity setup)
 - Optional dashboard access protection with login (`/login`)
 - Managed billing flows (PayPal number activation + credit top-up)
 - Twilio callback handling (status, forwarding, recording, voicemail)
-- Google AI script copilot + transcription analysis (OpenAI fallback optional)
+- Google AI conversation engine + transcription analysis (OpenAI fallback optional)
 - Vercel cron dispatch endpoint for scheduled campaigns (`/api/cron/dispatch-scheduled`)
 - Data layer with dual drivers:
   - `postgres` (Neon/Postgres via Prisma, recommended for production)
@@ -163,9 +163,14 @@ Natural voices (ElevenLabs):
 - Optional: set `ELEVENLABS_MODEL_ID` (default `eleven_multilingual_v2`).
 
 AI provider:
-- Google AI is primary for script copilot and transcript analysis.
+- Google AI is primary for live call conversation, copilot, and transcript analysis.
 - Set `GOOGLE_AI_API_KEY` (and optional `GOOGLE_AI_MODEL`).
+- Live calls run in conversational mode (listen/respond per turn) by default.
+- Optional overrides:
+  - `AI_CALL_MODEL` to use a dedicated Gemini model for live calls
+  - `AI_CONVERSATION_MODE=false` to force legacy one-shot script playback
 - Optional fallback: `OPENAI_API_KEY`.
+- Optional OpenAI live-call model override: `OPENAI_CALL_MODEL`.
 
 ## 7. Useful Commands
 

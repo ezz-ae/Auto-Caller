@@ -51,8 +51,11 @@ export async function runCampaign(campaign: Campaign): Promise<void> {
           transcribe: campaign.transcribeCalls ?? settings.transcribeCalls,
           language: campaign.language || 'en-US',
           callerIdentityId: campaign.callerIdentityId,
+          callerName: campaign.callerIdentityName,
+          callerPosition: campaign.callerPosition,
           voiceId: campaign.voiceId,
           fromNumber,
+          mode: 'conversation',
         }
       );
 

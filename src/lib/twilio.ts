@@ -127,8 +127,11 @@ export async function makeCall(
     transcribe?: boolean;
     language?: string;
     callerIdentityId?: string;
+    callerName?: string;
+    callerPosition?: string;
     voiceId?: string;
     fromNumber?: string;
+    mode?: 'conversation' | 'legacy';
   } = {}
 ): Promise<{ sid: string; status: string }> {
   const client = await getClient();
@@ -148,7 +151,20 @@ export async function makeCall(
     transcribe: String(options.transcribe || settings.transcribeCalls || false),
     language: options.language || 'en-US',
     voiceId: options.voiceId || 'alice',
+    mode: options.mode || 'conversation',
   });
+
+  if (options.callerIdentityId) {
+    params.set('callerIdentityId', options.callerIdentityId);
+  }
+
+  if (options.callerName) {
+    params.set('callerName', options.callerName);
+  }
+
+  if (options.callerPosition) {
+    params.set('callerPosition', options.callerPosition);
+  }
 
   const statusUrl = new URL(`${webhookUrl}/api/calls/status`);
   if (options.callerIdentityId) {

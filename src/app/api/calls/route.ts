@@ -78,15 +78,8 @@ export async function POST(request: NextRequest) {
     const selectedLanguage = String(language || selectedIdentity?.language || 'en-US');
     const selectedVoiceId = String(voiceId || selectedIdentity?.voiceId || '21m00Tcm4TlvDq8ikWAM');
     const baseScript = String(script || selectedIdentity?.script || 'Hi, this is a quick update call. Are you open to hearing the offer?').trim();
-    const introLine = selectedIdentity
-      ? (selectedIdentity.mentionAi
-        ? `Hi, this is ${selectedIdentity.name}, an AI assistant calling on behalf of ${settings.businessName || 'our company'}.`
-        : `Hi, this is ${selectedIdentity.name}, ${selectedIdentity.position} at ${settings.businessName || 'our company'}.`)
-      : '';
-
     const ruleNotes = (selectedIdentity?.sayThisRules || settings.sayThisRules || '').trim();
-
-    const finalScript = [introLine, baseScript, ruleNotes].filter(Boolean).join(' ');
+    const finalScript = [baseScript, ruleNotes].filter(Boolean).join(' ');
     const parsedSchedule =
       typeof scheduledAt === 'string' && scheduledAt.trim().length > 0
         ? new Date(scheduledAt)

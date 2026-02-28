@@ -1165,7 +1165,7 @@ export default function Dashboard() {
   const readinessItems = [
     { label: 'Forwarding number configured', ready: !!settings.forwardToNumber?.trim(), tab: 'settings' },
     { label: 'Credits available', ready: credits > 0, tab: 'billing' },
-    { label: 'Call script prepared', ready: script.trim().length >= 20, tab: 'call' },
+    { label: 'Conversation brief prepared', ready: script.trim().length >= 20, tab: 'call' },
     { label: 'Lead list imported', ready: preparedNumbers > 0, tab: 'call' },
     {
       label: managedMode ? 'At least one caller has a dedicated number' : 'Calling setup active',
@@ -1921,12 +1921,12 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
 
-                {/* Voice & Script */}
+                {/* Voice & Conversation Brief */}
                 <Card className="bg-zinc-900 border-zinc-800">
 	                  <CardHeader>
 	                    <CardTitle className="text-lg flex items-center gap-2">
 	                      <Volume2 className="w-5 h-5 text-emerald-400" />
-	                      Voice & Script
+	                      Voice & Conversation Brief
 	                    </CardTitle>
 	                  </CardHeader>
 	                  <CardContent className="space-y-4">
@@ -1963,9 +1963,9 @@ export default function Dashboard() {
                     </div>
                     
                     <div className="space-y-2">
-                      <Label>Call Script</Label>
+                      <Label>Conversation Brief</Label>
                       <Textarea
-                        placeholder="What should the AI say when they answer?"
+                        placeholder="Give the AI context, objective, and key points to discuss."
                         value={script}
                         onChange={(e) => setScript(e.target.value)}
                         disabled={isCalling}
@@ -2012,17 +2012,17 @@ export default function Dashboard() {
                   <CardHeader>
                     <CardTitle className="text-lg flex items-center gap-2">
                       <Bot className="w-5 h-5 text-emerald-400" />
-                      AI Script Copilot
+                      AI Conversation Copilot
                     </CardTitle>
                     <CardDescription>
-                      Chat with AI to generate and refine your call script instantly
+                      Generate and refine a smart conversation brief with objection handling.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     <div className="max-h-48 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 space-y-3">
                       {copilotMessages.length === 0 ? (
                         <p className="text-sm text-zinc-500">
-                          Ask for a script, objection handling, or tone variations.
+                          Ask for a conversation brief, discovery questions, or objection handling lines.
                         </p>
                       ) : (
                         copilotMessages.map((msg, idx) => (
@@ -2031,17 +2031,17 @@ export default function Dashboard() {
                             <p className="text-sm text-zinc-200 whitespace-pre-wrap">{msg.content}</p>
                             {msg.script && (
                               <div className="mt-3 p-3 rounded-md bg-zinc-900 border border-zinc-700 space-y-2">
-                                <p className="text-xs text-zinc-400">Suggested Script</p>
+                                <p className="text-xs text-zinc-400">Suggested Brief</p>
                                 <p className="text-sm text-zinc-200 whitespace-pre-wrap">{msg.script}</p>
                                 <Button
                                   size="sm"
                                   className="bg-emerald-500 hover:bg-emerald-600"
                                   onClick={() => {
                                     setScript(msg.script || '')
-                                    toast.success('Script applied to campaign')
+                                    toast.success('Conversation brief applied')
                                   }}
                                 >
-                                  Use This Script
+                                  Use This Brief
                                 </Button>
                               </div>
                             )}
@@ -2067,7 +2067,7 @@ export default function Dashboard() {
                             askCopilot()
                           }
                         }}
-                        placeholder="Example: Write a concise script for first-time home buyers in Dubai"
+                        placeholder="Example: Build a natural brief for first-time home buyers in Dubai"
                         className="bg-zinc-800 border-zinc-700"
                       />
                       <Button onClick={askCopilot} disabled={copilotLoading || !copilotInput.trim()}>

@@ -146,13 +146,13 @@ export async function POST(request: NextRequest) {
       .join('\n');
 
     const systemPrompt = `You are an expert outbound call strategist.
-Generate short, high-converting sales call scripts.
-You must personalize the script using caller identity and company profile.
+Generate natural conversation briefs for live AI phone calls (not rigid script reading).
+You must personalize the brief using caller identity and company profile.
 If mentionAi is true, disclose AI clearly in the opening line.
 Respect "must say" and "avoid saying" rules strictly.
 Always return valid JSON with:
 - reply: brief assistant response
-- script: full call script ready to use
+- script: conversation brief with opening, discovery prompts, and objection responses
 - objections: array of 3 objection handling lines
 - profileSummary: one short line about the caller identity you used`;
 
