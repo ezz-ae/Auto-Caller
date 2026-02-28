@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useRef, type ChangeEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,6 +12,7 @@ import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
 import { 
+  LayoutDashboard,
   Phone, 
   PhoneOff, 
   Upload, 
@@ -33,7 +34,11 @@ import {
   Download,
   Sparkles,
   Send,
-  Bot
+  Bot,
+  Wallet,
+  BarChart3,
+  ShieldCheck,
+  Target
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -93,6 +98,8 @@ interface Campaign {
   numbers: string[]
   results: CallResult[]
   createdAt: string
+  script?: string
+  voiceId?: string
 }
 
 interface CopilotMessage {
@@ -138,10 +145,12 @@ export default function Dashboard() {
   const [selectedRecording, setSelectedRecording] = useState<Recording | null>(null)
   const [playingRecording, setPlayingRecording] = useState<string | null>(null)
   const [transcribing, setTranscribing] = useState<string | null>(null)
+  const [recordingSearch, setRecordingSearch] = useState('')
   const audioRef = useRef<HTMLAudioElement>(null)
+  const csvInputRef = useRef<HTMLInputElement>(null)
   
   // UI state
-  const [activeTab, setActiveTab] = useState('call')
+  const [activeTab, setActiveTab] = useState('overview')
   const [loading, setLoading] = useState(false)
   const [purchasingProduct, setPurchasingProduct] = useState<string | null>(null)
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null)
@@ -149,6 +158,31 @@ export default function Dashboard() {
   const [copilotInput, setCopilotInput] = useState('')
   const [copilotLoading, setCopilotLoading] = useState(false)
   const initRef = useRef(false)
+
+  const fetchCampaigns = useCallback(async () => {
+    try {
+      const res = await fetch('/api/calls')
+      const data = await res.json()
+      const loadedCampaigns = data.campaigns || []
+      setCampaigns(loadedCampaigns)
+
+      const active = loadedCampaigns.find((c: Campaign) => c.status === 'running')
+      setCurrentCampaign(active || null)
+      setIsCalling(!!active)
+    } catch {
+      console.error('Failed to load campaigns')
+    }
+  }, [])
+
+  const fetchRecordings = useCallback(async () => {
+    try {
+      const res = await fetch('/api/recordings')
+      const data = await res.json()
+      setRecordings(data.recordings || [])
+    } catch {
+      console.error('Failed to load recordings')
+    }
+  }, [])
 
   useEffect(() => {
     if (redirectUrl) {
@@ -188,43 +222,34 @@ export default function Dashboard() {
         ])
       }
       
-      // Fetch campaigns
-      try {
-        const res = await fetch('/api/calls')
-        const data = await res.json()
-        setCampaigns(data.campaigns || [])
-        const active = data.campaigns?.find((c: Campaign) => c.status === 'running')
-        if (active) {
-          setCurrentCampaign(active)
-          setIsCalling(true)
-        }
-      } catch {
-        console.error('Failed to load campaigns')
-      }
-      
-      // Fetch recordings
-      try {
-        const res = await fetch('/api/recordings')
-        const data = await res.json()
-        setRecordings(data.recordings || [])
-      } catch {
-        console.error('Failed to load recordings')
-      }
+      await Promise.all([fetchCampaigns(), fetchRecordings()])
     }
     
     init()
-  }, [])
+  }, [fetchCampaigns, fetchRecordings])
 
-  // Fetch recordings when tab changes
-  const fetchRecordings = useCallback(async () => {
-    try {
-      const res = await fetch('/api/recordings')
-      const data = await res.json()
-      setRecordings(data.recordings || [])
-    } catch {
-      console.error('Failed to load recordings')
-    }
-  }, [])
+  useEffect(() => {
+    if (!isCalling) return
+
+    const interval = setInterval(() => {
+      fetchCampaigns()
+      if (activeTab === 'recordings' || activeTab === 'overview') {
+        fetchRecordings()
+      }
+    }, 4000)
+
+    return () => clearInterval(interval)
+  }, [activeTab, fetchCampaigns, fetchRecordings, isCalling])
+
+  useEffect(() => {
+    if (activeTab !== 'recordings') return
+
+    const interval = setInterval(() => {
+      fetchRecordings()
+    }, 12000)
+
+    return () => clearInterval(interval)
+  }, [activeTab, fetchRecordings])
 
   // Save settings
   const saveSettings = async () => {
@@ -333,10 +358,7 @@ export default function Dashboard() {
       return
     }
     
-    const numberList = numbers
-      .split(/[\n,]+/)
-      .map(n => n.trim())
-      .filter(n => n.length > 0)
+    const numberList = extractNumbers(numbers)
     
     if (numberList.length === 0) {
       toast.error('Please enter at least one phone number')
@@ -367,6 +389,7 @@ export default function Dashboard() {
       if (data.success) {
         setCurrentCampaign(data.campaign)
         setIsCalling(true)
+        fetchCampaigns()
         toast.success(data.message)
       } else {
         toast.error(data.error || 'Failed to start calling')
@@ -385,10 +408,70 @@ export default function Dashboard() {
       await fetch(`/api/calls?id=${currentCampaign.id}`, { method: 'DELETE' })
       setIsCalling(false)
       setCurrentCampaign(null)
+      fetchCampaigns()
       toast.success('Campaign stopped')
     } catch {
       toast.error('Failed to stop campaign')
     }
+  }
+
+  const extractNumbers = (input: string) => {
+    return Array.from(new Set(
+      input
+        .split(/[\n,;]+/)
+        .map(n => n.trim())
+        .filter(Boolean)
+    ))
+  }
+
+  const handleCsvImport = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    try {
+      const text = await file.text()
+      const rawCells = text
+        .split(/\r?\n/)
+        .flatMap(row => row.split(','))
+        .map(cell => cell.trim().replace(/^['"]|['"]$/g, ''))
+        .filter(Boolean)
+
+      const parsedNumbers = Array.from(new Set(
+        rawCells
+          .map(cell => cell.replace(/[^\d+]/g, ''))
+          .filter(cell => {
+            const numeric = cell.replace(/\D/g, '')
+            return numeric.length >= 8
+          })
+      ))
+
+      if (parsedNumbers.length === 0) {
+        toast.error('No valid phone numbers found in the file')
+        return
+      }
+
+      const combined = Array.from(new Set([...extractNumbers(numbers), ...parsedNumbers]))
+      setNumbers(combined.join('\n'))
+      toast.success(`Imported ${parsedNumbers.length} numbers`)
+    } catch {
+      toast.error('Failed to import CSV')
+    } finally {
+      if (csvInputRef.current) {
+        csvInputRef.current.value = ''
+      }
+    }
+  }
+
+  const loadCampaignToComposer = (campaign: Campaign) => {
+    setNumbers((campaign.numbers || []).join('\n'))
+    if (campaign.script) {
+      setScript(campaign.script)
+    }
+    if (campaign.voiceId) {
+      setSelectedVoice(campaign.voiceId)
+    }
+    setActiveTab('call')
+    toast.success('Campaign loaded into Call Center')
   }
 
   // Transcribe recording
@@ -458,20 +541,68 @@ export default function Dashboard() {
     if (tab === 'recordings') {
       fetchRecordings()
     }
+    if (tab === 'history' || tab === 'overview') {
+      fetchCampaigns()
+    }
   }
 
   const totalCalls = campaigns.reduce((sum, c) => sum + (c.results?.length || 0), 0)
+  const totalNumbersQueued = campaigns.reduce((sum, c) => sum + (c.numbers?.length || 0), 0)
   const transcribedCount = recordings.filter(r => r.transcript).length
   const successRate = totalCalls > 0
     ? Math.round((campaigns.reduce((sum, c) => sum + (c.results?.filter(r => r.status === 'connected').length || 0), 0) / totalCalls) * 100)
     : 0
+  const connectedCalls = campaigns.reduce((sum, c) => sum + (c.results?.filter(r => r.status === 'connected').length || 0), 0)
+  const preparedNumbers = extractNumbers(numbers).length
+  const readinessItems = [
+    { label: 'Forwarding number configured', ready: !!settings.forwardToNumber?.trim(), tab: 'settings' },
+    { label: 'Credits available', ready: credits > 0, tab: 'billing' },
+    { label: 'Call script prepared', ready: script.trim().length >= 20, tab: 'call' },
+    { label: 'Lead list imported', ready: preparedNumbers > 0, tab: 'call' },
+    {
+      label: managedMode ? 'Dedicated caller number active' : 'Provider credentials configured',
+      ready: managedMode ? !!(assignedPhoneNumber || settings.twilioPhoneNumber) : isConfigured,
+      tab: managedMode ? 'billing' : 'settings',
+    },
+  ]
+  const readinessScore = Math.round((readinessItems.filter(item => item.ready).length / readinessItems.length) * 100)
+  const filteredRecordings = recordings.filter(recording => {
+    const query = recordingSearch.trim().toLowerCase()
+    if (!query) return true
+
+    return (
+      recording.phoneNumber.toLowerCase().includes(query) ||
+      recording.status.toLowerCase().includes(query) ||
+      (recording.transcript?.summary || '').toLowerCase().includes(query) ||
+      (recording.transcript?.text || '').toLowerCase().includes(query) ||
+      (recording.transcript?.keywords || []).some(keyword => keyword.toLowerCase().includes(query))
+    )
+  })
+
+  useEffect(() => {
+    if (filteredRecordings.length === 0) {
+      setSelectedRecording(null)
+      return
+    }
+
+    setSelectedRecording(prev =>
+      prev && filteredRecordings.some(recording => recording.id === prev.id)
+        ? prev
+        : filteredRecordings[0]
+    )
+  }, [filteredRecordings])
+
   const activeTabTitle =
-    activeTab === 'call'
+    activeTab === 'overview'
+      ? 'Platform Overview'
+      : activeTab === 'call'
       ? 'Call Operations'
       : activeTab === 'recordings'
         ? 'Conversation Intelligence'
         : activeTab === 'history'
           ? 'Campaign Activity'
+          : activeTab === 'billing'
+            ? 'Billing & Growth'
           : 'Workspace Settings'
 
   return (
@@ -493,9 +624,13 @@ export default function Dashboard() {
           </div>
           
           <div className="flex items-center gap-3">
-            <a href={managedMode ? '#settings' : '/pricing'} className="text-xs text-zinc-400 hover:text-emerald-400 transition">
-              {managedMode ? 'Billing' : 'Upgrade'}
-            </a>
+            <button
+              type="button"
+              onClick={() => setActiveTab(managedMode ? 'billing' : 'settings')}
+              className="text-xs text-zinc-400 hover:text-emerald-400 transition"
+            >
+              {managedMode ? 'Billing' : 'Setup'}
+            </button>
             {managedMode && assignedPhoneNumber && (
               <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-700">
                 <span className="text-xs text-zinc-400">Number:</span>
@@ -567,7 +702,11 @@ export default function Dashboard() {
               {isCalling ? 'Campaign currently running' : 'No active campaign'}
             </div>
           </div>
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 gap-2 h-auto bg-transparent p-0">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 xl:grid-cols-6 gap-2 h-auto bg-transparent p-0">
+            <TabsTrigger value="overview" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
+              <LayoutDashboard className="w-4 h-4 mr-2" />
+              Overview
+            </TabsTrigger>
             <TabsTrigger value="call" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
               <Phone className="w-4 h-4 mr-2" />
               Call Center
@@ -580,11 +719,165 @@ export default function Dashboard() {
               <History className="w-4 h-4 mr-2" />
               History
             </TabsTrigger>
+            <TabsTrigger value="billing" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
+              <Wallet className="w-4 h-4 mr-2" />
+              Billing
+            </TabsTrigger>
             <TabsTrigger value="settings" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500/15 data-[state=active]:text-emerald-300 data-[state=active]:border-emerald-500/40">
               <Settings className="w-4 h-4 mr-2" />
               Settings
             </TabsTrigger>
           </TabsList>
+
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6 animate-in fade-in-50 duration-200">
+            <div className="grid gap-6 xl:grid-cols-3">
+              <Card className="xl:col-span-2 bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <ShieldCheck className="w-5 h-5 text-emerald-400" />
+                    Launch Readiness
+                  </CardTitle>
+                  <CardDescription>
+                    Complete these checks to run dependable campaigns for customers.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <p className="text-sm text-zinc-300">Readiness Score</p>
+                      <p className="text-sm font-semibold text-emerald-400">{readinessScore}%</p>
+                    </div>
+                    <Progress value={readinessScore} className="h-2" />
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    {readinessItems.map((item) => (
+                      <button
+                        key={item.label}
+                        type="button"
+                        onClick={() => setActiveTab(item.tab)}
+                        className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 text-left hover:border-zinc-700 transition"
+                      >
+                        <span className="text-sm text-zinc-200">{item.label}</span>
+                        {item.ready ? (
+                          <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">Ready</Badge>
+                        ) : (
+                          <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30">Action Needed</Badge>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Target className="w-5 h-5 text-emerald-400" />
+                    Quick Actions
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <Button className="w-full justify-start" onClick={() => setActiveTab('call')}>
+                    <Phone className="w-4 h-4 mr-2" />
+                    Start New Campaign
+                  </Button>
+                  <Button variant="secondary" className="w-full justify-start bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('billing')}>
+                    <Wallet className="w-4 h-4 mr-2" />
+                    Buy Credits / Number
+                  </Button>
+                  <Button variant="secondary" className="w-full justify-start bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('recordings')}>
+                    <Mic className="w-4 h-4 mr-2" />
+                    Review Conversations
+                  </Button>
+                  <Button variant="secondary" className="w-full justify-start bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('settings')}>
+                    <Settings className="w-4 h-4 mr-2" />
+                    Update Workspace Settings
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-3">
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <BarChart3 className="w-5 h-5 text-emerald-400" />
+                    Conversion Snapshot
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-zinc-400">Connected Calls</span>
+                    <span className="font-semibold">{connectedCalls}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-zinc-400">Completed Calls</span>
+                    <span className="font-semibold">{totalCalls}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-zinc-400">Queued Numbers</span>
+                    <span className="font-semibold">{totalNumbersQueued}</span>
+                  </div>
+                  <div className="pt-2 border-t border-zinc-800 flex justify-between text-sm">
+                    <span className="text-zinc-400">Success Rate</span>
+                    <span className="font-semibold text-emerald-400">{successRate}%</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="text-lg">Campaign Health</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {currentCampaign ? (
+                    <div className="space-y-3">
+                      <p className="text-sm text-zinc-300">{currentCampaign.name}</p>
+                      <div className="flex items-center justify-between text-xs text-zinc-400">
+                        <span>Status</span>
+                        <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                          {currentCampaign.status}
+                        </Badge>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="flex justify-between text-xs text-zinc-400">
+                          <span>Progress</span>
+                          <span>{stats.connected + stats.failed}/{stats.total}</span>
+                        </div>
+                        <Progress value={stats.total > 0 ? ((stats.connected + stats.failed) / stats.total) * 100 : 0} className="h-2" />
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-zinc-400">No active campaign. Use Call Center to launch one.</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="text-lg">Revenue Inputs</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Credits Available</span>
+                    <span className="font-semibold text-emerald-400">{credits}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Managed Mode</span>
+                    <span className="font-semibold">{managedMode ? 'Enabled' : 'Disabled'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Assigned Number</span>
+                    <span className="font-semibold">{assignedPhoneNumber || 'Not Assigned'}</span>
+                  </div>
+                  <Button variant="secondary" className="w-full bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('billing')}>
+                    Open Billing Workspace
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
 
           {/* Call Center Tab */}
           <TabsContent value="call" className="space-y-6 animate-in fade-in-50 duration-200">
@@ -602,6 +895,13 @@ export default function Dashboard() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
+                    <input
+                      ref={csvInputRef}
+                      type="file"
+                      accept=".csv,text/csv,.txt"
+                      onChange={handleCsvImport}
+                      className="hidden"
+                    />
                     <Textarea
                       placeholder="+971 50 123 4567&#10;+971 55 987 6543&#10;+971 56 456 7890"
                       value={numbers}
@@ -610,8 +910,15 @@ export default function Dashboard() {
                       className="min-h-[150px] bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
                     />
                     <div className="mt-2 flex items-center justify-between text-xs text-zinc-400">
-                      <span>{numbers.split(/[\n,]+/).filter(n => n.trim()).length} numbers</span>
-                      <Button variant="ghost" size="sm" className="text-xs">
+                      <span>{extractNumbers(numbers).length} numbers</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs"
+                        onClick={() => csvInputRef.current?.click()}
+                        disabled={isCalling}
+                      >
                         <Upload className="w-3 h-3 mr-1" />
                         Upload CSV
                       </Button>
@@ -795,7 +1102,7 @@ export default function Dashboard() {
                             <span className="text-zinc-400">Progress</span>
                             <span>{stats.connected + stats.failed} / {stats.total}</span>
                           </div>
-                          <Progress value={(stats.connected + stats.failed) / stats.total * 100} className="h-2" />
+                          <Progress value={stats.total > 0 ? ((stats.connected + stats.failed) / stats.total) * 100 : 0} className="h-2" />
                         </div>
                         
                         <div className="grid grid-cols-2 gap-3">
@@ -852,6 +1159,27 @@ export default function Dashboard() {
             <div className="grid gap-6 lg:grid-cols-3">
               {/* Recordings List */}
               <div className="lg:col-span-2 space-y-4">
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardContent className="pt-6">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                      <Input
+                        value={recordingSearch}
+                        onChange={(e) => setRecordingSearch(e.target.value)}
+                        placeholder="Search by number, keyword, summary..."
+                        className="bg-zinc-800 border-zinc-700"
+                      />
+                      <Button
+                        variant="secondary"
+                        className="bg-zinc-800 hover:bg-zinc-700"
+                        onClick={fetchRecordings}
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Refresh
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
                 {recordings.length === 0 ? (
                   <Card className="bg-zinc-900 border-zinc-800">
                     <CardContent className="py-12 text-center text-zinc-500">
@@ -860,12 +1188,26 @@ export default function Dashboard() {
                       <p className="text-sm mt-2">Enable recording in settings to capture calls</p>
                     </CardContent>
                   </Card>
+                ) : filteredRecordings.length === 0 ? (
+                  <Card className="bg-zinc-900 border-zinc-800">
+                    <CardContent className="py-12 text-center text-zinc-500">
+                      <MessageSquare className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p>No recordings match your search</p>
+                    </CardContent>
+                  </Card>
                 ) : (
-                  recordings.map((recording) => (
-                    <Card key={recording.id} className="bg-zinc-900 border-zinc-800">
+                  filteredRecordings.map((recording) => (
+                    <Card
+                      key={recording.id}
+                      className={`bg-zinc-900 border-zinc-800 ${selectedRecording?.id === recording.id ? 'ring-1 ring-emerald-500/40' : ''}`}
+                    >
                       <CardHeader className="pb-3">
                         <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedRecording(recording)}
+                            className="flex items-center gap-3 text-left"
+                          >
                             <div className="w-10 h-10 rounded-lg bg-emerald-500/20 flex items-center justify-center">
                               <Mic className="w-5 h-5 text-emerald-400" />
                             </div>
@@ -875,7 +1217,7 @@ export default function Dashboard() {
                                 {new Date(recording.createdAt).toLocaleString()} • {recording.duration}s
                               </p>
                             </div>
-                          </div>
+                          </button>
                           <div className="flex items-center gap-2">
                             <Button
                               variant="ghost"
@@ -989,7 +1331,7 @@ export default function Dashboard() {
                     <div className="space-y-3">
                       <div className="flex justify-between">
                         <span className="text-zinc-400">Total Recordings</span>
-                        <span className="font-bold">{recordings.length}</span>
+                        <span className="font-bold">{filteredRecordings.length}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-zinc-400">Transcribed</span>
@@ -1009,29 +1351,32 @@ export default function Dashboard() {
                 
                 <Card className="bg-zinc-900 border-zinc-800">
                   <CardHeader>
-                    <CardTitle className="text-lg">Sentiment Analysis</CardTitle>
+                    <CardTitle className="text-lg">Selected Recording</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <span className="text-emerald-400">Positive</span>
-                        <span className="font-bold">
-                          {recordings.filter(r => r.transcript?.sentiment === 'positive').length}
-                        </span>
+                    {selectedRecording ? (
+                      <div className="space-y-3 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-zinc-400">Phone</span>
+                          <span className="font-medium">{selectedRecording.phoneNumber}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-zinc-400">Duration</span>
+                          <span className="font-medium">{selectedRecording.duration}s</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-zinc-400">Sentiment</span>
+                          <Badge className={getSentimentColor(selectedRecording.transcript?.sentiment)}>
+                            {selectedRecording.transcript?.sentiment || 'unknown'}
+                          </Badge>
+                        </div>
+                        <p className="text-zinc-300 text-xs leading-relaxed">
+                          {selectedRecording.transcript?.summary || 'No summary available yet. Run transcription to generate insights.'}
+                        </p>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-zinc-400">Neutral</span>
-                        <span className="font-bold">
-                          {recordings.filter(r => r.transcript?.sentiment === 'neutral').length}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-red-400">Negative</span>
-                        <span className="font-bold">
-                          {recordings.filter(r => r.transcript?.sentiment === 'negative').length}
-                        </span>
-                      </div>
-                    </div>
+                    ) : (
+                      <p className="text-sm text-zinc-400">Select a recording to view details.</p>
+                    )}
                   </CardContent>
                 </Card>
               </div>
@@ -1059,11 +1404,21 @@ export default function Dashboard() {
                       >
                         <div className="flex items-center justify-between mb-2">
                           <h3 className="font-medium">{campaign.name}</h3>
-                          <Badge 
-                            className={campaign.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : ''}
-                          >
-                            {campaign.status}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            <Badge 
+                              className={campaign.status === 'completed' ? 'bg-emerald-500/20 text-emerald-400' : ''}
+                            >
+                              {campaign.status}
+                            </Badge>
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="bg-zinc-700 hover:bg-zinc-600"
+                              onClick={() => loadCampaignToComposer(campaign)}
+                            >
+                              Reuse Setup
+                            </Button>
+                          </div>
                         </div>
                         <div className="flex gap-4 text-sm text-zinc-400">
                           <span>{campaign.numbers?.length || 0} numbers</span>
@@ -1076,6 +1431,132 @@ export default function Dashboard() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          {/* Billing Tab */}
+          <TabsContent value="billing" className="space-y-6 animate-in fade-in-50 duration-200">
+            {!managedMode ? (
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Wallet className="w-5 h-5 text-emerald-400" />
+                    Managed Billing Is Disabled
+                  </CardTitle>
+                  <CardDescription>
+                    Enable managed mode to sell phone numbers and credits without requiring customer API keys.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-zinc-300">
+                    Once enabled, this tab handles all PayPal checkout flows for number activation and credit top-ups.
+                  </p>
+                  <Button onClick={() => setActiveTab('settings')}>
+                    Open Settings
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid gap-6 xl:grid-cols-3">
+                <Card className="xl:col-span-2 bg-zinc-900 border-zinc-800">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Wallet className="w-5 h-5 text-emerald-400" />
+                      Monetization Workspace
+                    </CardTitle>
+                    <CardDescription>
+                      Sell access with a dedicated number and prepaid credits using PayPal.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="rounded-xl border border-zinc-700 bg-zinc-800/60 p-4 space-y-3">
+                        <p className="text-sm font-semibold">Dedicated Caller Number</p>
+                        <p className="text-xs text-zinc-400">
+                          {assignedPhoneNumber
+                            ? `Active number: ${assignedPhoneNumber}`
+                            : 'No number assigned yet. Purchase to activate.'}
+                        </p>
+                        <Button
+                          disabled={!!assignedPhoneNumber || purchasingProduct === 'number_activation'}
+                          onClick={() => purchaseProduct('number_activation', 39, 0)}
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                        >
+                          {assignedPhoneNumber
+                            ? 'Number Active'
+                            : (purchasingProduct === 'number_activation' ? 'Processing...' : 'Buy Number - $39')}
+                        </Button>
+                      </div>
+
+                      <div className="rounded-xl border border-zinc-700 bg-zinc-800/60 p-4 space-y-3">
+                        <p className="text-sm font-semibold">Credit Balance</p>
+                        <p className="text-3xl font-bold text-emerald-400">{credits}</p>
+                        <p className="text-xs text-zinc-500">One credit is consumed per outbound call attempt.</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <p className="text-sm font-semibold">Top Up Credits</p>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <button
+                          type="button"
+                          disabled={purchasingProduct !== null}
+                          onClick={() => purchaseProduct('credits_500', 49, 500)}
+                          className="rounded-xl border border-zinc-700 bg-zinc-800/60 p-4 text-left hover:border-emerald-500/40 transition disabled:opacity-50"
+                        >
+                          <p className="text-lg font-semibold">500 Credits</p>
+                          <p className="text-sm text-zinc-400">$49</p>
+                          <p className="text-xs text-zinc-500 mt-2">Starter campaigns</p>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={purchasingProduct !== null}
+                          onClick={() => purchaseProduct('credits_1500', 129, 1500)}
+                          className="rounded-xl border border-zinc-700 bg-zinc-800/60 p-4 text-left hover:border-emerald-500/40 transition disabled:opacity-50"
+                        >
+                          <p className="text-lg font-semibold">1,500 Credits</p>
+                          <p className="text-sm text-zinc-400">$129</p>
+                          <p className="text-xs text-zinc-500 mt-2">Growth package</p>
+                        </button>
+                        <button
+                          type="button"
+                          disabled={purchasingProduct !== null}
+                          onClick={() => purchaseProduct('credits_5000', 349, 5000)}
+                          className="rounded-xl border border-zinc-700 bg-zinc-800/60 p-4 text-left hover:border-emerald-500/40 transition disabled:opacity-50"
+                        >
+                          <p className="text-lg font-semibold">5,000 Credits</p>
+                          <p className="text-sm text-zinc-400">$349</p>
+                          <p className="text-xs text-zinc-500 mt-2">Scale package</p>
+                        </button>
+                      </div>
+                      <p className="text-xs text-zinc-500">Secure checkout is processed via PayPal. Credits are applied automatically after payment.</p>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Plan Notes</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-zinc-400">Billing Provider</span>
+                      <span className="font-semibold">PayPal</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-400">Assigned Number</span>
+                      <span className="font-semibold">{assignedPhoneNumber || 'Pending'}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-400">Current Credits</span>
+                      <span className="font-semibold text-emerald-400">{credits}</span>
+                    </div>
+                    <p className="text-xs text-zinc-500 pt-2 border-t border-zinc-800">
+                      Use this screen as your customer-facing payments hub for number provisioning and usage credits.
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            )}
           </TabsContent>
 
           {/* Settings Tab */}
@@ -1221,54 +1702,15 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Managed Billing */}
                 {managedMode && (
-                  <div className="space-y-4">
-                    <h3 className="font-medium text-emerald-400">Billing & Number</h3>
-                    <div className="grid gap-4 md:grid-cols-2">
-                      <div className="rounded-lg border border-zinc-700 bg-zinc-800/60 p-4 space-y-3">
-                        <p className="text-sm font-semibold">Dedicated Number</p>
-                        <p className="text-xs text-zinc-400">
-                          {assignedPhoneNumber
-                            ? `Active number: ${assignedPhoneNumber}`
-                            : 'No number assigned yet. Purchase to activate.'}
-                        </p>
-                        <Button
-                          disabled={!!assignedPhoneNumber || purchasingProduct === 'number_activation'}
-                          onClick={() => purchaseProduct('number_activation', 39, 0)}
-                          className="w-full bg-blue-600 hover:bg-blue-700"
-                        >
-                          {assignedPhoneNumber ? 'Number Active' : (purchasingProduct === 'number_activation' ? 'Processing...' : 'Buy Number - $39')}
-                        </Button>
-                      </div>
-                      <div className="rounded-lg border border-zinc-700 bg-zinc-800/60 p-4 space-y-3">
-                        <p className="text-sm font-semibold">Top Up Credits</p>
-                        <div className="grid grid-cols-3 gap-2">
-                          <Button
-                            size="sm"
-                            disabled={purchasingProduct !== null}
-                            onClick={() => purchaseProduct('credits_500', 49, 500)}
-                          >
-                            500
-                          </Button>
-                          <Button
-                            size="sm"
-                            disabled={purchasingProduct !== null}
-                            onClick={() => purchaseProduct('credits_1500', 129, 1500)}
-                          >
-                            1.5K
-                          </Button>
-                          <Button
-                            size="sm"
-                            disabled={purchasingProduct !== null}
-                            onClick={() => purchaseProduct('credits_5000', 349, 5000)}
-                          >
-                            5K
-                          </Button>
-                        </div>
-                        <p className="text-xs text-zinc-500">Checkout is handled securely via PayPal.</p>
-                      </div>
+                  <div className="rounded-xl border border-zinc-700 bg-zinc-800/50 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-medium text-zinc-200">Billing is now managed in a dedicated workspace tab.</p>
+                      <p className="text-xs text-zinc-400">Use the Billing tab for PayPal checkout, number activation, and top-ups.</p>
                     </div>
+                    <Button variant="secondary" className="bg-zinc-700 hover:bg-zinc-600" onClick={() => setActiveTab('billing')}>
+                      Open Billing Tab
+                    </Button>
                   </div>
                 )}
 

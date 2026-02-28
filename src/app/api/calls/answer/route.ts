@@ -30,7 +30,7 @@ async function handleAnswer(request: NextRequest) {
       }
     }
     
-    const settings = getSettings();
+    const settings = await getSettings();
     
     // Generate TwiML response
     const twiml = generateCallTwiML(

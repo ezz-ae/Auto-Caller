@@ -10,7 +10,7 @@ export async function GET(request: NextRequest) {
     const recordingId = searchParams.get('recordingId');
     
     if (recordingId) {
-      const recording = getRecording(recordingId);
+      const recording = await getRecording(recordingId);
       return NextResponse.json({ 
         transcript: recording?.transcript || null 
       });
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Recording ID required' }, { status: 400 });
     }
     
-    const recording = getRecording(recordingId);
+    const recording = await getRecording(recordingId);
     
     if (!recording) {
       return NextResponse.json({ error: 'Recording not found' }, { status: 404 });
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Check if we have OpenAI API key for high-quality transcription
-    const settings = getSettings();
+    const settings = await getSettings();
     
     if (useOpenAI && settings.openaiApiKey) {
       // Download recording from Twilio
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       
       // Update recording with transcript
       transcript.recordingId = recording.id;
-      updateRecordingTranscript(recording.id, transcript);
+      await updateRecordingTranscript(recording.id, transcript);
       
       return NextResponse.json({ 
         success: true, 

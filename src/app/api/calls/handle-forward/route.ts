@@ -36,7 +36,7 @@ async function handleForward(request: NextRequest) {
       }
     }
 
-    updateCampaignResultByCallSid(callSid, patch);
+    await updateCampaignResultByCallSid(callSid, patch);
   }
 
   const response = new twilio.twiml.VoiceResponse();

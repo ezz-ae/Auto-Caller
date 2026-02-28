@@ -15,16 +15,16 @@ export async function GET(request: NextRequest) {
     const campaignId = searchParams.get('campaignId');
     
     if (id) {
-      const recording = getRecording(id);
+      const recording = await getRecording(id);
       return NextResponse.json({ recording });
     }
     
     if (campaignId) {
-      const recordings = getRecordingsByCampaign(campaignId);
+      const recordings = await getRecordingsByCampaign(campaignId);
       return NextResponse.json({ recordings });
     }
     
-    const recordings = getAllRecordings();
+    const recordings = await getAllRecordings();
     return NextResponse.json({ recordings });
     
   } catch (error) {
@@ -42,7 +42,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Recording ID required' }, { status: 400 });
     }
     
-    deleteRecording(id);
+    await deleteRecording(id);
     
     return NextResponse.json({ success: true });
     

@@ -11,11 +11,11 @@ export async function GET(request: NextRequest) {
     const id = searchParams.get('id');
     
     if (id) {
-      const campaign = getCampaign(id);
+      const campaign = await getCampaign(id);
       return NextResponse.json({ campaign });
     }
     
-    const campaigns = getAllCampaigns();
+    const campaigns = await getAllCampaigns();
     return NextResponse.json({ campaigns });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to get campaigns' }, { status: 500 });
@@ -35,7 +35,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Check credits
-    const credits = getCredits();
+    const credits = await getCredits();
     if (credits < numbers.length) {
       return NextResponse.json({ 
         error: `Not enough credits. Need ${numbers.length}, have ${credits}` 
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Get settings
-    const settings = getSettings();
+    const settings = await getSettings();
     if (!settings.forwardToNumber) {
       return NextResponse.json({ 
         error: 'Forward number not configured. Go to Settings first.' 
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       transcribeCalls: typeof transcribe === 'boolean' ? transcribe : settings.transcribeCalls,
     };
     
-    saveCampaign(campaign);
+    await saveCampaign(campaign);
     
     // Start calling in background
     startCalling(campaign);
@@ -91,10 +91,10 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Campaign ID required' }, { status: 400 });
     }
     
-    const campaign = getCampaign(id);
+    const campaign = await getCampaign(id);
     if (campaign) {
       campaign.status = 'stopped';
-      saveCampaign(campaign);
+      await saveCampaign(campaign);
     }
     
     return NextResponse.json({ success: true });
@@ -105,14 +105,14 @@ export async function DELETE(request: NextRequest) {
 
 // Background calling function
 async function startCalling(campaign: Campaign) {
-  const settings = getSettings();
+  const settings = await getSettings();
   
   // Determine webhook URL (this server)
   const webhookUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
   
   for (let i = 0; i < campaign.numbers.length; i++) {
     // Check if campaign was stopped
-    const currentCampaign = getCampaign(campaign.id);
+    const currentCampaign = await getCampaign(campaign.id);
     if (!currentCampaign || currentCampaign.status !== 'running') {
       break;
     }
@@ -129,7 +129,7 @@ async function startCalling(campaign: Campaign) {
       timestamp: new Date(),
     };
     
-    updateCampaignResult(campaign.id, result);
+    await updateCampaignResult(campaign.id, result);
     
     try {
       // Make the call
@@ -145,12 +145,12 @@ async function startCalling(campaign: Campaign) {
       );
       
       // Deduct credit
-      updateCredits(-1);
+      await updateCredits(-1);
       
       // Update result
       result.callSid = call.sid;
       result.status = 'calling';
-      updateCampaignResult(campaign.id, result);
+      await updateCampaignResult(campaign.id, result);
       
       // Wait between calls to avoid rate limits
       await new Promise(resolve => setTimeout(resolve, 3000));
@@ -158,21 +158,21 @@ async function startCalling(campaign: Campaign) {
     } catch (error: any) {
       result.status = 'failed';
       result.error = error.message;
-      updateCampaignResult(campaign.id, result);
+      await updateCampaignResult(campaign.id, result);
     }
     
     // Update index
     if (currentCampaign) {
       currentCampaign.currentIndex = i + 1;
-      saveCampaign(currentCampaign);
+      await saveCampaign(currentCampaign);
     }
   }
   
   // Mark campaign as completed
-  const finalCampaign = getCampaign(campaign.id);
+  const finalCampaign = await getCampaign(campaign.id);
   if (finalCampaign && finalCampaign.status === 'running') {
     finalCampaign.status = 'completed';
     finalCampaign.completedAt = new Date();
-    saveCampaign(finalCampaign);
+    await saveCampaign(finalCampaign);
   }
 }

@@ -17,15 +17,15 @@ async function handleVoicemail(request: NextRequest) {
   const recordingUrl = (formData.get('RecordingUrl') || '') as string;
   const recordingDuration = (formData.get('RecordingDuration') || '0') as string;
 
-  const matchedCall = callSid ? findCampaignResultByCallSid(callSid) : null;
+  const matchedCall = callSid ? await findCampaignResultByCallSid(callSid) : null;
   const campaignId = matchedCall?.campaign.id || '';
   const phoneNumber = matchedCall?.result.phoneNumber || '';
 
   if (callSid) {
-    updateCampaignResultByCallSid(callSid, { status: 'voicemail' });
+    await updateCampaignResultByCallSid(callSid, { status: 'voicemail' });
   }
 
-  const existingRecording = callSid ? getRecordingByCallSid(callSid) : null;
+  const existingRecording = callSid ? await getRecordingByCallSid(callSid) : null;
 
   if (existingRecording) {
     existingRecording.recordingSid = recordingSid || existingRecording.recordingSid;
@@ -36,7 +36,7 @@ async function handleVoicemail(request: NextRequest) {
     existingRecording.status = 'completed';
     existingRecording.campaignId = existingRecording.campaignId || campaignId;
     existingRecording.phoneNumber = existingRecording.phoneNumber || phoneNumber;
-    saveRecording(existingRecording);
+    await saveRecording(existingRecording);
   } else if (recordingSid && recordingUrl) {
     const recording: Recording = {
       id: uuidv4(),
@@ -49,7 +49,7 @@ async function handleVoicemail(request: NextRequest) {
       status: 'completed',
       createdAt: new Date(),
     };
-    saveRecording(recording);
+    await saveRecording(recording);
   }
 
   const response = new twilio.twiml.VoiceResponse();

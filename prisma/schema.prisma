@@ -1,32 +1,85 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model AppSettings {
+  id                 String   @id @default("default")
+  elevenLabsApiKey   String   @default("")
+  twilioAccountSid   String   @default("")
+  twilioAuthToken    String   @default("")
+  twilioPhoneNumber  String   @default("")
+  forwardToNumber    String   @default("")
+  recordCalls        Boolean  @default(true)
+  transcribeCalls    Boolean  @default(true)
+  openaiApiKey       String   @default("")
+  webSocketUrl       String   @default("")
+  managedMode        Boolean  @default(false)
+  assignedPhoneNumber String  @default("")
+  businessName       String   @default("")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  @@map("app_settings")
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
+model CreditBalance {
+  id        String   @id @default("default")
+  credits   Int      @default(100)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@map("credit_balances")
+}
+
+model CampaignRecord {
+  id             String   @id
+  userId         String   @default("default")
+  name           String
+  status         String
+  voiceId        String
+  script         String
+  numbers        Json
+  currentIndex   Int      @default(0)
+  results        Json
+  recordCalls    Boolean?
+  transcribeCalls Boolean?
+  createdAt      DateTime @default(now())
+  completedAt    DateTime?
+
+  @@map("campaigns")
+}
+
+model RecordingRecord {
+  id          String   @id
+  callSid     String   @unique
+  campaignId  String   @default("")
+  phoneNumber String   @default("")
+  recordingSid String  @default("")
+  recordingUrl String  @default("")
+  duration    Int      @default(0)
+  status      String
+  transcript  Json?
+  createdAt   DateTime @default(now())
+
+  @@map("recordings")
+}
+
+model TranscriptRecord {
+  id          String   @id
+  recordingId String
+  text        String
+  confidence  Float
+  segments    Json?
+  summary     String?
+  sentiment   String?
+  keywords    Json?
+  actionItems Json?
+  createdAt   DateTime @default(now())
+
+  @@map("transcripts")
 }

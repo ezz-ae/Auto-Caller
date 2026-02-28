@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Find the recording
-    const recording = getRecordingByCallSid(callSid);
+    const recording = await getRecordingByCallSid(callSid);
     
     if (!recording) {
       console.log('No recording found for call:', callSid);
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     };
     
     // Update recording with transcript
-    updateRecordingTranscript(recording.id, transcript);
+    await updateRecordingTranscript(recording.id, transcript);
     
     return NextResponse.json({ 
       success: true, 

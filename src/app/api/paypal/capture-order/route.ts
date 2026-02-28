@@ -72,18 +72,18 @@ export async function POST(request: NextRequest) {
         const productId = parsed.productId || parsed.tierId
 
         if (kind === 'number') {
-          const assignedPhoneNumber = assignManagedNumber()
+          const assignedPhoneNumber = await assignManagedNumber()
           return NextResponse.json({
             success: true,
             message: `Payment successful! Your dedicated number is ready: ${assignedPhoneNumber}`,
             assignedPhoneNumber,
             productId,
-            credits: updateCredits(0),
+            credits: await updateCredits(0),
           })
         }
 
         // Default behavior: add credits
-        const newCredits = updateCredits(credits)
+        const newCredits = await updateCredits(credits)
         
         return NextResponse.json({
           success: true,

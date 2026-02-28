@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const recordingDuration = formData.get('RecordingDuration') as string;
     const recordingStatus = formData.get('RecordingStatus') as string;
 
-    const matchedCall = findCampaignResultByCallSid(callSid);
+    const matchedCall = await findCampaignResultByCallSid(callSid);
     const campaignId = matchedCall?.campaign.id || '';
     const phoneNumber = matchedCall?.result.phoneNumber || '';
     
@@ -29,7 +29,7 @@ export async function POST(request: NextRequest) {
     });
     
     // Check if we already have a recording for this call
-    const existingRecording = getRecordingByCallSid(callSid);
+    const existingRecording = await getRecordingByCallSid(callSid);
     
     if (existingRecording) {
       // Update existing recording
@@ -38,7 +38,7 @@ export async function POST(request: NextRequest) {
       existingRecording.status = 'completed';
       existingRecording.campaignId = existingRecording.campaignId || campaignId;
       existingRecording.phoneNumber = existingRecording.phoneNumber || phoneNumber;
-      saveRecording(existingRecording);
+      await saveRecording(existingRecording);
       
       return NextResponse.json({ success: true, recording: existingRecording });
     }
@@ -56,10 +56,10 @@ export async function POST(request: NextRequest) {
       createdAt: new Date(),
     };
     
-    saveRecording(recording);
+    await saveRecording(recording);
     
     // Trigger transcription if enabled
-    const settings = getSettings();
+    const settings = await getSettings();
     if (settings.transcribeCalls) {
       const transcribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/transcriptions`;
 

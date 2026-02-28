@@ -4,8 +4,8 @@ import { resetClient } from '@/lib/twilio';
 
 export async function GET() {
   try {
-    const settings = getSettings();
-    const credits = getCredits();
+    const settings = await getSettings();
+    const credits = await getCredits();
     const managedMode = settings.managedMode;
     
     return NextResponse.json({
@@ -35,7 +35,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const current = getSettings();
+    const current = await getSettings();
     const managedMode = current.managedMode;
     
     const toSave: Record<string, string | number | boolean> = {};
@@ -78,13 +78,13 @@ export async function POST(request: NextRequest) {
     
     // Handle credit updates
     if (typeof body.addCredits === 'number') {
-      updateCredits(body.addCredits);
+      await updateCredits(body.addCredits);
     }
     
-    saveSettings(toSave);
+    await saveSettings(toSave);
     resetClient();
     
-    return NextResponse.json({ success: true, credits: getCredits() });
+    return NextResponse.json({ success: true, credits: await getCredits() });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 });
   }
@@ -95,10 +95,10 @@ export async function PUT(request: NextRequest) {
     const body = await request.json();
     
     if (typeof body.credits === 'number') {
-      setCredits(body.credits);
+      await setCredits(body.credits);
     }
     
-    return NextResponse.json({ success: true, credits: getCredits() });
+    return NextResponse.json({ success: true, credits: await getCredits() });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to update credits' }, { status: 500 });
   }

@@ -6,10 +6,10 @@ import { Transcript, TranscriptSegment } from './types';
 
 let openaiClient: OpenAI | null = null;
 
-function getClient(): OpenAI {
+async function getClient(): Promise<OpenAI> {
   if (openaiClient) return openaiClient;
   
-  const settings = getSettings();
+  const settings = await getSettings();
   
   if (!settings.openaiApiKey) {
     throw new Error('OpenAI API key not configured');
@@ -41,7 +41,7 @@ export async function transcribeAudio(
   segments: TranscriptSegment[];
   duration: number;
 }> {
-  const client = getClient();
+  const client = await getClient();
   
   // Create a File object from buffer
   const file = new File([new Uint8Array(audioBuffer)], 'recording.mp3', { type: 'audio/mpeg' });
@@ -88,7 +88,7 @@ export async function analyzeTranscript(
   outcome: string;
   followUp: string;
 }> {
-  const client = getClient();
+  const client = await getClient();
   
   const systemPrompt = `You are an expert sales call analyst. Analyze phone call transcripts and extract insights.
 Always respond with valid JSON containing these fields:
@@ -166,7 +166,7 @@ export async function processRecording(
  * Quick transcription without analysis (faster)
  */
 export async function quickTranscribe(audioBuffer: Buffer): Promise<string> {
-  const client = getClient();
+  const client = await getClient();
   
   const file = new File([new Uint8Array(audioBuffer)], 'recording.mp3', { type: 'audio/mpeg' });
   
@@ -187,7 +187,7 @@ export async function detectVoicemail(audioBuffer: Buffer): Promise<{
   confidence: number;
   reason: string;
 }> {
-  const client = getClient();
+  const client = await getClient();
   
   const file = new File([new Uint8Array(audioBuffer)], 'recording.mp3', { type: 'audio/mpeg' });
   

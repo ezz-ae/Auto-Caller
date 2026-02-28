@@ -23,7 +23,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
-    const settings = getSettings();
+    const settings = await getSettings();
     const apiKey = settings.openaiApiKey || process.env.OPENAI_API_KEY || '';
 
     if (!apiKey) {

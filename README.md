@@ -1,215 +1,127 @@
-# 🔥 Auto Caller Pro
+# Auto Caller Platform
 
-**AI-Controlled Lead Calling. 100% Local. One-Time Payment.**
+Production-ready outbound AI calling platform with:
+- campaign orchestration
+- AI script copilot
+- call forwarding
+- call recordings + transcription
+- credit billing + PayPal checkout
+- managed mode (customers do not bring their own API keys)
 
-*by [1hundred.ai](https://1hundred.ai)*
+## What Is Included
 
----
+- Full multi-tab platform UI (`Overview`, `Call Center`, `Recordings`, `History`, `Billing`, `Settings`)
+- Managed billing flows (PayPal number activation + credit top-up)
+- Twilio callback handling (status, forwarding, recording, voicemail)
+- OpenAI transcription + analysis pipeline
+- Data layer with dual drivers:
+  - `postgres` (Neon/Postgres via Prisma, recommended for production)
+  - `filesystem` (local JSON store for quick dev)
 
-## The Pitch
+## Tech Stack
 
-**Stop manually calling leads. Let AI do it.**
+- Next.js 16
+- TypeScript
+- Prisma ORM
+- Neon Postgres (production)
+- Twilio (calling)
+- OpenAI + ElevenLabs (AI)
+- PayPal (checkout)
 
-Paste numbers → AI calls them → Forwards answered calls to your phone → You close deals.
-
-```
-Your AI Assistant: "I'll call these 50 leads for you"
-       ↓
-Auto Caller Pro: Calls each number with AI voice
-       ↓
-Prospect answers? → CALL FORWARDED TO YOUR PHONE
-       ↓
-You talk to hot leads only. No more cold calling.
-```
-
----
-
-## Quick Start
+## 1. Local Setup
 
 ```bash
-# Option 1: Clone & Run
-git clone [your-repo]
-cd auto-caller-pro
-./install.sh
-
-# Option 2: Homebrew
-brew install auto-caller-pro
-auto-caller
+git clone https://github.com/ezz-ae/Auto-Caller.git
+cd Auto-Caller
+npm install
+cp .env.example .env.local
 ```
 
-**Open:** http://localhost:3000
+Edit `.env.local` and set at least:
+- `NEXT_PUBLIC_APP_URL`
+- `STORE_DRIVER`
+- `DATABASE_URL` (if `STORE_DRIVER=postgres`)
+- Twilio / OpenAI / ElevenLabs / PayPal vars for your mode
 
-**Done.**
+## 2. Neon DB Setup
 
----
+1. Create a Neon project and database.
+2. Copy the connection string (`postgresql://...sslmode=require`).
+3. Put it in `DATABASE_URL`.
+4. Generate Prisma client and push schema:
 
-## Why This Is Different
-
-| Most Auto-Dialers | Auto Caller Pro |
-|-------------------|-----------------|
-| Manual operation | AI-controllable via MCP |
-| Learn the interface | Use your existing AI assistant |
-| Click buttons | Natural language commands |
-| Software to manage | Software that manages itself |
-
-**"Hey Claude, call these leads with this script..."** and it happens.
-
----
-
-## MCP Integration (The Secret Sauce)
-
-This app speaks **Model Context Protocol (MCP)**. That means:
-
-- ✅ Control it from Claude, ChatGPT, or any MCP-compatible AI
-- ✅ No new interface to learn
-- ✅ Natural language commands
-- ✅ Automated workflows
-
-### Setup
-
-Add to your Claude Desktop config:
-
-```json
-{
-  "mcpServers": {
-    "auto-caller": {
-      "command": "bun",
-      "args": ["run", "mcp-server.ts"]
-    }
-  }
-}
+```bash
+npm run db:generate
+npm run db:push
 ```
 
-### Use
+This creates tables:
+- `app_settings`
+- `credit_balances`
+- `campaigns`
+- `recordings`
+- `transcripts`
 
-```
-You: "Claude, I have these 20 phone numbers from an open house.
-     Call them saying 'Hi, thanks for visiting our property at 
-     Downtown Tower. Are you still interested?' Forward answered
-     calls to my cell at +971 50 123 4567."
+## 3. Run Locally
 
-Claude: "I've started the campaign. So far: 3 answered (forwarded
-        to your phone), 5 voicemails left, 12 still calling."
-```
-
-**See [MCP-GUIDE.md](./MCP-GUIDE.md) for full documentation.**
-
----
-
-## Features
-
-| Feature | Description |
-|---------|-------------|
-| ✅ **100% Local** | Runs on your machine, no cloud needed |
-| ✅ **Private** | Your data never leaves your device |
-| ✅ **AI Voice** | ElevenLabs integration for natural speech |
-| ✅ **Call Forwarding** | Hot leads forwarded to your phone instantly |
-| ✅ **MCP Control** | Control via Claude, ChatGPT, or any AI assistant |
-| ✅ **Chrome Extension** | Quick access from browser |
-| ✅ **Credits System** | Track your usage |
-| ✅ **Campaign History** | All calls logged locally |
-| ✅ **PayPal Integration** | Buy credits in-app |
-| ✅ **Managed Mode** | End users run without API keys |
-| ✅ **AI Script Copilot** | Chat to generate call scripts instantly |
-
----
-
-## Pricing
-
-| Package | Price | Includes |
-|---------|-------|----------|
-| **Starter** | $97 | Full app + Chrome extension + 500 credits |
-| **Pro** | $197 | Above + 1,500 credits + Priority support + MCP access |
-| **Agency** | $397 | Above + 5,000 credits + White-label + Resell rights |
-
-**No subscriptions. No monthly fees. Yours forever.**
-
-**Buy at:** [1hundred.ai/pricing](https://1hundred.ai/pricing)
-
----
-
-## Requirements
-
-- macOS, Windows, or Linux
-- Node.js 18+ (auto-installed by install script)
-- Twilio account (pay-as-you-go, ~$0.01-0.02/min)
-- ElevenLabs account (optional, free tier available)
-
----
-
-## API Costs (You Control)
-
-| Service | Cost | Notes |
-|---------|------|-------|
-| Twilio Voice | ~$0.01-0.02/min | Pay only for connected calls |
-| ElevenLabs | Free tier available | Or $5/mo for more voices |
-
-**Your costs. Your control. No markup.**
-
----
-
-## Chrome Extension
-
-1. Open `chrome://extensions`
-2. Enable **Developer mode**
-3. Click **Load unpacked**
-4. Select the `chrome-extension` folder
-
-Shows server status, credits, and quick dashboard access.
-
----
-
-## Security
-
-- ✅ All data stored locally in `data/` folder
-- ✅ API keys never transmitted anywhere
-- ✅ No telemetry, no tracking
-- ✅ No cloud, no servers
-- ✅ You own everything
-
----
-
-## Environment Variables (Optional)
-
-Create a `.env` file for PayPal / Managed Mode:
-
-```env
-PAYPAL_MODE=sandbox  # or 'live' for production
-PAYPAL_CLIENT_ID=your_paypal_client_id
-PAYPAL_CLIENT_SECRET=your_paypal_client_secret
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-# Managed Mode (no end-user API keys required)
-MANAGED_MODE=true
-MANAGED_TWILIO_ACCOUNT_SID=ACxxxxxxxx
-MANAGED_TWILIO_AUTH_TOKEN=xxxxxxxx
-MANAGED_TWILIO_PHONE_NUMBER=+12025550111
-MANAGED_OPENAI_API_KEY=sk-xxxxxxxx
-MANAGED_ELEVENLABS_API_KEY=xi-xxxxxxxx
-MANAGED_NUMBER_POOL=+12025550111,+12025550112
+```bash
+npm run dev
 ```
 
----
+Open [http://localhost:3000](http://localhost:3000)
 
-## Support
+## 4. Production Deploy (Vercel)
 
-- Email: support@1hundred.ai
-- Website: [1hundred.ai](https://1hundred.ai)
+1. Push repo to GitHub.
+2. Import project in Vercel.
+3. Add all environment variables from `.env.example` in Vercel Project Settings.
+4. Set `NEXT_PUBLIC_APP_URL` to your production domain.
+5. Ensure `STORE_DRIVER=postgres` in production.
+6. Deploy.
+7. Run schema push once against production DB:
 
----
+```bash
+npm run db:push
+```
 
-## License
+## 5. Twilio + PayPal Production Checklist
 
-**One-time purchase. Single user. No redistribution.**
+- Twilio phone number webhook URLs:
+  - Voice: `https://YOUR_DOMAIN/api/calls/answer`
+  - Status callback: `https://YOUR_DOMAIN/api/calls/status`
+  - Recording callback: `https://YOUR_DOMAIN/api/calls/recording-complete`
+- PayPal app set to `live` mode for production:
+  - `PAYPAL_MODE=live`
+  - live `PAYPAL_CLIENT_ID` / `PAYPAL_CLIENT_SECRET`
 
-For agency/resell rights, see Agency tier.
+## 6. Managed Mode (Sell As a Platform)
 
----
+Set:
+- `MANAGED_MODE=true`
+- `MANAGED_TWILIO_*`
+- `MANAGED_OPENAI_API_KEY`
+- `MANAGED_ELEVENLABS_API_KEY`
 
-<div align="center">
+In this mode customers only need to:
+- add forwarding number
+- buy number + credits
+- run campaigns from UI
 
-**Your AI. Your Machine. Your Rules.** 🔐
+No customer API keys required.
 
-*Brought to you by [1hundred.ai](https://1hundred.ai)*
+## 7. Useful Commands
 
-</div>
+```bash
+npm run dev
+npm run lint
+npx tsc --noEmit
+npm run build
+npm run db:generate
+npm run db:push
+```
+
+## Notes
+
+- If you want zero external DB for local testing, set `STORE_DRIVER=filesystem`.
+- For multi-user production, always use `STORE_DRIVER=postgres`.
+- Keep secrets only in `.env.local` / Vercel env settings.

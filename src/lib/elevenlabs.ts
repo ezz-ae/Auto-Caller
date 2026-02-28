@@ -18,7 +18,7 @@ interface ElevenLabsVoicesResponse {
 
 // Get available voices
 export async function getVoices(): Promise<ElevenLabsVoice[]> {
-  const settings = getSettings();
+  const settings = await getSettings();
   
   if (!settings.elevenLabsApiKey) {
     // Return default voices if no API key
@@ -54,7 +54,7 @@ export async function generateSpeech(
   text: string,
   voiceId: string = '21m00Tcm4TlvDq8ikWAM'
 ): Promise<Buffer> {
-  const settings = getSettings();
+  const settings = await getSettings();
   
   if (!settings.elevenLabsApiKey) {
     throw new Error('ElevenLabs API key not configured');

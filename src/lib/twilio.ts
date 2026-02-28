@@ -5,10 +5,10 @@ import { getSettings } from './store';
 
 let twilioClient: ReturnType<typeof twilio> | null = null;
 
-function getClient() {
+async function getClient() {
   if (twilioClient) return twilioClient;
   
-  const settings = getSettings();
+  const settings = await getSettings();
   
   if (!settings.twilioAccountSid || !settings.twilioAuthToken) {
     throw new Error('Twilio credentials not configured');
@@ -111,8 +111,8 @@ export async function makeCall(
     transcribe?: boolean;
   } = {}
 ): Promise<{ sid: string; status: string }> {
-  const client = getClient();
-  const settings = getSettings();
+  const client = await getClient();
+  const settings = await getSettings();
   
   if (!settings.twilioPhoneNumber) {
     throw new Error('Twilio phone number not configured');
@@ -154,7 +154,7 @@ export async function getCallStatus(callSid: string): Promise<{
   price: string;
   recordingUrl?: string;
 }> {
-  const client = getClient();
+  const client = await getClient();
   
   const call = await client.calls(callSid).fetch();
   
@@ -179,7 +179,7 @@ export async function getCallRecordings(callSid: string): Promise<{
   url: string;
   status: string;
 }[]> {
-  const client = getClient();
+  const client = await getClient();
   
   const recordings = await client.recordings.list({ callSid });
   
@@ -193,8 +193,8 @@ export async function getCallRecordings(callSid: string): Promise<{
 
 // Download recording as buffer
 export async function downloadRecording(recordingSid: string): Promise<Buffer> {
-  const client = getClient();
-  const settings = getSettings();
+  const client = await getClient();
+  const settings = await getSettings();
   
   const response = await client.recordings(recordingSid).fetch();
   const uri = `https://api.twilio.com${response.uri.replace('.json', '.mp3')}`;
@@ -219,7 +219,7 @@ export async function getTranscription(recordingSid: string): Promise<{
   status: string;
   text: string;
 } | null> {
-  const client = getClient();
+  const client = await getClient();
   
   const transcriptions = await (client as any).transcriptions.list({ recordingSid });
   
@@ -242,7 +242,7 @@ export async function getTranscription(recordingSid: string): Promise<{
 
 // End a call
 export async function endCall(callSid: string): Promise<void> {
-  const client = getClient();
+  const client = await getClient();
   
   await client.calls(callSid).update({
     status: 'completed',
@@ -250,12 +250,12 @@ export async function endCall(callSid: string): Promise<void> {
 }
 
 // Validate Twilio webhook signature
-export function validateWebhookSignature(
+export async function validateWebhookSignature(
   url: string,
   params: Record<string, string>,
   signature: string
-): boolean {
-  const settings = getSettings();
+): Promise<boolean> {
+  const settings = await getSettings();
   
   if (!settings.twilioAuthToken) {
     return false;

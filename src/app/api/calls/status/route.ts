@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       patch.error = [errorCode, errorMessage].filter(Boolean).join(': ');
     }
 
-    const updated = updateCampaignResultByCallSid(callSid, patch);
+    const updated = await updateCampaignResultByCallSid(callSid, patch);
     
     return NextResponse.json({ 
       success: true,
