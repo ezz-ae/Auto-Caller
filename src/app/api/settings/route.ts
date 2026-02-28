@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getSettings, saveSettings, getCredits, setCredits, updateCredits } from '@/lib/store';
+import { assignManagedNumber } from '@/lib/store';
 import { resetClient } from '@/lib/twilio';
 
 export async function GET() {
@@ -37,6 +38,8 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const current = await getSettings();
     const managedMode = current.managedMode;
+    const assignOnRegistration =
+      (process.env.MANAGED_ASSIGN_NUMBER_ON_REGISTRATION || 'false').toLowerCase() === 'true';
     
     const toSave: Record<string, string | number | boolean> = {};
     
@@ -82,9 +85,19 @@ export async function POST(request: NextRequest) {
     }
     
     await saveSettings(toSave);
+
+    let assignedPhoneNumber = current.assignedPhoneNumber || '';
+    if (managedMode && assignOnRegistration && !assignedPhoneNumber) {
+      assignedPhoneNumber = await assignManagedNumber();
+    }
+
     resetClient();
     
-    return NextResponse.json({ success: true, credits: await getCredits() });
+    return NextResponse.json({
+      success: true,
+      credits: await getCredits(),
+      assignedPhoneNumber,
+    });
   } catch (error) {
     return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 });
   }

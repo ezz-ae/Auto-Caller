@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
+import { tryProvisionManagedNumber } from './managed-number';
 import { Campaign, CallResult, Recording, Transcript } from '@/lib/types';
 
 const DATA_DIR = process.env.DATA_DIR || (process.env.VERCEL ? '/tmp/auto-caller-data' : path.join(process.cwd(), 'data'));
@@ -230,11 +231,56 @@ function fsSaveSettings(settings: Partial<StoredSettings>): void {
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify(updated, null, 2));
 }
 
-function fsAssignManagedNumber(): string {
+async function fsAssignManagedNumber(): Promise<string> {
   const settings = fsGetSettings();
 
   if (settings.assignedPhoneNumber) {
     return settings.assignedPhoneNumber;
+  }
+
+  const fallbackAssign = () => {
+    const pool = (process.env.MANAGED_NUMBER_POOL || '')
+      .split(',')
+      .map(n => n.trim())
+      .filter(Boolean);
+
+    const fallbackNumber = process.env.MANAGED_DEFAULT_NUMBER || process.env.MANAGED_TWILIO_PHONE_NUMBER || '+12025550111';
+    const assignedPhoneNumber = pool[0] || fallbackNumber;
+
+    fsSaveSettings({
+      assignedPhoneNumber,
+      twilioPhoneNumber: assignedPhoneNumber,
+    });
+
+    return assignedPhoneNumber;
+  };
+
+  const provisionedNumber = await tryProvisionManagedNumber();
+  if (provisionedNumber) {
+    fsSaveSettings({
+      assignedPhoneNumber: provisionedNumber,
+      twilioPhoneNumber: provisionedNumber,
+    });
+    return provisionedNumber;
+  }
+
+  return fallbackAssign();
+}
+
+async function dbAssignManagedNumber(): Promise<string> {
+  const settings = await dbGetSettings();
+
+  if (settings.assignedPhoneNumber) {
+    return settings.assignedPhoneNumber;
+  }
+
+  const provisionedNumber = await tryProvisionManagedNumber();
+  if (provisionedNumber) {
+    await dbSaveSettings({
+      assignedPhoneNumber: provisionedNumber,
+      twilioPhoneNumber: provisionedNumber,
+    });
+    return provisionedNumber;
   }
 
   const pool = (process.env.MANAGED_NUMBER_POOL || '')
@@ -245,7 +291,7 @@ function fsAssignManagedNumber(): string {
   const fallbackNumber = process.env.MANAGED_DEFAULT_NUMBER || process.env.MANAGED_TWILIO_PHONE_NUMBER || '+12025550111';
   const assignedPhoneNumber = pool[0] || fallbackNumber;
 
-  fsSaveSettings({
+  await dbSaveSettings({
     assignedPhoneNumber,
     twilioPhoneNumber: assignedPhoneNumber,
   });
@@ -515,29 +561,6 @@ async function dbSaveSettings(settings: Partial<StoredSettings>): Promise<void> 
       businessName: updated.businessName,
     },
   });
-}
-
-async function dbAssignManagedNumber(): Promise<string> {
-  const settings = await dbGetSettings();
-
-  if (settings.assignedPhoneNumber) {
-    return settings.assignedPhoneNumber;
-  }
-
-  const pool = (process.env.MANAGED_NUMBER_POOL || '')
-    .split(',')
-    .map(n => n.trim())
-    .filter(Boolean);
-
-  const fallbackNumber = process.env.MANAGED_DEFAULT_NUMBER || process.env.MANAGED_TWILIO_PHONE_NUMBER || '+12025550111';
-  const assignedPhoneNumber = pool[0] || fallbackNumber;
-
-  await dbSaveSettings({
-    assignedPhoneNumber,
-    twilioPhoneNumber: assignedPhoneNumber,
-  });
-
-  return assignedPhoneNumber;
 }
 
 async function dbGetCredits(): Promise<number> {
@@ -829,7 +852,7 @@ export async function saveSettings(settings: Partial<StoredSettings>): Promise<v
 }
 
 export async function assignManagedNumber(): Promise<string> {
-  return usePostgresStore ? dbAssignManagedNumber() : fsAssignManagedNumber();
+  return usePostgresStore ? dbAssignManagedNumber() : await fsAssignManagedNumber();
 }
 
 export async function getCredits(): Promise<number> {

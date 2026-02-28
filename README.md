@@ -131,6 +131,20 @@ In this mode customers only need to:
 
 No customer API keys required.
 
+Automatic number provisioning:
+- Set `MANAGED_AUTO_PROVISION_NUMBER=true` to auto-buy a Twilio number after successful number checkout.
+- Configure search with:
+  - `MANAGED_NUMBER_COUNTRY` (default `US`)
+  - `MANAGED_NUMBER_AREA_CODE` (optional)
+  - `MANAGED_NUMBER_CONTAINS` (optional)
+- `MANAGED_NUMBER_POOL` remains fallback if auto-provisioning fails.
+- Optional: set `MANAGED_ASSIGN_NUMBER_ON_REGISTRATION=true` to auto-assign at first setup save (before number checkout).
+
+Credit pricing with margin:
+- `TWILIO_ESTIMATED_COST_PER_CALL_USD` (example `0.02`)
+- `CREDIT_MARGIN_MULTIPLIER` (example `2.0` for 100% markup)
+- Product prices are now computed server-side from these values.
+
 ## 7. Useful Commands
 
 ```bash

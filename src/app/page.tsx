@@ -121,6 +121,21 @@ interface TeamMember {
   createdAt: string
 }
 
+interface BillingProduct {
+  id: string
+  name: string
+  price: number
+  kind: 'credits' | 'number'
+  credits?: number
+}
+
+const DEFAULT_BILLING_PRODUCTS: Record<string, BillingProduct> = {
+  credits_500: { id: 'credits_500', name: '500 Credits Pack', price: 49, kind: 'credits', credits: 500 },
+  credits_1500: { id: 'credits_1500', name: '1,500 Credits Pack', price: 129, kind: 'credits', credits: 1500 },
+  credits_5000: { id: 'credits_5000', name: '5,000 Credits Pack', price: 349, kind: 'credits', credits: 5000 },
+  number_activation: { id: 'number_activation', name: 'Dedicated Phone Number', price: 39, kind: 'number' },
+}
+
 export default function Dashboard() {
   // Settings state
   const [settings, setSettings] = useState<Settings>({
@@ -173,6 +188,7 @@ export default function Dashboard() {
   const [teamForm, setTeamForm] = useState({ name: '', email: '', role: 'Agent' })
   const [teamLoading, setTeamLoading] = useState(false)
   const [showOnboarding, setShowOnboarding] = useState(true)
+  const [billingProducts, setBillingProducts] = useState<Record<string, BillingProduct>>(DEFAULT_BILLING_PRODUCTS)
   const initRef = useRef(false)
 
   const fetchCampaigns = useCallback(async () => {
@@ -216,6 +232,31 @@ export default function Dashboard() {
       setTeamMembers(data.members || [])
     } catch {
       console.error('Failed to load team members')
+    }
+  }, [])
+
+  const fetchBillingProducts = useCallback(async () => {
+    try {
+      const res = await fetch('/api/paypal/create-order')
+      if (!res.ok) {
+        throw new Error('Failed to load billing products')
+      }
+      const data = await res.json()
+      const products = Array.isArray(data.products) ? data.products : []
+      if (products.length === 0) return
+
+      const mapped = products.reduce((acc: Record<string, BillingProduct>, product: BillingProduct) => {
+        if (product?.id) {
+          acc[product.id] = product
+        }
+        return acc
+      }, {})
+
+      if (Object.keys(mapped).length > 0) {
+        setBillingProducts(prev => ({ ...prev, ...mapped }))
+      }
+    } catch {
+      console.error('Failed to load billing products')
     }
   }, [])
 
@@ -358,11 +399,11 @@ export default function Dashboard() {
         ])
       }
       
-      await Promise.all([fetchCampaigns(), fetchRecordings(), fetchTeamMembers()])
+      await Promise.all([fetchCampaigns(), fetchRecordings(), fetchTeamMembers(), fetchBillingProducts()])
     }
     
     init()
-  }, [fetchCampaigns, fetchRecordings, fetchTeamMembers])
+  }, [fetchCampaigns, fetchRecordings, fetchTeamMembers, fetchBillingProducts])
 
   useEffect(() => {
     const onboardingDone = window.localStorage.getItem('acp_onboarding_done')
@@ -407,7 +448,11 @@ export default function Dashboard() {
         setCredits(data.credits)
         setIsConfigured(true)
         setManagedMode(!!settings.managedMode)
-        setAssignedPhoneNumber(settings.assignedPhoneNumber || assignedPhoneNumber)
+        const nextAssigned = data.assignedPhoneNumber || settings.assignedPhoneNumber || assignedPhoneNumber
+        setAssignedPhoneNumber(nextAssigned)
+        if (nextAssigned && nextAssigned !== settings.twilioPhoneNumber) {
+          setSettings(prev => ({ ...prev, twilioPhoneNumber: nextAssigned, assignedPhoneNumber: nextAssigned }))
+        }
         toast.success('Settings saved successfully')
       } else {
         toast.error('Failed to save settings')
@@ -418,7 +463,7 @@ export default function Dashboard() {
     setLoading(false)
   }
 
-  const purchaseProduct = async (productId: string, price: number, creditsAmount = 0) => {
+  const purchaseProduct = async (productId: string) => {
     setPurchasingProduct(productId)
     try {
       const res = await fetch('/api/paypal/create-order', {
@@ -426,8 +471,6 @@ export default function Dashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productId,
-          price,
-          credits: creditsAmount,
         }),
       })
 
@@ -775,6 +818,8 @@ export default function Dashboard() {
           : activeTab === 'billing'
             ? 'Billing & Growth'
           : 'Workspace Settings'
+
+  const getProduct = (id: string) => billingProducts[id] || DEFAULT_BILLING_PRODUCTS[id]
 
   return (
     <div className="min-h-screen bg-[radial-gradient(circle_at_top,#1a2b24_0%,#0a0a0b_40%,#09090b_100%)] text-white">
@@ -1704,12 +1749,14 @@ export default function Dashboard() {
                         </p>
                         <Button
                           disabled={!!assignedPhoneNumber || purchasingProduct === 'number_activation'}
-                          onClick={() => purchaseProduct('number_activation', 39, 0)}
+                          onClick={() => purchaseProduct('number_activation')}
                           className="w-full bg-blue-600 hover:bg-blue-700"
                         >
                           {assignedPhoneNumber
                             ? 'Number Active'
-                            : (purchasingProduct === 'number_activation' ? 'Processing...' : 'Buy Number - $39')}
+                            : (purchasingProduct === 'number_activation'
+                              ? 'Processing...'
+                              : `Buy Number - $${getProduct('number_activation').price.toFixed(2)}`)}
                         </Button>
                       </div>
 
@@ -1726,31 +1773,31 @@ export default function Dashboard() {
                         <button
                           type="button"
                           disabled={purchasingProduct !== null}
-                          onClick={() => purchaseProduct('credits_500', 49, 500)}
+                          onClick={() => purchaseProduct('credits_500')}
                           className="rounded-xl border border-zinc-700 bg-zinc-800/60 p-4 text-left hover:border-emerald-500/40 transition disabled:opacity-50"
                         >
-                          <p className="text-lg font-semibold">500 Credits</p>
-                          <p className="text-sm text-zinc-400">$49</p>
+                          <p className="text-lg font-semibold">{getProduct('credits_500').credits || 500} Credits</p>
+                          <p className="text-sm text-zinc-400">${getProduct('credits_500').price.toFixed(2)}</p>
                           <p className="text-xs text-zinc-500 mt-2">Starter campaigns</p>
                         </button>
                         <button
                           type="button"
                           disabled={purchasingProduct !== null}
-                          onClick={() => purchaseProduct('credits_1500', 129, 1500)}
+                          onClick={() => purchaseProduct('credits_1500')}
                           className="rounded-xl border border-zinc-700 bg-zinc-800/60 p-4 text-left hover:border-emerald-500/40 transition disabled:opacity-50"
                         >
-                          <p className="text-lg font-semibold">1,500 Credits</p>
-                          <p className="text-sm text-zinc-400">$129</p>
+                          <p className="text-lg font-semibold">{(getProduct('credits_1500').credits || 1500).toLocaleString()} Credits</p>
+                          <p className="text-sm text-zinc-400">${getProduct('credits_1500').price.toFixed(2)}</p>
                           <p className="text-xs text-zinc-500 mt-2">Growth package</p>
                         </button>
                         <button
                           type="button"
                           disabled={purchasingProduct !== null}
-                          onClick={() => purchaseProduct('credits_5000', 349, 5000)}
+                          onClick={() => purchaseProduct('credits_5000')}
                           className="rounded-xl border border-zinc-700 bg-zinc-800/60 p-4 text-left hover:border-emerald-500/40 transition disabled:opacity-50"
                         >
-                          <p className="text-lg font-semibold">5,000 Credits</p>
-                          <p className="text-sm text-zinc-400">$349</p>
+                          <p className="text-lg font-semibold">{(getProduct('credits_5000').credits || 5000).toLocaleString()} Credits</p>
+                          <p className="text-sm text-zinc-400">${getProduct('credits_5000').price.toFixed(2)}</p>
                           <p className="text-xs text-zinc-500 mt-2">Scale package</p>
                         </button>
                       </div>
