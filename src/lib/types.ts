@@ -15,6 +15,10 @@ export interface Campaign {
   name: string;
   status: 'pending' | 'running' | 'paused' | 'completed' | 'stopped';
   voiceId: string;
+  language?: string;
+  callerIdentityId?: string;
+  callerIdentityName?: string;
+  callerPosition?: string;
   script: string;
   numbers: string[];
   currentIndex: number;
@@ -95,6 +99,31 @@ export interface UserSettings {
   managedMode?: boolean;
   assignedPhoneNumber?: string;
   businessName?: string;
+  industry?: string;
+  companyDetails?: string;
+  sayThisRules?: string;
+  avoidThisRules?: string;
+}
+
+export interface CallerIdentity {
+  id: string;
+  name: string;
+  position: string;
+  language: string;
+  voiceId: string;
+  industry?: string;
+  mentionAi: boolean;
+  script: string;
+  sayThisRules?: string;
+  avoidThisRules?: string;
+  totalCalls: number;
+  connectedCalls: number;
+  failedCalls: number;
+  noAnswerCalls: number;
+  campaignsLaunched: number;
+  creditsUsed: number;
+  lastCalledAt?: Date;
+  createdAt: Date;
 }
 
 export interface CallStatus {

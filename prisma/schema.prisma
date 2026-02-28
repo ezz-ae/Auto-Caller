@@ -21,6 +21,10 @@ model AppSettings {
   managedMode        Boolean  @default(false)
   assignedPhoneNumber String  @default("")
   businessName       String   @default("")
+  industry           String   @default("")
+  companyDetails     String   @default("")
+  sayThisRules       String   @default("")
+  avoidThisRules     String   @default("")
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -42,6 +46,10 @@ model CampaignRecord {
   name           String
   status         String
   voiceId        String
+  language       String?
+  callerIdentityId String?
+  callerIdentityName String?
+  callerPosition String?
   script         String
   numbers        Json
   currentIndex   Int      @default(0)
@@ -94,4 +102,28 @@ model TeamMember {
   updatedAt DateTime @updatedAt
 
   @@map("team_members")
+}
+
+model CallerIdentity {
+  id                  String   @id
+  name                String
+  position            String
+  language            String
+  voiceId             String
+  industry            String
+  mentionAi           Boolean  @default(false)
+  script              String
+  sayThisRules        String   @default("")
+  avoidThisRules      String   @default("")
+  totalCalls          Int      @default(0)
+  connectedCalls      Int      @default(0)
+  failedCalls         Int      @default(0)
+  noAnswerCalls       Int      @default(0)
+  campaignsLaunched   Int      @default(0)
+  creditsUsed         Int      @default(0)
+  lastCalledAt        DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@map("caller_identities")
 }

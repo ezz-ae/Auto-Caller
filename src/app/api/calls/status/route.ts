@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateCampaignResultByCallSid } from '@/lib/store';
+import { applyCallerIdentityKpiDelta } from '@/lib/caller-identity-store';
 import { CallResult } from '@/lib/types';
 
 // Handle call status updates from Twilio
 export async function POST(request: NextRequest) {
   try {
+    const callerIdentityId = new URL(request.url).searchParams.get('callerIdentityId') || '';
     const formData = await request.formData();
     
     const callSid = formData.get('CallSid') as string;
@@ -52,6 +54,26 @@ export async function POST(request: NextRequest) {
     }
 
     const updated = await updateCampaignResultByCallSid(callSid, patch);
+
+    // Update KPI counters only on terminal states to avoid duplicate increments.
+    if (callerIdentityId) {
+      if (callStatus === 'completed') {
+        await applyCallerIdentityKpiDelta(callerIdentityId, {
+          connectedCalls: 1,
+          lastCalledAt: new Date(),
+        });
+      } else if (callStatus === 'no-answer' || callStatus === 'busy') {
+        await applyCallerIdentityKpiDelta(callerIdentityId, {
+          noAnswerCalls: 1,
+          lastCalledAt: new Date(),
+        });
+      } else if (callStatus === 'failed') {
+        await applyCallerIdentityKpiDelta(callerIdentityId, {
+          failedCalls: 1,
+          lastCalledAt: new Date(),
+        });
+      }
+    }
     
     return NextResponse.json({ 
       success: true,

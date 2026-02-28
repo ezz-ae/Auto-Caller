@@ -32,6 +32,7 @@ export function generateCallTwiML(
     transcribe?: boolean;
     transcriptionCallback?: string;
     webSocketUrl?: string;
+    language?: string;
   } = {}
 ): string {
   const VoiceResponse = twilio.twiml.VoiceResponse;
@@ -49,7 +50,7 @@ export function generateCallTwiML(
   // Speak the script
   response.say({
     voice: 'alice',
-    language: 'en-US',
+    language: (options.language || 'en-US') as any,
   }, script);
   
   // Pause before forwarding
@@ -109,6 +110,8 @@ export async function makeCall(
   options: {
     record?: boolean;
     transcribe?: boolean;
+    language?: string;
+    callerIdentityId?: string;
   } = {}
 ): Promise<{ sid: string; status: string }> {
   const client = await getClient();
@@ -124,13 +127,19 @@ export async function makeCall(
     forward: forwardToNumber,
     record: String(options.record || settings.recordCalls || false),
     transcribe: String(options.transcribe || settings.transcribeCalls || false),
+    language: options.language || 'en-US',
   });
+
+  const statusUrl = new URL(`${webhookUrl}/api/calls/status`);
+  if (options.callerIdentityId) {
+    statusUrl.searchParams.set('callerIdentityId', options.callerIdentityId);
+  }
   
   const call = await client.calls.create({
     to: to,
     from: settings.twilioPhoneNumber,
     url: `${webhookUrl}/api/calls/answer?${params.toString()}`,
-    statusCallback: `${webhookUrl}/api/calls/status`,
+    statusCallback: statusUrl.toString(),
     statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed', 'failed', 'no-answer'],
     statusCallbackMethod: 'POST',
     timeout: 30,

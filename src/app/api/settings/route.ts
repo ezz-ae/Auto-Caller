@@ -22,6 +22,10 @@ export async function GET() {
         managedMode,
         assignedPhoneNumber: settings.assignedPhoneNumber || '',
         businessName: settings.businessName || '',
+        industry: settings.industry || '',
+        companyDetails: settings.companyDetails || '',
+        sayThisRules: settings.sayThisRules || '',
+        avoidThisRules: settings.avoidThisRules || '',
       },
       credits,
       isConfigured: managedMode
@@ -69,6 +73,18 @@ export async function POST(request: NextRequest) {
     }
     if (body.businessName) {
       toSave.businessName = body.businessName;
+    }
+    if (typeof body.industry === 'string') {
+      toSave.industry = body.industry;
+    }
+    if (typeof body.companyDetails === 'string') {
+      toSave.companyDetails = body.companyDetails;
+    }
+    if (typeof body.sayThisRules === 'string') {
+      toSave.sayThisRules = body.sayThisRules;
+    }
+    if (typeof body.avoidThisRules === 'string') {
+      toSave.avoidThisRules = body.avoidThisRules;
     }
     
     // Handle boolean settings

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getCredits, updateCredits, getSettings, saveCampaign, getCampaign, getAllCampaigns, updateCampaignResult } from '@/lib/store';
 import { makeCall } from '@/lib/twilio';
+import { applyCallerIdentityKpiDelta, getCallerIdentity } from '@/lib/caller-identity-store';
 import { v4 as uuidv4 } from 'uuid';
 import { Campaign, CallResult } from '@/lib/types';
 
@@ -26,7 +27,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { numbers, voiceId, script, name, record, transcribe } = body;
+    const { numbers, voiceId, language, script, name, record, transcribe, callerIdentityId } = body;
 
     if (!Array.isArray(numbers) || numbers.length === 0) {
       return NextResponse.json({
@@ -49,6 +50,20 @@ export async function POST(request: NextRequest) {
         error: 'Forward number not configured. Go to Settings first.' 
       }, { status: 400 });
     }
+
+    const selectedIdentity = callerIdentityId ? await getCallerIdentity(String(callerIdentityId)) : null;
+    const selectedLanguage = String(language || selectedIdentity?.language || 'en-US');
+    const selectedVoiceId = String(voiceId || selectedIdentity?.voiceId || '21m00Tcm4TlvDq8ikWAM');
+    const baseScript = String(script || selectedIdentity?.script || 'Hi, this is a quick update call. Are you open to hearing the offer?').trim();
+    const introLine = selectedIdentity
+      ? (selectedIdentity.mentionAi
+        ? `Hi, this is ${selectedIdentity.name}, an AI assistant calling on behalf of ${settings.businessName || 'our company'}.`
+        : `Hi, this is ${selectedIdentity.name}, ${selectedIdentity.position} at ${settings.businessName || 'our company'}.`)
+      : '';
+
+    const ruleNotes = (selectedIdentity?.sayThisRules || settings.sayThisRules || '').trim();
+
+    const finalScript = [introLine, baseScript, ruleNotes].filter(Boolean).join(' ');
     
     // Create campaign
     const campaign: Campaign = {
@@ -56,8 +71,12 @@ export async function POST(request: NextRequest) {
       userId: 'default',
       name: name || `Campaign ${new Date().toLocaleDateString()}`,
       status: 'running',
-      voiceId: voiceId || '21m00Tcm4TlvDq8ikWAM',
-      script: script || 'Hi, this is a call from your real estate agent. I have an exciting property opportunity for you. Are you interested in learning more?',
+      voiceId: selectedVoiceId,
+      language: selectedLanguage,
+      callerIdentityId: selectedIdentity?.id,
+      callerIdentityName: selectedIdentity?.name,
+      callerPosition: selectedIdentity?.position,
+      script: finalScript,
       numbers,
       currentIndex: 0,
       results: [],
@@ -67,6 +86,12 @@ export async function POST(request: NextRequest) {
     };
     
     await saveCampaign(campaign);
+
+    if (selectedIdentity) {
+      await applyCallerIdentityKpiDelta(selectedIdentity.id, {
+        campaignsLaunched: 1,
+      });
+    }
     
     // Start calling in background
     startCalling(campaign);
@@ -141,11 +166,20 @@ async function startCalling(campaign: Campaign) {
         {
           record: campaign.recordCalls ?? settings.recordCalls,
           transcribe: campaign.transcribeCalls ?? settings.transcribeCalls,
+          language: campaign.language || 'en-US',
+          callerIdentityId: campaign.callerIdentityId,
         }
       );
       
       // Deduct credit
       await updateCredits(-1);
+      if (campaign.callerIdentityId) {
+        await applyCallerIdentityKpiDelta(campaign.callerIdentityId, {
+          totalCalls: 1,
+          creditsUsed: 1,
+          lastCalledAt: new Date(),
+        });
+      }
       
       // Update result
       result.callSid = call.sid;

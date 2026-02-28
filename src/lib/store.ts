@@ -30,6 +30,10 @@ interface StoredSettings {
   managedMode: boolean;
   assignedPhoneNumber: string;
   businessName: string;
+  industry: string;
+  companyDetails: string;
+  sayThisRules: string;
+  avoidThisRules: string;
 }
 
 function ensureDataDir() {
@@ -63,6 +67,10 @@ function defaultSettings(): StoredSettings {
     managedMode,
     assignedPhoneNumber: '',
     businessName: '',
+    industry: '',
+    companyDetails: '',
+    sayThisRules: '',
+    avoidThisRules: '',
   };
 }
 
@@ -130,6 +138,10 @@ function deserializeCampaign(row: {
   name: string;
   status: string;
   voiceId: string;
+  language: string | null;
+  callerIdentityId: string | null;
+  callerIdentityName: string | null;
+  callerPosition: string | null;
   script: string;
   numbers: any;
   currentIndex: number;
@@ -145,6 +157,10 @@ function deserializeCampaign(row: {
     name: row.name,
     status: row.status as Campaign['status'],
     voiceId: row.voiceId,
+    language: row.language || undefined,
+    callerIdentityId: row.callerIdentityId || undefined,
+    callerIdentityName: row.callerIdentityName || undefined,
+    callerPosition: row.callerPosition || undefined,
     script: row.script,
     numbers: Array.isArray(row.numbers) ? (row.numbers as string[]) : [],
     currentIndex: row.currentIndex,
@@ -195,6 +211,10 @@ function deserializeSettings(row: {
   managedMode: boolean;
   assignedPhoneNumber: string;
   businessName: string;
+  industry: string;
+  companyDetails: string;
+  sayThisRules: string;
+  avoidThisRules: string;
 }): StoredSettings {
   return {
     elevenLabsApiKey: row.elevenLabsApiKey,
@@ -209,6 +229,10 @@ function deserializeSettings(row: {
     managedMode: row.managedMode,
     assignedPhoneNumber: row.assignedPhoneNumber,
     businessName: row.businessName,
+    industry: row.industry,
+    companyDetails: row.companyDetails,
+    sayThisRules: row.sayThisRules,
+    avoidThisRules: row.avoidThisRules,
   };
 }
 
@@ -559,6 +583,10 @@ async function dbSaveSettings(settings: Partial<StoredSettings>): Promise<void> 
       managedMode: updated.managedMode,
       assignedPhoneNumber: updated.assignedPhoneNumber,
       businessName: updated.businessName,
+      industry: updated.industry,
+      companyDetails: updated.companyDetails,
+      sayThisRules: updated.sayThisRules,
+      avoidThisRules: updated.avoidThisRules,
     },
   });
 }
@@ -603,6 +631,10 @@ async function dbSaveCampaign(campaign: Campaign): Promise<void> {
       name: campaign.name,
       status: campaign.status,
       voiceId: campaign.voiceId,
+      language: campaign.language || null,
+      callerIdentityId: campaign.callerIdentityId || null,
+      callerIdentityName: campaign.callerIdentityName || null,
+      callerPosition: campaign.callerPosition || null,
       script: campaign.script,
       numbers: campaign.numbers,
       currentIndex: campaign.currentIndex,
@@ -617,6 +649,10 @@ async function dbSaveCampaign(campaign: Campaign): Promise<void> {
       name: campaign.name,
       status: campaign.status,
       voiceId: campaign.voiceId,
+      language: campaign.language || null,
+      callerIdentityId: campaign.callerIdentityId || null,
+      callerIdentityName: campaign.callerIdentityName || null,
+      callerPosition: campaign.callerPosition || null,
       script: campaign.script,
       numbers: campaign.numbers,
       currentIndex: campaign.currentIndex,

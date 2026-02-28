@@ -13,6 +13,7 @@ Production-ready outbound AI calling platform with:
 - Full multi-tab platform UI (`Overview`, `Call Center`, `Recordings`, `History`, `Billing`, `Settings`)
 - Guided onboarding wizard in `Overview` for first-launch setup
 - Team accounts directory in `Settings` (owner/agent/manager operational records)
+- Caller identities in `Settings` (name, position, voice, language, disclosure mode, script constraints, KPI counters)
 - Optional dashboard access protection with login (`/login`)
 - Managed billing flows (PayPal number activation + credit top-up)
 - Twilio callback handling (status, forwarding, recording, voicemail)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, type ChangeEvent } from 'react'
+import { useState, useEffect, useCallback, useRef, useMemo, type ChangeEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -57,6 +57,10 @@ interface Settings {
   managedMode?: boolean
   assignedPhoneNumber?: string
   businessName?: string
+  industry?: string
+  companyDetails?: string
+  sayThisRules?: string
+  avoidThisRules?: string
 }
 
 interface Voice {
@@ -103,6 +107,10 @@ interface Campaign {
   createdAt: string
   script?: string
   voiceId?: string
+  language?: string
+  callerIdentityId?: string
+  callerIdentityName?: string
+  callerPosition?: string
 }
 
 interface CopilotMessage {
@@ -129,6 +137,40 @@ interface BillingProduct {
   credits?: number
 }
 
+interface CallerIdentity {
+  id: string
+  name: string
+  position: string
+  language: string
+  voiceId: string
+  industry?: string
+  mentionAi: boolean
+  script: string
+  sayThisRules?: string
+  avoidThisRules?: string
+  totalCalls: number
+  connectedCalls: number
+  failedCalls: number
+  noAnswerCalls: number
+  campaignsLaunched: number
+  creditsUsed: number
+  lastCalledAt?: string
+  createdAt: string
+}
+
+const LANGUAGE_OPTIONS = [
+  { value: 'en-US', label: 'English (US)' },
+  { value: 'en-GB', label: 'English (UK)' },
+  { value: 'ar-SA', label: 'Arabic' },
+  { value: 'es-ES', label: 'Spanish' },
+  { value: 'fr-FR', label: 'French' },
+  { value: 'de-DE', label: 'German' },
+  { value: 'it-IT', label: 'Italian' },
+  { value: 'pt-BR', label: 'Portuguese (BR)' },
+  { value: 'hi-IN', label: 'Hindi' },
+  { value: 'tr-TR', label: 'Turkish' },
+]
+
 const DEFAULT_BILLING_PRODUCTS: Record<string, BillingProduct> = {
   credits_500: { id: 'credits_500', name: '500 Credits Pack', price: 49, kind: 'credits', credits: 500 },
   credits_1500: { id: 'credits_1500', name: '1,500 Credits Pack', price: 129, kind: 'credits', credits: 1500 },
@@ -150,6 +192,10 @@ export default function Dashboard() {
     managedMode: false,
     assignedPhoneNumber: '',
     businessName: '',
+    industry: '',
+    companyDetails: '',
+    sayThisRules: '',
+    avoidThisRules: '',
   })
   const [credits, setCredits] = useState(0)
   const [isConfigured, setIsConfigured] = useState(false)
@@ -160,7 +206,23 @@ export default function Dashboard() {
   const [numbers, setNumbers] = useState('')
   const [script, setScript] = useState('Hi, this is a call about an exciting property opportunity in your area. I\'d love to share more details with you. Are you available to talk?')
   const [selectedVoice, setSelectedVoice] = useState('21m00Tcm4TlvDq8ikWAM')
+  const [selectedLanguage, setSelectedLanguage] = useState('en-US')
   const [voices, setVoices] = useState<Voice[]>([])
+  const [callerIdentities, setCallerIdentities] = useState<CallerIdentity[]>([])
+  const [selectedCallerIdentityId, setSelectedCallerIdentityId] = useState('')
+  const [identityForm, setIdentityForm] = useState({
+    name: '',
+    position: '',
+    language: 'en-US',
+    voiceId: '21m00Tcm4TlvDq8ikWAM',
+    industry: '',
+    mentionAi: false,
+    campaignGoal: '',
+    script: '',
+    sayThisRules: '',
+    avoidThisRules: '',
+  })
+  const [identityLoading, setIdentityLoading] = useState(false)
   
   // Campaign state
   const [isCalling, setIsCalling] = useState(false)
@@ -260,6 +322,19 @@ export default function Dashboard() {
     }
   }, [])
 
+  const fetchCallerIdentities = useCallback(async () => {
+    try {
+      const res = await fetch('/api/caller-identities')
+      if (!res.ok) {
+        throw new Error('Failed to load caller identities')
+      }
+      const data = await res.json()
+      setCallerIdentities(data.identities || [])
+    } catch {
+      console.error('Failed to load caller identities')
+    }
+  }, [])
+
   const addTeamMember = async () => {
     if (!teamForm.name.trim() || !teamForm.email.trim() || !teamForm.role.trim()) {
       toast.error('Name, email, and role are required')
@@ -292,6 +367,95 @@ export default function Dashboard() {
       toast.error('Failed to add team member')
     } finally {
       setTeamLoading(false)
+    }
+  }
+
+  const selectedCallerIdentity = useMemo(
+    () => callerIdentities.find(identity => identity.id === selectedCallerIdentityId) || null,
+    [callerIdentities, selectedCallerIdentityId]
+  )
+
+  const applyIdentityToComposer = (identity: CallerIdentity) => {
+    setSelectedCallerIdentityId(identity.id)
+    setSelectedVoice(identity.voiceId || selectedVoice)
+    setSelectedLanguage(identity.language || 'en-US')
+    if (identity.script?.trim()) {
+      setScript(identity.script)
+    }
+    toast.success(`${identity.name} is now active`)
+  }
+
+  const saveCallerIdentity = async () => {
+    if (!identityForm.name.trim() || !identityForm.position.trim()) {
+      toast.error('Identity name and position are required')
+      return
+    }
+
+    setIdentityLoading(true)
+    try {
+      const res = await fetch('/api/caller-identities', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: identityForm.name.trim(),
+          position: identityForm.position.trim(),
+          language: identityForm.language,
+          voiceId: identityForm.voiceId,
+          industry: identityForm.industry.trim(),
+          mentionAi: identityForm.mentionAi,
+          campaignGoal: identityForm.campaignGoal.trim(),
+          script: identityForm.script.trim(),
+          sayThisRules: identityForm.sayThisRules.trim(),
+          avoidThisRules: identityForm.avoidThisRules.trim(),
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        toast.error(data.error || 'Failed to save caller identity')
+        return
+      }
+
+      const identity = data.identity as CallerIdentity
+      await fetchCallerIdentities()
+      setIdentityForm({
+        name: '',
+        position: '',
+        language: selectedLanguage,
+        voiceId: selectedVoice,
+        industry: settings.industry || '',
+        mentionAi: false,
+        campaignGoal: '',
+        script: '',
+        sayThisRules: settings.sayThisRules || '',
+        avoidThisRules: settings.avoidThisRules || '',
+      })
+      applyIdentityToComposer(identity)
+    } catch {
+      toast.error('Failed to save caller identity')
+    } finally {
+      setIdentityLoading(false)
+    }
+  }
+
+  const removeCallerIdentity = async (id: string) => {
+    setIdentityLoading(true)
+    try {
+      const res = await fetch(`/api/caller-identities?id=${id}`, { method: 'DELETE' })
+      const data = await res.json()
+      if (!res.ok || !data.success) {
+        toast.error(data.error || 'Failed to delete caller identity')
+        return
+      }
+
+      if (selectedCallerIdentityId === id) {
+        setSelectedCallerIdentityId('')
+      }
+      await fetchCallerIdentities()
+      toast.success('Caller identity removed')
+    } catch {
+      toast.error('Failed to delete caller identity')
+    } finally {
+      setIdentityLoading(false)
     }
   }
 
@@ -378,6 +542,12 @@ export default function Dashboard() {
         setIsConfigured(!!data.isConfigured)
         setManagedMode(!!data.settings?.managedMode)
         setAssignedPhoneNumber(data.settings?.assignedPhoneNumber || '')
+        setIdentityForm(prev => ({
+          ...prev,
+          industry: data.settings?.industry || '',
+          sayThisRules: data.settings?.sayThisRules || '',
+          avoidThisRules: data.settings?.avoidThisRules || '',
+        }))
       } catch {
         toast.error('Failed to load settings, using defaults')
       }
@@ -399,11 +569,11 @@ export default function Dashboard() {
         ])
       }
       
-      await Promise.all([fetchCampaigns(), fetchRecordings(), fetchTeamMembers(), fetchBillingProducts()])
+      await Promise.all([fetchCampaigns(), fetchRecordings(), fetchTeamMembers(), fetchBillingProducts(), fetchCallerIdentities()])
     }
     
     init()
-  }, [fetchCampaigns, fetchRecordings, fetchTeamMembers, fetchBillingProducts])
+  }, [fetchCampaigns, fetchRecordings, fetchTeamMembers, fetchBillingProducts, fetchCallerIdentities])
 
   useEffect(() => {
     const onboardingDone = window.localStorage.getItem('acp_onboarding_done')
@@ -506,9 +676,19 @@ export default function Dashboard() {
           messages: copilotMessages,
           context: {
             businessName: settings.businessName || 'Auto Caller',
-            objective: 'Qualify lead and forward to agent',
+            industry: settings.industry || selectedCallerIdentity?.industry || '',
+            companyDetails: settings.companyDetails || '',
+            objective: selectedCallerIdentity
+              ? `Run ${selectedCallerIdentity.position} outreach and qualify lead before transfer`
+              : 'Qualify lead and forward to agent',
             audience: 'Potential buyers',
             tone: 'Professional and confident',
+            language: selectedCallerIdentity?.language || selectedLanguage,
+            callerName: selectedCallerIdentity?.name || '',
+            callerPosition: selectedCallerIdentity?.position || '',
+            mentionAi: selectedCallerIdentity?.mentionAi || false,
+            sayThisRules: selectedCallerIdentity?.sayThisRules || settings.sayThisRules || '',
+            avoidThisRules: selectedCallerIdentity?.avoidThisRules || settings.avoidThisRules || '',
           },
         }),
       })
@@ -562,6 +742,8 @@ export default function Dashboard() {
         body: JSON.stringify({
           numbers: numberList,
           voiceId: selectedVoice,
+          language: selectedLanguage,
+          callerIdentityId: selectedCallerIdentityId || undefined,
           script,
           record: settings.recordCalls,
           transcribe: settings.transcribeCalls,
@@ -653,6 +835,12 @@ export default function Dashboard() {
     }
     if (campaign.voiceId) {
       setSelectedVoice(campaign.voiceId)
+    }
+    if (campaign.language) {
+      setSelectedLanguage(campaign.language)
+    }
+    if (campaign.callerIdentityId) {
+      setSelectedCallerIdentityId(campaign.callerIdentityId)
     }
     setActiveTab('call')
     toast.success('Campaign loaded into Call Center')
@@ -1207,6 +1395,36 @@ export default function Dashboard() {
                   </CardHeader>
                   <CardContent className="space-y-4">
                     <div className="space-y-2">
+                      <Label>Caller Identity</Label>
+                      <Select
+                        value={selectedCallerIdentityId || 'none'}
+                        onValueChange={(value) => {
+                          if (value === 'none') {
+                            setSelectedCallerIdentityId('')
+                            return
+                          }
+                          const identity = callerIdentities.find(item => item.id === value)
+                          if (identity) {
+                            applyIdentityToComposer(identity)
+                          }
+                        }}
+                        disabled={isCalling}
+                      >
+                        <SelectTrigger className="bg-zinc-800 border-zinc-700">
+                          <SelectValue placeholder="Choose a caller identity" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="none">No identity</SelectItem>
+                          {callerIdentities.map(identity => (
+                            <SelectItem key={identity.id} value={identity.id}>
+                              {identity.name} ({identity.position}) - {identity.language}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
                       <Label>Select Voice</Label>
                       <Select value={selectedVoice} onValueChange={setSelectedVoice} disabled={isCalling}>
                         <SelectTrigger className="bg-zinc-800 border-zinc-700">
@@ -1216,6 +1434,22 @@ export default function Dashboard() {
                           {voices.map(voice => (
                             <SelectItem key={voice.id} value={voice.id}>
                               {voice.name} ({voice.labels?.gender || 'N/A'})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Language</Label>
+                      <Select value={selectedLanguage} onValueChange={setSelectedLanguage} disabled={isCalling}>
+                        <SelectTrigger className="bg-zinc-800 border-zinc-700">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {LANGUAGE_OPTIONS.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -1231,6 +1465,11 @@ export default function Dashboard() {
                         disabled={isCalling}
                         className="min-h-[100px] bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
                       />
+                      {selectedCallerIdentity && (
+                        <p className="text-xs text-zinc-500">
+                          Active profile: {selectedCallerIdentity.name} ({selectedCallerIdentity.position}) • Industry: {selectedCallerIdentity.industry || settings.industry || 'General'}
+                        </p>
+                      )}
                     </div>
                     
                     {/* Recording Options */}
@@ -1928,14 +2167,54 @@ export default function Dashboard() {
                 {/* Business Profile */}
                 <div className="space-y-4">
                   <h3 className="font-medium text-emerald-400">Business Profile</h3>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Business Name</Label>
+                      <Input
+                        placeholder="Your company name"
+                        value={settings.businessName || ''}
+                        onChange={(e) => setSettings({ ...settings, businessName: e.target.value })}
+                        className="bg-zinc-800 border-zinc-700"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Industry</Label>
+                      <Input
+                        placeholder="Real Estate, Insurance, Med Spa..."
+                        value={settings.industry || ''}
+                        onChange={(e) => setSettings({ ...settings, industry: e.target.value })}
+                        className="bg-zinc-800 border-zinc-700"
+                      />
+                    </div>
+                  </div>
                   <div className="space-y-2">
-                    <Label>Business Name</Label>
-                    <Input
-                      placeholder="Your company name"
-                      value={settings.businessName || ''}
-                      onChange={(e) => setSettings({ ...settings, businessName: e.target.value })}
-                      className="bg-zinc-800 border-zinc-700"
+                    <Label>Company Details</Label>
+                    <Textarea
+                      placeholder="Short company profile, value proposition, and offer context."
+                      value={settings.companyDetails || ''}
+                      onChange={(e) => setSettings({ ...settings, companyDetails: e.target.value })}
+                      className="min-h-[88px] bg-zinc-800 border-zinc-700"
                     />
+                  </div>
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label>Global "Say This" Rules</Label>
+                      <Textarea
+                        placeholder="Must mention launch date, financing option, call-back line..."
+                        value={settings.sayThisRules || ''}
+                        onChange={(e) => setSettings({ ...settings, sayThisRules: e.target.value })}
+                        className="min-h-[88px] bg-zinc-800 border-zinc-700"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Global "Avoid This" Rules</Label>
+                      <Textarea
+                        placeholder="Avoid guaranteed return claims, legal wording, price commitments..."
+                        value={settings.avoidThisRules || ''}
+                        onChange={(e) => setSettings({ ...settings, avoidThisRules: e.target.value })}
+                        className="min-h-[88px] bg-zinc-800 border-zinc-700"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -1972,6 +2251,155 @@ export default function Dashboard() {
                       />
                       <Label className="text-zinc-400">Auto-transcribe</Label>
                     </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <h3 className="font-medium text-emerald-400">Caller Identities</h3>
+                  <p className="text-xs text-zinc-500">
+                    Create agent personas with voice, language, disclosure settings, and script constraints. Each identity keeps its own KPI counters.
+                  </p>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Input
+                      placeholder="Caller name (e.g., Sara)"
+                      value={identityForm.name}
+                      onChange={e => setIdentityForm(prev => ({ ...prev, name: e.target.value }))}
+                      className="bg-zinc-800 border-zinc-700"
+                    />
+                    <Input
+                      placeholder="Position (e.g., Sales Advisor)"
+                      value={identityForm.position}
+                      onChange={e => setIdentityForm(prev => ({ ...prev, position: e.target.value }))}
+                      className="bg-zinc-800 border-zinc-700"
+                    />
+                    <Select value={identityForm.language} onValueChange={(value) => setIdentityForm(prev => ({ ...prev, language: value }))}>
+                      <SelectTrigger className="bg-zinc-800 border-zinc-700">
+                        <SelectValue placeholder="Select language" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {LANGUAGE_OPTIONS.map(option => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Select value={identityForm.voiceId} onValueChange={(value) => setIdentityForm(prev => ({ ...prev, voiceId: value }))}>
+                      <SelectTrigger className="bg-zinc-800 border-zinc-700">
+                        <SelectValue placeholder="Select voice" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {voices.map(voice => (
+                          <SelectItem key={voice.id} value={voice.id}>
+                            {voice.name} ({voice.labels?.gender || 'N/A'})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      placeholder="Industry override (optional)"
+                      value={identityForm.industry}
+                      onChange={e => setIdentityForm(prev => ({ ...prev, industry: e.target.value }))}
+                      className="bg-zinc-800 border-zinc-700"
+                    />
+                    <Input
+                      placeholder="Campaign goal (new launch, follow-up, reactivation...)"
+                      value={identityForm.campaignGoal}
+                      onChange={e => setIdentityForm(prev => ({ ...prev, campaignGoal: e.target.value }))}
+                      className="bg-zinc-800 border-zinc-700"
+                    />
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <Textarea
+                      placeholder='Identity "say this" rules'
+                      value={identityForm.sayThisRules}
+                      onChange={e => setIdentityForm(prev => ({ ...prev, sayThisRules: e.target.value }))}
+                      className="min-h-[80px] bg-zinc-800 border-zinc-700"
+                    />
+                    <Textarea
+                      placeholder='Identity "avoid this" rules'
+                      value={identityForm.avoidThisRules}
+                      onChange={e => setIdentityForm(prev => ({ ...prev, avoidThisRules: e.target.value }))}
+                      className="min-h-[80px] bg-zinc-800 border-zinc-700"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Identity Script</Label>
+                    <Textarea
+                      placeholder="Script for this caller identity. Leave blank to auto-generate from profile and goal."
+                      value={identityForm.script}
+                      onChange={e => setIdentityForm(prev => ({ ...prev, script: e.target.value }))}
+                      className="min-h-[96px] bg-zinc-800 border-zinc-700"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                    <div>
+                      <p className="text-sm font-medium">AI Disclosure</p>
+                      <p className="text-xs text-zinc-500">If enabled, opening line says caller is an AI assistant.</p>
+                    </div>
+                    <Switch
+                      checked={identityForm.mentionAi}
+                      onCheckedChange={(checked) => setIdentityForm(prev => ({ ...prev, mentionAi: checked }))}
+                    />
+                  </div>
+                  <Button
+                    type="button"
+                    onClick={saveCallerIdentity}
+                    disabled={identityLoading}
+                    className="bg-zinc-700 hover:bg-zinc-600"
+                  >
+                    {identityLoading ? 'Saving...' : 'Create Caller Identity'}
+                  </Button>
+
+                  <div className="space-y-2">
+                    {callerIdentities.length === 0 ? (
+                      <p className="text-sm text-zinc-500">No caller identities yet.</p>
+                    ) : (
+                      callerIdentities.map(identity => {
+                        const successRate = identity.totalCalls > 0
+                          ? Math.round((identity.connectedCalls / identity.totalCalls) * 100)
+                          : 0
+                        const isActive = selectedCallerIdentityId === identity.id
+                        return (
+                          <div key={identity.id} className={`rounded-lg border p-3 ${isActive ? 'border-emerald-500/50 bg-emerald-500/10' : 'border-zinc-800 bg-zinc-950/40'}`}>
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-medium">
+                                  {identity.name} <span className="text-zinc-500">({identity.position})</span>
+                                </p>
+                                <p className="text-xs text-zinc-400">
+                                  {identity.language} • {identity.industry || settings.industry || 'General'} • Voice {identity.voiceId}
+                                </p>
+                                <p className="text-xs text-zinc-500 mt-1">
+                                  Calls {identity.totalCalls} • Connected {identity.connectedCalls} • Success {successRate}% • Credits {identity.creditsUsed}
+                                </p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  className="bg-zinc-800 hover:bg-zinc-700"
+                                  onClick={() => applyIdentityToComposer(identity)}
+                                >
+                                  Use
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-red-300 hover:text-red-200"
+                                  onClick={() => removeCallerIdentity(identity.id)}
+                                  disabled={identityLoading}
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+                        )
+                      })
+                    )}
                   </div>
                 </div>
 

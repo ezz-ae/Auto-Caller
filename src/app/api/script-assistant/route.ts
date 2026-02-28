@@ -14,9 +14,17 @@ export async function POST(request: NextRequest) {
     const prompt = (body.prompt || '') as string;
     const context = (body.context || {}) as {
       businessName?: string;
+      industry?: string;
+      companyDetails?: string;
       audience?: string;
       objective?: string;
       tone?: string;
+      language?: string;
+      callerName?: string;
+      callerPosition?: string;
+      mentionAi?: boolean;
+      sayThisRules?: string;
+      avoidThisRules?: string;
     };
 
     if (!prompt.trim()) {
@@ -39,16 +47,28 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = `You are an expert outbound call strategist.
 Generate short, high-converting sales call scripts.
+You must personalize the script using caller identity and company profile.
+If mentionAi is true, disclose AI clearly in the opening line.
+Respect "must say" and "avoid saying" rules strictly.
 Always return valid JSON with:
 - reply: brief assistant response
 - script: full call script ready to use
-- objections: array of 3 objection handling lines`;
+- objections: array of 3 objection handling lines
+- profileSummary: one short line about the caller identity you used`;
 
     const userPrompt = `Context:
 - Business: ${context.businessName || 'Not provided'}
+- Industry: ${context.industry || 'Not provided'}
+- Company details: ${context.companyDetails || 'Not provided'}
 - Audience: ${context.audience || 'General leads'}
 - Objective: ${context.objective || 'Book a follow-up call'}
 - Tone: ${context.tone || 'Professional and friendly'}
+- Language: ${context.language || 'en-US'}
+- Caller name: ${context.callerName || 'Not provided'}
+- Caller position: ${context.callerPosition || 'Not provided'}
+- Mention AI explicitly: ${context.mentionAi ? 'Yes' : 'No'}
+- Must say: ${context.sayThisRules || 'None'}
+- Avoid saying: ${context.avoidThisRules || 'None'}
 
 Conversation history:
 ${history || 'No previous history'}
@@ -74,6 +94,7 @@ ${prompt}`;
       reply: parsed.reply || 'I drafted a script for you.',
       script: parsed.script || '',
       objections: Array.isArray(parsed.objections) ? parsed.objections : [],
+      profileSummary: parsed.profileSummary || '',
     });
   } catch (error) {
     console.error('Script assistant error:', error);

@@ -10,12 +10,14 @@ async function handleAnswer(request: NextRequest) {
     const forwardFromQuery = url.searchParams.get('forward');
     const recordFromQuery = url.searchParams.get('record');
     const transcribeFromQuery = url.searchParams.get('transcribe');
+    const languageFromQuery = url.searchParams.get('language');
 
     let callSid = '';
     let script = scriptFromQuery || '';
     let forward = forwardFromQuery || '';
     let record = recordFromQuery === 'true';
     let transcribe = transcribeFromQuery === 'true';
+    let language = languageFromQuery || 'en-US';
 
     if (request.method === 'POST') {
       const formData = await request.formData();
@@ -27,6 +29,9 @@ async function handleAnswer(request: NextRequest) {
       }
       if (!transcribeFromQuery) {
         transcribe = formData.get('transcribe') === 'true';
+      }
+      if (!languageFromQuery) {
+        language = (formData.get('language') as string) || language;
       }
     }
     
@@ -42,6 +47,7 @@ async function handleAnswer(request: NextRequest) {
         transcribe: transcribe || settings.transcribeCalls,
         transcriptionCallback: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/calls/transcription`,
         webSocketUrl: settings.webSocketUrl,
+        language,
       }
     );
     
