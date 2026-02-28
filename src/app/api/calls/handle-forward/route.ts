@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import twilio from 'twilio';
 import { updateCampaignResultByCallSid } from '@/lib/store';
+import { syncParentFollowUpStatusFromChild } from '@/lib/follow-up-status';
 import { CallResult } from '@/lib/types';
 
 function mapDialStatus(dialStatus: string): CallResult['status'] {
@@ -42,7 +43,14 @@ async function handleForward(request: NextRequest) {
       }
     }
 
-    await updateCampaignResultByCallSid(callSid, patch);
+    const updated = await updateCampaignResultByCallSid(callSid, patch);
+    if (updated.updated) {
+      await syncParentFollowUpStatusFromChild({
+        campaignId: updated.campaignId,
+        resultId: updated.resultId,
+        childStatus: patch.status || 'connected',
+      });
+    }
   }
 
   const response = new twilio.twiml.VoiceResponse();

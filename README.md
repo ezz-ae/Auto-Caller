@@ -11,7 +11,7 @@ Production-ready outbound AI calling platform with:
 
 ## What Is Included
 
-- Full multi-tab platform UI (`Overview`, `Agent Desk`, `Call Center`, `Callers`, `Recordings`, `History`, `Billing`, `Settings`)
+- Full multi-tab platform UI (`Overview`, `Agent Desk`, `Call Center`, `Callers`, `Recordings`, `Leads`, `Callbacks`, `History`, `Billing`, `Settings`)
 - Guided onboarding wizard in `Overview` for first-launch setup
 - Team accounts directory in `Settings` (owner/agent/manager operational records)
 - Caller identities in dedicated `Callers` tab (name, position, voice, language, disclosure mode, conversation constraints, KPI counters)
@@ -19,6 +19,9 @@ Production-ready outbound AI calling platform with:
 - Target blueprint-driven calling (goal, audience, offer, qualification, CTA) instead of fixed script reading
 - Lead notes support (`number | user comment | target comment`) attached to per-call results
 - Auto callback scheduling when lead says “call me later” (server-side scheduled follow-up campaign)
+- Lead intelligence timeline workspace (per-number history, notes, outcomes, and follow-up context)
+- Callback queue workspace (scheduled/completed/cancelled tasks with one-click load back to Call Center)
+- Daily operations reporting (calls, connection metrics, callback performance, AI recommendations)
 - Natural call voice delivery via ElevenLabs TTS for identity voices (with gender/language filtering in identity setup)
 - Optional dashboard access protection with login (`/login`)
 - Managed billing flows (PayPal number activation + credit top-up)
@@ -26,6 +29,10 @@ Production-ready outbound AI calling platform with:
 - Twilio callback handling (status, forwarding, recording, voicemail)
 - Google AI conversation engine + transcription analysis (OpenAI fallback optional)
 - Vercel cron dispatch endpoint for scheduled campaigns (`/api/cron/dispatch-scheduled`)
+- Intelligence APIs for integrations:
+  - `/api/leads`
+  - `/api/callbacks`
+  - `/api/reports/daily`
 - Data layer with dual drivers:
   - `postgres` (Neon/Postgres via Prisma, recommended for production)
   - `filesystem` (local JSON store for quick dev)

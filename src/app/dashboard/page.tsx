@@ -12,7 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
-import { 
+import {
   LayoutDashboard,
   Phone, 
   PhoneOff, 
@@ -42,9 +42,19 @@ import {
   Target,
   LogOut,
   UserPlus,
-  Trash2
+  Trash2,
+  ClipboardList,
+  CalendarClock,
+  TimerReset
 } from 'lucide-react'
 import { toast } from 'sonner'
+import {
+  buildCallbackQueue,
+  buildDailyReport,
+  buildLeadProfiles,
+  type CallbackTask,
+  type LeadProfile,
+} from '@/lib/call-center-intelligence'
 
 interface Settings {
   elevenLabsApiKey: string
@@ -108,6 +118,7 @@ interface CallResult {
   followUpRequested?: boolean
   followUpAt?: string
   followUpStatus?: string
+  followUpCampaignId?: string
 }
 
 interface Campaign {
@@ -340,6 +351,8 @@ export default function Dashboard() {
   
   // UI state
   const [activeTab, setActiveTab] = useState('overview')
+  const [leadSearch, setLeadSearch] = useState('')
+  const [callbackFilter, setCallbackFilter] = useState<'all' | 'scheduled' | 'completed' | 'cancelled'>('all')
   const [loading, setLoading] = useState(false)
   const [purchasingProduct, setPurchasingProduct] = useState<string | null>(null)
   const [redirectUrl, setRedirectUrl] = useState<string | null>(null)
@@ -1191,6 +1204,32 @@ export default function Dashboard() {
     toast.success('Campaign loaded into Call Center')
   }
 
+  const formatDateTime = (value?: string) => {
+    if (!value) return 'N/A'
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return 'N/A'
+    return date.toLocaleString()
+  }
+
+  const loadScheduledCallbacksToComposer = () => {
+    const pendingCallbacks = callbackQueue.filter(item => item.status === 'scheduled')
+    if (pendingCallbacks.length === 0) {
+      toast.error('No scheduled callbacks found')
+      return
+    }
+
+    const uniqueNumbers = Array.from(new Set(pendingCallbacks.map(item => item.phoneNumber)))
+    setNumbers(uniqueNumbers.join('\n'))
+
+    const lines = pendingCallbacks.map(item => {
+      const details = [item.reason, item.targetComment, item.userComment].filter(Boolean).join(' | ')
+      return `${item.phoneNumber} | callback at ${formatDateTime(item.callbackAt)} | ${details}`.trim()
+    })
+    setLeadNotesText(lines.join('\n'))
+    setActiveTab('call')
+    toast.success(`Loaded ${uniqueNumbers.length} callback numbers into Call Center`)
+  }
+
   // Transcribe recording
   const transcribeRecording = async (recordingId: string) => {
     setTranscribing(recordingId)
@@ -1258,13 +1297,34 @@ export default function Dashboard() {
     if (tab === 'recordings') {
       fetchRecordings()
     }
-    if (tab === 'history' || tab === 'overview') {
+    if (tab === 'history' || tab === 'overview' || tab === 'leads' || tab === 'callbacks') {
       fetchCampaigns()
     }
   }
 
   const totalCalls = campaigns.reduce((sum, c) => sum + (c.results?.length || 0), 0)
   const totalNumbersQueued = campaigns.reduce((sum, c) => sum + (c.numbers?.length || 0), 0)
+  const leadProfiles = useMemo(() => buildLeadProfiles(campaigns), [campaigns])
+  const callbackQueue = useMemo(() => buildCallbackQueue(campaigns), [campaigns])
+  const dailyReport = useMemo(() => buildDailyReport(campaigns, new Date()), [campaigns])
+  const leadSearchQuery = leadSearch.trim().toLowerCase()
+  const filteredLeads = leadProfiles.filter(profile => {
+    if (!leadSearchQuery) return true
+    return (
+      profile.phoneNumber.toLowerCase().includes(leadSearchQuery) ||
+      String(profile.latestUserComment || '').toLowerCase().includes(leadSearchQuery) ||
+      String(profile.latestTargetComment || '').toLowerCase().includes(leadSearchQuery) ||
+      String(profile.latestLeadSummary || '').toLowerCase().includes(leadSearchQuery)
+    )
+  })
+  const filteredCallbacks = callbackQueue.filter(item => {
+    if (callbackFilter === 'all') return true
+    return item.status === callbackFilter
+  })
+  const callbacksDueNow = callbackQueue.filter(item =>
+    item.status === 'scheduled' && new Date(item.callbackAt).getTime() <= Date.now()
+  ).length
+  const callbacksScheduled = callbackQueue.filter(item => item.status === 'scheduled').length
   const transcribedCount = recordings.filter(r => r.transcript).length
   const callerNumbersActive = callerIdentities.filter(identity => !!identity.dedicatedNumber).length
   const creditProducts = Object.values(billingProducts)
@@ -1346,6 +1406,10 @@ export default function Dashboard() {
         ? 'Callers'
       : activeTab === 'recordings'
         ? 'Recordings'
+      : activeTab === 'leads'
+        ? 'Leads'
+      : activeTab === 'callbacks'
+        ? 'Callback Queue'
       : activeTab === 'history'
         ? 'History'
       : activeTab === 'billing'
@@ -1363,6 +1427,10 @@ export default function Dashboard() {
         ? 'Create and manage caller identities and target blueprints.'
       : activeTab === 'recordings'
         ? 'Review recordings and transcripts.'
+      : activeTab === 'leads'
+        ? 'Track per-lead timeline, comments, and engagement quality.'
+      : activeTab === 'callbacks'
+        ? 'Manage scheduled callback tasks and move them back into the call center.'
       : activeTab === 'history'
         ? 'Reuse previous campaign setups.'
       : activeTab === 'billing'
@@ -1749,7 +1817,7 @@ export default function Dashboard() {
               {isCalling ? 'Campaign currently running' : 'No active campaign'}
             </div>
           </div>
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 xl:grid-cols-8 gap-2 h-auto bg-transparent p-0">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 xl:grid-cols-10 gap-2 h-auto bg-transparent p-0">
             <TabsTrigger value="overview" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <LayoutDashboard className="w-4 h-4 mr-2" />
               Overview
@@ -1769,6 +1837,14 @@ export default function Dashboard() {
             <TabsTrigger value="recordings" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <Mic className="w-4 h-4 mr-2" />
               Recordings
+            </TabsTrigger>
+            <TabsTrigger value="leads" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
+              <ClipboardList className="w-4 h-4 mr-2" />
+              Leads
+            </TabsTrigger>
+            <TabsTrigger value="callbacks" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
+              <CalendarClock className="w-4 h-4 mr-2" />
+              Callbacks
             </TabsTrigger>
             <TabsTrigger value="history" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <History className="w-4 h-4 mr-2" />
@@ -1861,6 +1937,10 @@ export default function Dashboard() {
                     <Wallet className="w-4 h-4 mr-2" />
                     Open Billing (Paid Checkout)
                   </Button>
+                  <Button variant="secondary" className="w-full justify-start bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('callbacks')}>
+                    <CalendarClock className="w-4 h-4 mr-2" />
+                    Open Callback Queue
+                  </Button>
                   <Button className="w-full justify-start" onClick={() => setActiveTab('call')}>
                     <Phone className="w-4 h-4 mr-2" />
                     Open Call Center
@@ -1942,9 +2022,76 @@ export default function Dashboard() {
                     <span className="text-zinc-400">Caller Numbers</span>
                     <span className="font-semibold">{callerNumbersActive}/{callerIdentities.length}</span>
                   </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Scheduled Callbacks</span>
+                    <span className="font-semibold">{callbacksScheduled}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Callbacks Due Now</span>
+                    <span className="font-semibold text-amber-300">{callbacksDueNow}</span>
+                  </div>
                   <Button variant="secondary" className="w-full bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('billing')}>
                     Open Billing (Paid)
                   </Button>
+                  <Button variant="secondary" className="w-full bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('callbacks')}>
+                    Open Callback Queue
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid gap-6 lg:grid-cols-2">
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <TimerReset className="w-5 h-5 text-emerald-400" />
+                    Daily Operations Report
+                  </CardTitle>
+                  <CardDescription>
+                    Today&apos;s call-center performance summary.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                      <p className="text-xs text-zinc-500">Total Calls</p>
+                      <p className="text-lg font-semibold">{dailyReport.totalCalls}</p>
+                    </div>
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                      <p className="text-xs text-zinc-500">Connected</p>
+                      <p className="text-lg font-semibold text-emerald-400">{dailyReport.connectedCalls}</p>
+                    </div>
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                      <p className="text-xs text-zinc-500">Follow-ups Scheduled</p>
+                      <p className="text-lg font-semibold">{dailyReport.followUpsScheduled}</p>
+                    </div>
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                      <p className="text-xs text-zinc-500">Leads Touched</p>
+                      <p className="text-lg font-semibold">{dailyReport.leadsTouched}</p>
+                    </div>
+                  </div>
+                  <Button
+                    variant="secondary"
+                    className="w-full bg-zinc-800 hover:bg-zinc-700"
+                    onClick={() => setActiveTab('callbacks')}
+                  >
+                    Review Callback Queue
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="text-lg">AI Recommendations</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {dailyReport.recommendations.length === 0 ? (
+                    <p className="text-sm text-zinc-400">No recommendations yet.</p>
+                  ) : (
+                    dailyReport.recommendations.slice(0, 4).map((item, index) => (
+                      <p key={`${item}-${index}`} className="text-sm text-zinc-300">• {item}</p>
+                    ))
+                  )}
                 </CardContent>
               </Card>
             </div>
@@ -2688,6 +2835,236 @@ export default function Dashboard() {
                   </CardContent>
                 </Card>
               </div>
+            </div>
+          </TabsContent>
+
+          {/* Leads Tab */}
+          <TabsContent value="leads" className="space-y-6 animate-in fade-in-50 duration-200">
+            <Card className="bg-zinc-900 border-zinc-800">
+              <CardContent className="pt-6">
+                <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                  <Input
+                    value={leadSearch}
+                    onChange={(e) => setLeadSearch(e.target.value)}
+                    placeholder="Search lead by phone, comments, or summary..."
+                    className="bg-zinc-800 border-zinc-700"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Button
+                      variant="secondary"
+                      className="bg-zinc-800 hover:bg-zinc-700"
+                      onClick={fetchCampaigns}
+                    >
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      Refresh
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="bg-zinc-800 hover:bg-zinc-700"
+                      onClick={() => setActiveTab('callbacks')}
+                    >
+                      Open Callback Queue
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {filteredLeads.length === 0 ? (
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardContent className="py-12 text-center text-zinc-500">
+                  <ClipboardList className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                  <p>No lead intelligence available yet</p>
+                  <p className="text-sm mt-2">Start campaigns to build lead timelines and performance data.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {filteredLeads.slice(0, 80).map((lead: LeadProfile) => (
+                  <Card key={lead.phoneNumber} className="bg-zinc-900 border-zinc-800">
+                    <CardContent className="pt-5 space-y-3">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                        <div>
+                          <p className="font-medium">{lead.phoneNumber}</p>
+                          <p className="text-xs text-zinc-500">
+                            First seen: {formatDateTime(lead.firstSeenAt)} • Last activity: {formatDateTime(lead.lastActivityAt)}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge className="bg-zinc-800 text-zinc-200 border-zinc-700">Calls {lead.totalCalls}</Badge>
+                          <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">Connected {lead.connectedCalls}</Badge>
+                          <Badge className="bg-amber-500/20 text-amber-300 border-amber-500/30">No Answer {lead.noAnswerCalls}</Badge>
+                          <Badge className="bg-red-500/20 text-red-300 border-red-500/30">Failed {lead.failedCalls}</Badge>
+                        </div>
+                      </div>
+
+                      {(lead.latestUserComment || lead.latestTargetComment || lead.latestCallComment || lead.latestLeadSummary) && (
+                        <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 text-xs text-zinc-300 space-y-1">
+                          {lead.latestUserComment && <p>User note: {lead.latestUserComment}</p>}
+                          {lead.latestTargetComment && <p>Target note: {lead.latestTargetComment}</p>}
+                          {lead.latestCallComment && <p>Call feedback: {lead.latestCallComment}</p>}
+                          {lead.latestLeadSummary && <p>Lead summary: {lead.latestLeadSummary}</p>}
+                        </div>
+                      )}
+
+                      <details className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                        <summary className="cursor-pointer text-sm text-zinc-300">
+                          Timeline ({lead.timeline.length} events)
+                        </summary>
+                        <div className="mt-3 space-y-2">
+                          {lead.timeline.slice(0, 12).map((item, index) => (
+                            <div key={`${item.campaignId}-${item.timestamp}-${index}`} className="rounded-md border border-zinc-800 bg-zinc-900/60 p-2 text-xs text-zinc-300">
+                              <p className="text-zinc-200">
+                                {item.campaignName} • {item.status} • {formatDateTime(item.timestamp)}
+                              </p>
+                              {item.callComment && <p className="text-zinc-400 mt-1">Feedback: {item.callComment}</p>}
+                              {item.leadSummary && <p className="text-zinc-400 mt-1">Lead: {item.leadSummary}</p>}
+                              {item.followUpAt && (
+                                <p className="text-amber-300 mt-1">
+                                  Callback: {formatDateTime(item.followUpAt)} ({item.followUpStatus || 'scheduled'})
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </details>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Callback Queue Tab */}
+          <TabsContent value="callbacks" className="space-y-6 animate-in fade-in-50 duration-200">
+            <div className="grid gap-6 lg:grid-cols-3">
+              <Card className="lg:col-span-2 bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <CalendarClock className="w-5 h-5 text-emerald-400" />
+                    Callback Queue
+                  </CardTitle>
+                  <CardDescription>
+                    Auto-scheduled follow-up tasks generated from live conversations.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
+                    <Select value={callbackFilter} onValueChange={(value) => setCallbackFilter(value as typeof callbackFilter)}>
+                      <SelectTrigger className="w-full sm:w-56 bg-zinc-800 border-zinc-700">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All statuses</SelectItem>
+                        <SelectItem value="scheduled">Scheduled</SelectItem>
+                        <SelectItem value="completed">Completed</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="flex items-center gap-2">
+                      <Button
+                        variant="secondary"
+                        className="bg-zinc-800 hover:bg-zinc-700"
+                        onClick={loadScheduledCallbacksToComposer}
+                      >
+                        Load Scheduled to Call Center
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        className="bg-zinc-800 hover:bg-zinc-700"
+                        onClick={fetchCampaigns}
+                      >
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Refresh
+                      </Button>
+                    </div>
+                  </div>
+
+                  {filteredCallbacks.length === 0 ? (
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 py-12 text-center text-zinc-500">
+                      <CalendarClock className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                      <p>No callback tasks for this filter</p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredCallbacks.map((task: CallbackTask, index: number) => {
+                        const followUpCampaign = task.followUpCampaignId
+                          ? campaigns.find(campaign => campaign.id === task.followUpCampaignId)
+                          : null
+                        return (
+                          <div key={`${task.phoneNumber}-${task.callbackAt}-${index}`} className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                              <div>
+                                <p className="text-sm font-medium">{task.phoneNumber}</p>
+                                <p className="text-xs text-zinc-500">
+                                  {task.parentCampaignName} • callback at {formatDateTime(task.callbackAt)}
+                                </p>
+                              </div>
+                              <Badge
+                                className={
+                                  task.status === 'completed'
+                                    ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30'
+                                    : task.status === 'cancelled'
+                                      ? 'bg-red-500/20 text-red-300 border-red-500/30'
+                                      : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                }
+                              >
+                                {task.status}
+                              </Badge>
+                            </div>
+                            {(task.reason || task.targetComment || task.userComment || task.callComment) && (
+                              <div className="mt-2 text-xs text-zinc-300 space-y-1">
+                                {task.reason && <p>Reason: {task.reason}</p>}
+                                {task.targetComment && <p>Target note: {task.targetComment}</p>}
+                                {task.userComment && <p>User note: {task.userComment}</p>}
+                                {task.callComment && <p>Call feedback: {task.callComment}</p>}
+                              </div>
+                            )}
+                            {followUpCampaign && (
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                className="mt-2 bg-zinc-800 hover:bg-zinc-700"
+                                onClick={() => loadCampaignToComposer(followUpCampaign)}
+                              >
+                                Open Follow-up Campaign
+                              </Button>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="text-lg">Queue Snapshot</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Scheduled</span>
+                    <span className="font-semibold">{callbacksScheduled}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Due Now</span>
+                    <span className="font-semibold text-amber-300">{callbacksDueNow}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Completed Today</span>
+                    <span className="font-semibold text-emerald-400">{dailyReport.followUpsCompleted}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-zinc-400">Cancelled Today</span>
+                    <span className="font-semibold text-red-300">{dailyReport.followUpsCancelled}</span>
+                  </div>
+                  <Button className="w-full" onClick={() => setActiveTab('call')}>
+                    Open Call Center
+                  </Button>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 

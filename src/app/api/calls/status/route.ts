@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { updateCampaignResultByCallSid } from '@/lib/store';
 import { applyCallerIdentityKpiDelta } from '@/lib/caller-identity-store';
+import { syncParentFollowUpStatusFromChild } from '@/lib/follow-up-status';
 import { CallResult } from '@/lib/types';
 
 // Handle call status updates from Twilio
@@ -66,6 +67,13 @@ export async function POST(request: NextRequest) {
     }
 
     const updated = await updateCampaignResultByCallSid(callSid, patch);
+    if (updated.updated) {
+      await syncParentFollowUpStatusFromChild({
+        campaignId: updated.campaignId,
+        resultId: updated.resultId,
+        childStatus: mappedStatus,
+      });
+    }
 
     // Update KPI counters only on terminal states to avoid duplicate increments.
     if (callerIdentityId) {
