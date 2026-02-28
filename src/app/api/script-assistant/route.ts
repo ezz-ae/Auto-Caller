@@ -125,11 +125,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
     }
 
-    const apiKey =
+    const apiKey = (
       process.env.MANAGED_GOOGLE_AI_API_KEY ||
       process.env.GOOGLE_AI_API_KEY ||
       process.env.GEMINI_API_KEY ||
-      '';
+      ''
+    ).trim();
     const model =
       normalizeGeminiModel(process.env.GOOGLE_AI_MODEL || process.env.GEMINI_MODEL || '') ||
       process.env.GEMINI_MODEL ||
@@ -192,7 +193,10 @@ ${prompt}`;
   } catch (error) {
     console.error('Script assistant error:', error);
     return NextResponse.json(
-      { error: 'Failed to generate script suggestion' },
+      {
+        error: 'Failed to generate script suggestion',
+        details: error instanceof Error ? error.message : 'Unknown error',
+      },
       { status: 500 }
     );
   }
