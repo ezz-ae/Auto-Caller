@@ -113,6 +113,7 @@ export interface CallerIdentity {
   gender: string;
   language: string;
   voiceId: string;
+  dedicatedNumber?: string;
   industry?: string;
   mentionAi: boolean;
   script: string;

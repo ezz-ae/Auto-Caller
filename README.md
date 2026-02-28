@@ -79,6 +79,7 @@ This creates tables:
 - `recordings`
 - `transcripts`
 - `team_members`
+- `caller_identities`
 
 ## 3. Run Locally
 
@@ -134,7 +135,9 @@ Set:
 
 In this mode customers only need to:
 - add forwarding number
-- buy number + credits
+- create caller identities
+- buy one number per caller identity
+- top up credits
 - run campaigns from UI
 
 No customer API keys required.
@@ -146,12 +149,13 @@ Automatic number provisioning:
   - `MANAGED_NUMBER_AREA_CODE` (optional)
   - `MANAGED_NUMBER_CONTAINS` (optional)
 - `MANAGED_NUMBER_POOL` remains fallback if auto-provisioning fails.
-- Optional: set `MANAGED_ASSIGN_NUMBER_ON_REGISTRATION=true` to auto-assign at first setup save (before number checkout).
+- Keep `MANAGED_ASSIGN_NUMBER_ON_REGISTRATION=false` (recommended) so users explicitly buy number per caller identity.
 
 Credit pricing with margin:
 - `TWILIO_ESTIMATED_COST_PER_CALL_USD` (example `0.02`)
 - `CREDIT_MARGIN_MULTIPLIER` (example `2.0` for 100% markup)
-- Product prices are now computed server-side from these values.
+- Fixed credit packs are `30`, `60`, `90`, `140`, and `200`.
+- Product prices are computed server-side from these values.
 
 Natural voices (ElevenLabs):
 - Caller identities now filter voices by gender and language.

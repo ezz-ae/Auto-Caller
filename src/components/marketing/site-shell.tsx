@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 const navItems = [
   { href: '/features', label: 'Features' },
   { href: '/how-it-works', label: 'How It Works' },
-  { href: '/pricing', label: 'Pricing' },
   { href: '/docs', label: 'Docs' },
   { href: '/faq', label: 'FAQ' },
 ]
@@ -37,7 +36,7 @@ export function MarketingHeader() {
             <Link href="/login">Sign In</Link>
           </Button>
           <Button asChild className="bg-emerald-500 hover:bg-emerald-600">
-            <Link href="/pricing">Start Now</Link>
+            <Link href="/login">Start Free</Link>
           </Button>
         </div>
       </div>
@@ -60,7 +59,7 @@ export function MarketingFooter() {
           <div className="space-y-2 text-sm text-zinc-400">
             <Link href="/features" className="block hover:text-emerald-300 transition">Features</Link>
             <Link href="/how-it-works" className="block hover:text-emerald-300 transition">How It Works</Link>
-            <Link href="/pricing" className="block hover:text-emerald-300 transition">Pricing</Link>
+            <Link href="/login" className="block hover:text-emerald-300 transition">Start Free</Link>
           </div>
         </div>
         <div>

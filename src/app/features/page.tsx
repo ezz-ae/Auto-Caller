@@ -89,7 +89,7 @@ export default function FeaturesPage() {
               <Link href="/docs">Open Docs</Link>
             </Button>
             <Button asChild className="bg-emerald-500 hover:bg-emerald-600">
-              <Link href="/pricing">Open Pricing</Link>
+              <Link href="/login">Start Free</Link>
             </Button>
           </div>
         </section>

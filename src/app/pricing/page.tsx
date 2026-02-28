@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import Link from 'next/link'
-import { Check, Crown, Phone, Sparkles, Wallet, Zap } from 'lucide-react'
+import { Check, Crown, Sparkles, Wallet, Zap } from 'lucide-react'
 import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -18,29 +18,20 @@ interface BillingProduct {
 }
 
 const DEFAULT_PRODUCTS: BillingProduct[] = [
-  { id: 'number_activation', name: 'Dedicated Phone Number', price: 39, kind: 'number' },
-  { id: 'credits_500', name: '500 Credits Pack', price: 20, kind: 'credits', credits: 500 },
-  { id: 'credits_1500', name: '1,500 Credits Pack', price: 60, kind: 'credits', credits: 1500 },
-  { id: 'credits_5000', name: '5,000 Credits Pack', price: 200, kind: 'credits', credits: 5000 },
+  { id: 'credits_30', name: '30 Credits Pack', price: 1.2, kind: 'credits', credits: 30 },
+  { id: 'credits_60', name: '60 Credits Pack', price: 2.4, kind: 'credits', credits: 60 },
+  { id: 'credits_90', name: '90 Credits Pack', price: 3.6, kind: 'credits', credits: 90 },
+  { id: 'credits_140', name: '140 Credits Pack', price: 5.6, kind: 'credits', credits: 140 },
+  { id: 'credits_200', name: '200 Credits Pack', price: 8, kind: 'credits', credits: 200 },
 ]
 
 function getProductIcon(product: BillingProduct) {
-  if (product.kind === 'number') return <Phone className="w-6 h-6" />
-  if ((product.credits || 0) <= 500) return <Zap className="w-6 h-6" />
-  if ((product.credits || 0) <= 1500) return <Crown className="w-6 h-6" />
+  if ((product.credits || 0) <= 60) return <Zap className="w-6 h-6" />
+  if ((product.credits || 0) <= 140) return <Crown className="w-6 h-6" />
   return <Wallet className="w-6 h-6" />
 }
 
 function getProductFeatures(product: BillingProduct): string[] {
-  if (product.kind === 'number') {
-    return [
-      'Dedicated caller number for the customer workspace',
-      'Used across all campaign callers and scripts',
-      'Provisioned and managed by platform operations',
-      'No provider account needed for customer',
-    ]
-  }
-
   const credits = product.credits || 0
   return [
     `${credits.toLocaleString()} outbound call credits`,
@@ -78,11 +69,9 @@ export default function PricingPage() {
   }, [])
 
   const sortedProducts = useMemo(() => {
-    return [...products].sort((a, b) => {
-      if (a.kind === 'number' && b.kind !== 'number') return -1
-      if (a.kind !== 'number' && b.kind === 'number') return 1
-      return (a.credits || 0) - (b.credits || 0)
-    })
+    return [...products]
+      .filter(product => product.kind === 'credits')
+      .sort((a, b) => (a.credits || 0) - (b.credits || 0))
   }, [products])
 
   const handlePurchase = useCallback(async (productId: string) => {
@@ -119,17 +108,16 @@ export default function PricingPage() {
             <Sparkles className="w-3.5 h-3.5 mr-1" />
             Managed Platform Billing
           </Badge>
-          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">Sell Number + Credits, Start Calls Fast</h1>
+          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">Top Up Credits, Keep Calls Running</h1>
           <p className="text-zinc-300 text-lg">
-            This page is customer-facing checkout: activate a dedicated number, top up credits, and run campaigns
-            without external provider setup.
+            Dedicated numbers are purchased inside the dashboard per caller identity. Use this page for credit top-ups.
           </p>
         </section>
 
         <section className="grid gap-6 lg:grid-cols-4">
           {sortedProducts.map(product => {
-            const isPopular = product.kind === 'credits' && (product.credits || 0) >= 1500 && (product.credits || 0) < 5000
-            const title = product.kind === 'number' ? 'Dedicated Number' : `${(product.credits || 0).toLocaleString()} Credits`
+            const isPopular = (product.credits || 0) >= 90 && (product.credits || 0) <= 140
+            const title = `${(product.credits || 0).toLocaleString()} Credits`
 
             return (
               <Card key={product.id} className={`relative bg-zinc-900 border-zinc-800 ${isPopular ? 'border-emerald-500/60 shadow-lg shadow-emerald-500/10' : ''}`}>
@@ -196,10 +184,10 @@ export default function PricingPage() {
           </Card>
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
-              <CardTitle className="text-lg">Can number assignment be automatic?</CardTitle>
+              <CardTitle className="text-lg">Where do I buy a caller number?</CardTitle>
             </CardHeader>
             <CardContent className="text-zinc-400 text-sm">
-              Yes. You can auto-provision from Twilio and auto-assign on registration using managed mode env settings.
+              In the dashboard, go to Callers tab and buy number for each caller identity.
             </CardContent>
           </Card>
         </section>

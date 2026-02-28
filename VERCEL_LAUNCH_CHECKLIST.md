@@ -69,6 +69,8 @@ Notes:
 - `GOOGLE_AI_API_KEY` (or `MANAGED_GOOGLE_AI_API_KEY`) is the primary AI provider.
 - `OPENAI_API_KEY` is optional fallback only.
 - Keep all secret values in Vercel only, never in git.
+- Credit packs are fixed at `30/60/90/140/200` and priced from your cost+margin env vars.
+- Keep `MANAGED_ASSIGN_NUMBER_ON_REGISTRATION=false` so each caller identity buys its own number.
 
 ## 4. Environment Variables (Preview)
 
@@ -151,7 +153,7 @@ Expected result:
 
 Before accepting customers:
 1. Verify login gate works (`/login`) with `APP_ACCESS_PASSWORD`.
-2. Verify billing tab starts PayPal checkout.
+2. Verify caller identities can buy number (one number per caller identity).
 3. Verify calls can start and callbacks update campaign status.
 4. Verify recordings appear and transcription analysis runs with Google AI.
 5. Verify credits decrement and top-up flow updates balance.

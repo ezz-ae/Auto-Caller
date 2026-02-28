@@ -67,8 +67,8 @@ export default function MarketingHomePage() {
             </p>
             <div className="flex flex-wrap items-center gap-3">
               <Button size="lg" asChild className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700">
-                <Link href="/pricing">
-                  Start Selling Calls
+                <Link href="/login">
+                  Start Free
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Link>
               </Button>

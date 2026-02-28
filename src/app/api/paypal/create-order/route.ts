@@ -17,7 +17,7 @@ type Product = {
   credits?: number
 }
 
-const CREDIT_PACKS = [500, 1500, 5000]
+const CREDIT_PACKS = [30, 60, 90, 140, 200]
 
 function roundUsd(value: number): number {
   return Math.max(1, Math.round(value * 100) / 100)
@@ -28,46 +28,28 @@ function buildProductCatalog(): Record<string, Product> {
   const creditMarginMultiplier = Number(process.env.CREDIT_MARGIN_MULTIPLIER || '2')
   const numberActivationPrice = Number(process.env.MANAGED_NUMBER_ACTIVATION_PRICE || '39')
 
-  const [pack500, pack1500, pack5000] = CREDIT_PACKS
-
   const priceForCredits = (credits: number) => roundUsd(credits * twilioEstimatedCost * creditMarginMultiplier)
-
-  return {
-    credits_500: {
-      id: 'credits_500',
-      name: '500 Credits Pack',
-      price: priceForCredits(pack500),
-      kind: 'credits',
-      credits: pack500,
-    },
-    credits_1500: {
-      id: 'credits_1500',
-      name: '1,500 Credits Pack',
-      price: priceForCredits(pack1500),
-      kind: 'credits',
-      credits: pack1500,
-    },
-    credits_5000: {
-      id: 'credits_5000',
-      name: '5,000 Credits Pack',
-      price: priceForCredits(pack5000),
-      kind: 'credits',
-      credits: pack5000,
-    },
+  const catalog: Record<string, Product> = {
     number_activation: {
       id: 'number_activation',
-      name: 'Dedicated Phone Number',
+      name: 'Dedicated Caller Number',
       price: roundUsd(numberActivationPrice),
       kind: 'number',
     },
   }
-}
 
-// Backward compatibility with old tier API contract
-const LEGACY_TIERS: Record<string, { price: number; credits: number; name: string }> = {
-  starter: { price: 97, credits: 500, name: 'Starter Plan' },
-  pro: { price: 197, credits: 1500, name: 'Pro Plan' },
-  agency: { price: 397, credits: 5000, name: 'Agency Plan' },
+  for (const credits of CREDIT_PACKS) {
+    const id = `credits_${credits}`
+    catalog[id] = {
+      id,
+      name: `${credits} Credits Pack`,
+      price: priceForCredits(credits),
+      kind: 'credits',
+      credits,
+    }
+  }
+
+  return catalog
 }
 
 // Get PayPal access token
@@ -104,30 +86,25 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { productId, tierId } = body
+    const { productId, callerIdentityId } = body
 
-    let product: Product | null = null
-
-    if (productId) {
-      const catalog = buildProductCatalog()
-      product = catalog[productId] || null
-      if (!product) {
-        return NextResponse.json({ error: 'Invalid product' }, { status: 400 })
-      }
-    } else if (tierId) {
-      const tier = LEGACY_TIERS[tierId]
-      if (!tier) {
-        return NextResponse.json({ error: 'Invalid tier' }, { status: 400 })
-      }
-      product = {
-        id: tierId,
-        name: tier.name,
-        price: tier.price,
-        kind: 'credits',
-        credits: tier.credits,
-      }
-    } else {
+    if (!productId) {
       return NextResponse.json({ error: 'Product ID required' }, { status: 400 })
+    }
+
+    const catalog = buildProductCatalog()
+    const product = catalog[productId] || null
+    if (!product) {
+      return NextResponse.json({ error: 'Invalid product' }, { status: 400 })
+    }
+
+    const normalizedCallerIdentityId =
+      typeof callerIdentityId === 'string' && callerIdentityId.trim()
+        ? callerIdentityId.trim()
+        : ''
+
+    if (product.kind === 'number' && !normalizedCallerIdentityId) {
+      return NextResponse.json({ error: 'callerIdentityId is required for number activation' }, { status: 400 })
     }
 
     // Get access token
@@ -154,6 +131,7 @@ export async function POST(request: NextRequest) {
             kind: product.kind,
             credits: product.credits || 0,
             price: product.price,
+            callerIdentityId: normalizedCallerIdentityId || undefined,
           }),
         }],
         application_context: {

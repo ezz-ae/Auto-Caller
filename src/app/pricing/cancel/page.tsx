@@ -18,9 +18,9 @@ export default function CancelPage() {
         </CardHeader>
         
         <CardContent className="space-y-4">
-          <Link href="/pricing">
+          <Link href="/dashboard">
             <Button className="w-full bg-emerald-500 hover:bg-emerald-600">
-              Try Again
+              Back to Billing
             </Button>
           </Link>
           

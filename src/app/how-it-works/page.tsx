@@ -8,7 +8,7 @@ const flow = [
   {
     step: '01',
     title: 'Create caller identities',
-    description: 'Define each AI caller with name, role, voice, language, and disclosure behavior.',
+    description: 'Define each AI caller with name, role, voice, language, and disclosure behavior, then activate its dedicated number.',
     icon: UserRoundCog,
   },
   {
@@ -87,8 +87,8 @@ export default function HowItWorksPage() {
               <Link href="/docs">Open Docs</Link>
             </Button>
             <Button asChild className="bg-emerald-500 hover:bg-emerald-600">
-              <Link href="/pricing">
-                Start Setup
+              <Link href="/login">
+                Start Free
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
             </Button>

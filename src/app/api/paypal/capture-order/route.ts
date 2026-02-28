@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { updateCredits } from '@/lib/store'
 import { assignManagedNumber } from '@/lib/store'
+import { assignDedicatedNumberToCallerIdentity } from '@/lib/caller-identity-store'
 
 // PayPal API base URL
 const PAYPAL_API = process.env.PAYPAL_MODE === 'live' 
@@ -70,8 +71,29 @@ export async function POST(request: NextRequest) {
         const kind = parsed.kind as 'credits' | 'number' | undefined
         const credits = Number(parsed.credits || 0)
         const productId = parsed.productId || parsed.tierId
+        const callerIdentityId =
+          typeof parsed.callerIdentityId === 'string' && parsed.callerIdentityId.trim()
+            ? parsed.callerIdentityId.trim()
+            : ''
 
         if (kind === 'number') {
+          if (callerIdentityId) {
+            const identity = await assignDedicatedNumberToCallerIdentity(callerIdentityId)
+            if (!identity?.dedicatedNumber) {
+              return NextResponse.json({ error: 'Failed to assign dedicated number to caller identity' }, { status: 500 })
+            }
+
+            return NextResponse.json({
+              success: true,
+              message: `Payment successful! ${identity.name} now has number ${identity.dedicatedNumber}`,
+              assignedPhoneNumber: identity.dedicatedNumber,
+              callerIdentityId: identity.id,
+              callerIdentityName: identity.name,
+              productId,
+              credits: await updateCredits(0),
+            })
+          }
+
           const assignedPhoneNumber = await assignManagedNumber()
           return NextResponse.json({
             success: true,

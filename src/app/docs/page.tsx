@@ -28,6 +28,7 @@ const setupSteps = [
     icon: Wallet,
     points: [
       'Set PAYPAL_MODE, PAYPAL_CLIENT_ID, PAYPAL_CLIENT_SECRET.',
+      'Caller numbers are purchased per caller identity; credit packs are 30/60/90/140/200.',
       'Set GOOGLE_AI_API_KEY (or MANAGED_GOOGLE_AI_API_KEY) and optional GOOGLE_AI_MODEL.',
       'Set CRON_SECRET to secure scheduled campaign dispatch endpoint.',
     ],
@@ -95,8 +96,8 @@ export default function DocsPage() {
           </p>
           <div className="pt-2 flex flex-wrap gap-2">
             <Button asChild className="bg-emerald-500 hover:bg-emerald-600">
-              <Link href="/pricing">
-                Open Billing Page
+              <Link href="/login">
+                Open Dashboard
                 <Rocket className="w-4 h-4 ml-2" />
               </Link>
             </Button>

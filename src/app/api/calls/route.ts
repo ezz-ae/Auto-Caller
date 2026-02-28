@@ -53,7 +53,28 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    const selectedIdentity = callerIdentityId ? await getCallerIdentity(String(callerIdentityId)) : null;
+    if (!callerIdentityId) {
+      return NextResponse.json({
+        error: 'Caller identity is required before launching a campaign',
+        code: 'CALLER_IDENTITY_REQUIRED',
+      }, { status: 400 });
+    }
+
+    const selectedIdentity = await getCallerIdentity(String(callerIdentityId));
+    if (!selectedIdentity) {
+      return NextResponse.json({
+        error: 'Selected caller identity was not found',
+        code: 'CALLER_IDENTITY_NOT_FOUND',
+      }, { status: 400 });
+    }
+
+    if (settings.managedMode && !selectedIdentity.dedicatedNumber) {
+      return NextResponse.json({
+        error: `Caller "${selectedIdentity.name}" is missing a dedicated number. Buy number first.`,
+        code: 'CALLER_NUMBER_REQUIRED',
+      }, { status: 400 });
+    }
+
     const selectedLanguage = String(language || selectedIdentity?.language || 'en-US');
     const selectedVoiceId = String(voiceId || selectedIdentity?.voiceId || '21m00Tcm4TlvDq8ikWAM');
     const baseScript = String(script || selectedIdentity?.script || 'Hi, this is a quick update call. Are you open to hearing the offer?').trim();

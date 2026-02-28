@@ -128,12 +128,15 @@ export async function makeCall(
     language?: string;
     callerIdentityId?: string;
     voiceId?: string;
+    fromNumber?: string;
   } = {}
 ): Promise<{ sid: string; status: string }> {
   const client = await getClient();
   const settings = await getSettings();
-  
-  if (!settings.twilioPhoneNumber) {
+
+  const fromNumber = options.fromNumber || settings.twilioPhoneNumber;
+
+  if (!fromNumber) {
     throw new Error('Twilio phone number not configured');
   }
   
@@ -154,7 +157,7 @@ export async function makeCall(
   
   const call = await client.calls.create({
     to: to,
-    from: settings.twilioPhoneNumber,
+    from: fromNumber,
     url: `${webhookUrl}/api/calls/answer?${params.toString()}`,
     statusCallback: statusUrl.toString(),
     statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed', 'failed', 'no-answer'],

@@ -1,12 +1,25 @@
 import { v4 as uuidv4 } from 'uuid';
-import { applyCallerIdentityKpiDelta } from '@/lib/caller-identity-store';
+import { applyCallerIdentityKpiDelta, getCallerIdentity } from '@/lib/caller-identity-store';
 import { getCampaign, getSettings, saveCampaign, updateCampaignResult, updateCredits } from '@/lib/store';
 import { makeCall } from '@/lib/twilio';
 import { Campaign, CallResult } from '@/lib/types';
 
 export async function runCampaign(campaign: Campaign): Promise<void> {
   const settings = await getSettings();
+  const selectedIdentity = campaign.callerIdentityId
+    ? await getCallerIdentity(campaign.callerIdentityId)
+    : null;
+  const fromNumber = selectedIdentity?.dedicatedNumber || settings.twilioPhoneNumber;
   const webhookUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+
+  if (campaign.callerIdentityId && !selectedIdentity?.dedicatedNumber) {
+    const latest = await getCampaign(campaign.id);
+    if (latest && latest.status === 'running') {
+      latest.status = 'stopped';
+      await saveCampaign(latest);
+    }
+    return;
+  }
 
   for (let i = 0; i < campaign.numbers.length; i++) {
     const currentCampaign = await getCampaign(campaign.id);
@@ -39,6 +52,7 @@ export async function runCampaign(campaign: Campaign): Promise<void> {
           language: campaign.language || 'en-US',
           callerIdentityId: campaign.callerIdentityId,
           voiceId: campaign.voiceId,
+          fromNumber,
         }
       );
 

@@ -112,6 +112,7 @@ model CallerIdentity {
   gender              String   @default("any")
   language            String
   voiceId             String
+  dedicatedNumber     String?  @unique
   industry            String
   mentionAi           Boolean  @default(false)
   script              String

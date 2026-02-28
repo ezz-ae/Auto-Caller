@@ -28,7 +28,7 @@ const faqs = [
   {
     question: 'How are credits priced?',
     answer:
-      'Credit packs are computed from estimated Twilio call cost and your configured margin multiplier, then sold through PayPal checkout.',
+      'Credit packs are fixed at 30/60/90/140/200 credits, priced from estimated Twilio call cost and your configured margin multiplier, then sold through PayPal.',
   },
   {
     question: 'How do I secure workspace access?',
@@ -85,7 +85,7 @@ export default function FaqPage() {
               <Link href="/docs">Open Docs</Link>
             </Button>
             <Button asChild className="bg-emerald-500 hover:bg-emerald-600">
-              <Link href="/pricing">Open Pricing</Link>
+              <Link href="/login">Start Free</Link>
             </Button>
           </div>
         </section>

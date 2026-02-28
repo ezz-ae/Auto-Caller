@@ -149,6 +149,7 @@ interface CallerIdentity {
   gender: string
   language: string
   voiceId: string
+  dedicatedNumber?: string
   industry?: string
   mentionAi: boolean
   script: string
@@ -178,9 +179,11 @@ const LANGUAGE_OPTIONS = [
 ]
 
 const DEFAULT_BILLING_PRODUCTS: Record<string, BillingProduct> = {
-  credits_500: { id: 'credits_500', name: '500 Credits Pack', price: 49, kind: 'credits', credits: 500 },
-  credits_1500: { id: 'credits_1500', name: '1,500 Credits Pack', price: 129, kind: 'credits', credits: 1500 },
-  credits_5000: { id: 'credits_5000', name: '5,000 Credits Pack', price: 349, kind: 'credits', credits: 5000 },
+  credits_30: { id: 'credits_30', name: '30 Credits Pack', price: 1.2, kind: 'credits', credits: 30 },
+  credits_60: { id: 'credits_60', name: '60 Credits Pack', price: 2.4, kind: 'credits', credits: 60 },
+  credits_90: { id: 'credits_90', name: '90 Credits Pack', price: 3.6, kind: 'credits', credits: 90 },
+  credits_140: { id: 'credits_140', name: '140 Credits Pack', price: 5.6, kind: 'credits', credits: 140 },
+  credits_200: { id: 'credits_200', name: '200 Credits Pack', price: 8, kind: 'credits', credits: 200 },
   number_activation: { id: 'number_activation', name: 'Dedicated Phone Number', price: 39, kind: 'number' },
 }
 
@@ -763,14 +766,16 @@ export default function Dashboard() {
     setLoading(false)
   }
 
-  const purchaseProduct = async (productId: string) => {
-    setPurchasingProduct(productId)
+  const purchaseProduct = async (productId: string, callerIdentityId?: string) => {
+    const purchaseKey = callerIdentityId ? `${productId}:${callerIdentityId}` : productId
+    setPurchasingProduct(purchaseKey)
     try {
       const res = await fetch('/api/paypal/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           productId,
+          callerIdentityId,
         }),
       })
 
@@ -780,10 +785,10 @@ export default function Dashboard() {
         setRedirectUrl(data.approvalUrl)
       } else {
         toast.error(data.error || 'Failed to create payment order')
-        setPurchasingProduct(null)
       }
     } catch {
       toast.error('Failed to start payment')
+    } finally {
       setPurchasingProduct(null)
     }
   }
@@ -865,6 +870,13 @@ export default function Dashboard() {
       return
     }
 
+    const identity = callerIdentities.find(item => item.id === selectedCallerIdentityId)
+    if (managedMode && !identity?.dedicatedNumber) {
+      toast.error('This caller has no dedicated number yet. Buy number for this caller first.')
+      setActiveTab('callers')
+      return
+    }
+
     if (scheduledAt) {
       const parsed = new Date(scheduledAt)
       if (Number.isNaN(parsed.getTime())) {
@@ -875,6 +887,7 @@ export default function Dashboard() {
     
     if (credits < numberList.length) {
       toast.error(`Not enough credits. Need ${numberList.length}, have ${credits}`)
+      setActiveTab('billing')
       return
     }
     
@@ -903,6 +916,11 @@ export default function Dashboard() {
         fetchCampaigns()
         toast.success(data.message)
       } else {
+        if (data.code === 'CALLER_NUMBER_REQUIRED') {
+          setActiveTab('callers')
+        } else if (String(data.error || '').toLowerCase().includes('not enough credits')) {
+          setActiveTab('billing')
+        }
         toast.error(data.error || 'Failed to start calling')
       }
     } catch {
@@ -1076,6 +1094,12 @@ export default function Dashboard() {
   const totalCalls = campaigns.reduce((sum, c) => sum + (c.results?.length || 0), 0)
   const totalNumbersQueued = campaigns.reduce((sum, c) => sum + (c.numbers?.length || 0), 0)
   const transcribedCount = recordings.filter(r => r.transcript).length
+  const callerNumbersActive = callerIdentities.filter(identity => !!identity.dedicatedNumber).length
+  const creditProducts = Object.values(billingProducts)
+    .filter(product => product.kind === 'credits')
+    .sort((a, b) => (a.credits || 0) - (b.credits || 0))
+  const numberActivationPrice =
+    billingProducts.number_activation?.price || DEFAULT_BILLING_PRODUCTS.number_activation.price
   const successRate = totalCalls > 0
     ? Math.round((campaigns.reduce((sum, c) => sum + (c.results?.filter(r => r.status === 'connected').length || 0), 0) / totalCalls) * 100)
     : 0
@@ -1087,9 +1111,9 @@ export default function Dashboard() {
     { label: 'Call script prepared', ready: script.trim().length >= 20, tab: 'call' },
     { label: 'Lead list imported', ready: preparedNumbers > 0, tab: 'call' },
     {
-      label: managedMode ? 'Dedicated caller number active' : 'Calling setup active',
-      ready: managedMode ? !!(assignedPhoneNumber || settings.twilioPhoneNumber) : isConfigured,
-      tab: managedMode ? 'billing' : 'settings',
+      label: managedMode ? 'At least one caller has a dedicated number' : 'Calling setup active',
+      ready: managedMode ? callerNumbersActive > 0 : isConfigured,
+      tab: managedMode ? 'callers' : 'settings',
     },
   ]
   const readinessScore = Math.round((readinessItems.filter(item => item.ready).length / readinessItems.length) * 100)
@@ -1101,8 +1125,8 @@ export default function Dashboard() {
     },
     {
       label: 'Activate billing (number + credits)',
-      done: credits > 0 && (!managedMode || !!assignedPhoneNumber),
-      tab: managedMode ? 'billing' : 'settings',
+      done: managedMode ? (credits > 0 && callerNumbersActive > 0) : credits > 0,
+      tab: managedMode ? 'callers' : 'settings',
     },
     {
       label: 'Upload a lead list and script',
@@ -1163,8 +1187,6 @@ export default function Dashboard() {
           : activeTab === 'billing'
             ? 'Billing & Growth'
           : 'Workspace Settings'
-
-  const getProduct = (id: string) => billingProducts[id] || DEFAULT_BILLING_PRODUCTS[id]
 
   const callerIdentityManager = (
     <Card className="bg-zinc-900 border-zinc-800">
@@ -1339,11 +1361,32 @@ export default function Dashboard() {
                       <p className="text-xs text-zinc-400">
                         {identity.gender} • {identity.language} • {identity.industry || settings.industry || 'General'} • Voice {identity.voiceId}
                       </p>
+                      <p className="text-xs text-zinc-400 mt-1">
+                        Dedicated Number: {identity.dedicatedNumber || 'Not purchased'}
+                      </p>
                       <p className="text-xs text-zinc-500 mt-1">
                         Calls {identity.totalCalls} • Connected {identity.connectedCalls} • Success {successRate}% • Credits {identity.creditsUsed}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
+                      {!identity.dedicatedNumber && managedMode && (
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="bg-blue-600 hover:bg-blue-700"
+                          onClick={() => purchaseProduct('number_activation', identity.id)}
+                          disabled={purchasingProduct === `number_activation:${identity.id}`}
+                        >
+                          {purchasingProduct === `number_activation:${identity.id}`
+                            ? 'Processing...'
+                            : `Buy Number - $${numberActivationPrice.toFixed(2)}`}
+                        </Button>
+                      )}
+                      {identity.dedicatedNumber && (
+                        <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                          Number Active
+                        </Badge>
+                      )}
                       <Button
                         type="button"
                         size="sm"
@@ -1430,10 +1473,10 @@ export default function Dashboard() {
               <LogOut className="w-4 h-4 mr-1" />
               Logout
             </Button>
-            {managedMode && assignedPhoneNumber && (
+            {managedMode && (
               <div className="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-700">
-                <span className="text-xs text-zinc-400">Number:</span>
-                <span className="text-xs font-semibold text-emerald-400">{assignedPhoneNumber}</span>
+                <span className="text-xs text-zinc-400">Caller Numbers:</span>
+                <span className="text-xs font-semibold text-emerald-400">{callerNumbersActive}/{callerIdentities.length}</span>
               </div>
             )}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 border border-zinc-700">
@@ -1722,8 +1765,8 @@ export default function Dashboard() {
                     <span className="font-semibold">{managedMode ? 'Enabled' : 'Disabled'}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-zinc-400">Assigned Number</span>
-                    <span className="font-semibold">{assignedPhoneNumber || 'Not Assigned'}</span>
+                    <span className="text-zinc-400">Caller Numbers</span>
+                    <span className="font-semibold">{callerNumbersActive}/{callerIdentities.length}</span>
                   </div>
                   <Button variant="secondary" className="w-full bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('billing')}>
                     Open Billing Workspace
@@ -1785,12 +1828,12 @@ export default function Dashboard() {
 	                          </SelectTrigger>
 	                          <SelectContent>
 	                            <SelectItem value="none">No identity</SelectItem>
-	                            {callerIdentities.map(identity => (
-	                              <SelectItem key={identity.id} value={identity.id}>
-	                                {identity.name} ({identity.position}) - {identity.language}
-	                              </SelectItem>
-	                            ))}
-	                          </SelectContent>
+                            {callerIdentities.map(identity => (
+                              <SelectItem key={identity.id} value={identity.id}>
+                                {identity.name} ({identity.position}) - {identity.language} {identity.dedicatedNumber ? '• Number Active' : '• No Number'}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
 	                        </Select>
 	                        <p className="text-xs text-zinc-500">
 	                          No caller yet? Create one in the Callers tab.
@@ -1876,9 +1919,16 @@ export default function Dashboard() {
                         className="min-h-[100px] bg-zinc-800 border-zinc-700 text-white placeholder:text-zinc-500"
                       />
                       {selectedCallerIdentity && (
-                        <p className="text-xs text-zinc-500">
-                          Active profile: {selectedCallerIdentity.name} ({selectedCallerIdentity.position}) • Industry: {selectedCallerIdentity.industry || settings.industry || 'General'}
-                        </p>
+                        <div className="space-y-1">
+                          <p className="text-xs text-zinc-500">
+                            Active profile: {selectedCallerIdentity.name} ({selectedCallerIdentity.position}) • Industry: {selectedCallerIdentity.industry || settings.industry || 'General'}
+                          </p>
+                          {managedMode && !selectedCallerIdentity.dedicatedNumber && (
+                            <p className="text-xs text-amber-300">
+                              This caller needs a dedicated number before calls can start.
+                            </p>
+                          )}
+                        </div>
                       )}
                     </div>
                     
@@ -1979,7 +2029,7 @@ export default function Dashboard() {
                   {!isCalling ? (
 	                    <Button 
 	                      onClick={startCalling}
-	                      disabled={loading || !isConfigured}
+	                      disabled={loading || !isConfigured || (managedMode && !!selectedCallerIdentityId && !selectedCallerIdentity?.dedicatedNumber)}
 	                      className="flex-1 h-14 text-lg bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700"
 	                    >
 	                      <Play className="w-5 h-5 mr-2" />
@@ -2401,31 +2451,34 @@ export default function Dashboard() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <Wallet className="w-5 h-5 text-emerald-400" />
-                      Monetization Workspace
+                      Billing Workspace
                     </CardTitle>
                     <CardDescription>
-                      Sell access with a dedicated number and prepaid credits using PayPal.
+                      Start free, then buy a dedicated number per caller identity and top up usage credits.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <div className="grid gap-4 md:grid-cols-2">
                       <div className="rounded-xl border border-zinc-700 bg-zinc-800/60 p-4 space-y-3">
-                        <p className="text-sm font-semibold">Dedicated Caller Number</p>
+                        <p className="text-sm font-semibold">Caller Number Activation</p>
                         <p className="text-xs text-zinc-400">
-                          {assignedPhoneNumber
-                            ? `Active number: ${assignedPhoneNumber}`
-                            : 'No number assigned yet. Purchase to activate.'}
+                          Numbers are activated per caller identity. New identity = new number.
                         </p>
+                        <div className="grid grid-cols-2 gap-3 text-sm">
+                          <div className="rounded-lg border border-zinc-700 bg-zinc-900/60 px-3 py-2">
+                            <p className="text-zinc-400 text-xs">Caller Identities</p>
+                            <p className="font-semibold">{callerIdentities.length}</p>
+                          </div>
+                          <div className="rounded-lg border border-zinc-700 bg-zinc-900/60 px-3 py-2">
+                            <p className="text-zinc-400 text-xs">Numbers Active</p>
+                            <p className="font-semibold text-emerald-400">{callerNumbersActive}</p>
+                          </div>
+                        </div>
                         <Button
-                          disabled={!!assignedPhoneNumber || purchasingProduct === 'number_activation'}
-                          onClick={() => purchaseProduct('number_activation')}
+                          onClick={() => setActiveTab('callers')}
                           className="w-full bg-blue-600 hover:bg-blue-700"
                         >
-                          {assignedPhoneNumber
-                            ? 'Number Active'
-                            : (purchasingProduct === 'number_activation'
-                              ? 'Processing...'
-                              : `Buy Number - $${getProduct('number_activation').price.toFixed(2)}`)}
+                          Open Callers Tab
                         </Button>
                       </div>
 
@@ -2438,37 +2491,22 @@ export default function Dashboard() {
 
                     <div className="space-y-3">
                       <p className="text-sm font-semibold">Top Up Credits</p>
-                      <div className="grid gap-3 sm:grid-cols-3">
-                        <button
-                          type="button"
-                          disabled={purchasingProduct !== null}
-                          onClick={() => purchaseProduct('credits_500')}
-                          className="rounded-xl border border-zinc-700 bg-zinc-800/60 p-4 text-left hover:border-emerald-500/40 transition disabled:opacity-50"
-                        >
-                          <p className="text-lg font-semibold">{getProduct('credits_500').credits || 500} Credits</p>
-                          <p className="text-sm text-zinc-400">${getProduct('credits_500').price.toFixed(2)}</p>
-                          <p className="text-xs text-zinc-500 mt-2">Starter campaigns</p>
-                        </button>
-                        <button
-                          type="button"
-                          disabled={purchasingProduct !== null}
-                          onClick={() => purchaseProduct('credits_1500')}
-                          className="rounded-xl border border-zinc-700 bg-zinc-800/60 p-4 text-left hover:border-emerald-500/40 transition disabled:opacity-50"
-                        >
-                          <p className="text-lg font-semibold">{(getProduct('credits_1500').credits || 1500).toLocaleString()} Credits</p>
-                          <p className="text-sm text-zinc-400">${getProduct('credits_1500').price.toFixed(2)}</p>
-                          <p className="text-xs text-zinc-500 mt-2">Growth package</p>
-                        </button>
-                        <button
-                          type="button"
-                          disabled={purchasingProduct !== null}
-                          onClick={() => purchaseProduct('credits_5000')}
-                          className="rounded-xl border border-zinc-700 bg-zinc-800/60 p-4 text-left hover:border-emerald-500/40 transition disabled:opacity-50"
-                        >
-                          <p className="text-lg font-semibold">{(getProduct('credits_5000').credits || 5000).toLocaleString()} Credits</p>
-                          <p className="text-sm text-zinc-400">${getProduct('credits_5000').price.toFixed(2)}</p>
-                          <p className="text-xs text-zinc-500 mt-2">Scale package</p>
-                        </button>
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                        {creditProducts.map((product, index) => (
+                          <button
+                            key={product.id}
+                            type="button"
+                            disabled={purchasingProduct !== null}
+                            onClick={() => purchaseProduct(product.id)}
+                            className="rounded-xl border border-zinc-700 bg-zinc-800/60 p-4 text-left hover:border-emerald-500/40 transition disabled:opacity-50"
+                          >
+                            <p className="text-lg font-semibold">{(product.credits || 0).toLocaleString()} Credits</p>
+                            <p className="text-sm text-zinc-400">${product.price.toFixed(2)}</p>
+                            <p className="text-xs text-zinc-500 mt-2">
+                              {index === 0 ? 'Starter calls' : index === creditProducts.length - 1 ? 'High-volume usage' : 'Growth usage'}
+                            </p>
+                          </button>
+                        ))}
                       </div>
                       <p className="text-xs text-zinc-500">Secure checkout is processed via PayPal. Credits are applied automatically after payment.</p>
                     </div>
@@ -2485,15 +2523,19 @@ export default function Dashboard() {
                       <span className="font-semibold">PayPal</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-zinc-400">Assigned Number</span>
-                      <span className="font-semibold">{assignedPhoneNumber || 'Pending'}</span>
+                      <span className="text-zinc-400">Caller Identities</span>
+                      <span className="font-semibold">{callerIdentities.length}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-zinc-400">Numbers Active</span>
+                      <span className="font-semibold">{callerNumbersActive}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-zinc-400">Current Credits</span>
                       <span className="font-semibold text-emerald-400">{credits}</span>
                     </div>
                     <p className="text-xs text-zinc-500 pt-2 border-t border-zinc-800">
-                      Use this screen as your customer-facing payments hub for number provisioning and usage credits.
+                      Buy caller numbers from the Callers tab, then assign numbers to campaigns in Call Center.
                     </p>
                   </CardContent>
                 </Card>

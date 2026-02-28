@@ -2,6 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import { prisma } from './prisma';
+import { tryProvisionManagedNumber } from './managed-number';
 
 export interface CallerIdentity {
   id: string;
@@ -10,6 +11,7 @@ export interface CallerIdentity {
   gender: string;
   language: string;
   voiceId: string;
+  dedicatedNumber?: string;
   industry: string;
   mentionAi: boolean;
   script: string;
@@ -67,6 +69,7 @@ function normalizeIdentity(
     gender: (input.gender || existing?.gender || 'any').trim().toLowerCase(),
     language: input.language.trim() || 'en-US',
     voiceId: input.voiceId.trim() || '21m00Tcm4TlvDq8ikWAM',
+    dedicatedNumber: (input.dedicatedNumber || existing?.dedicatedNumber || '').trim() || undefined,
     industry: (input.industry || '').trim(),
     mentionAi: Boolean(input.mentionAi),
     script: input.script.trim(),
@@ -98,6 +101,7 @@ function fsReadAll(): CallerIdentity[] {
     .map(item => ({
       ...item,
       gender: (item as any).gender || 'any',
+      dedicatedNumber: (item as any).dedicatedNumber || undefined,
       createdAt: new Date(item.createdAt),
       lastCalledAt: item.lastCalledAt ? new Date(item.lastCalledAt) : undefined,
     }))
@@ -119,6 +123,7 @@ export async function listCallerIdentities(): Promise<CallerIdentity[]> {
       gender: row.gender,
       language: row.language,
       voiceId: row.voiceId,
+      dedicatedNumber: row.dedicatedNumber || undefined,
       industry: row.industry,
       mentionAi: row.mentionAi,
       script: row.script,
@@ -149,6 +154,7 @@ export async function getCallerIdentity(id: string): Promise<CallerIdentity | nu
       gender: row.gender,
       language: row.language,
       voiceId: row.voiceId,
+      dedicatedNumber: row.dedicatedNumber || undefined,
       industry: row.industry,
       mentionAi: row.mentionAi,
       script: row.script,
@@ -181,6 +187,7 @@ export async function saveCallerIdentity(
       gender: existing.gender,
       language: existing.language,
       voiceId: existing.voiceId,
+      dedicatedNumber: existing.dedicatedNumber || undefined,
       industry: existing.industry,
       mentionAi: existing.mentionAi,
       script: existing.script,
@@ -205,6 +212,7 @@ export async function saveCallerIdentity(
         gender: normalized.gender,
         language: normalized.language,
         voiceId: normalized.voiceId,
+        dedicatedNumber: normalized.dedicatedNumber || null,
         industry: normalized.industry,
         mentionAi: normalized.mentionAi,
         script: normalized.script,
@@ -224,6 +232,7 @@ export async function saveCallerIdentity(
         gender: normalized.gender,
         language: normalized.language,
         voiceId: normalized.voiceId,
+        dedicatedNumber: normalized.dedicatedNumber || null,
         industry: normalized.industry,
         mentionAi: normalized.mentionAi,
         script: normalized.script,
@@ -246,6 +255,7 @@ export async function saveCallerIdentity(
       gender: row.gender,
       language: row.language,
       voiceId: row.voiceId,
+      dedicatedNumber: row.dedicatedNumber || undefined,
       industry: row.industry,
       mentionAi: row.mentionAi,
       script: row.script,
@@ -313,6 +323,7 @@ export async function applyCallerIdentityKpiDelta(id: string, delta: CallerIdent
       gender: row.gender,
       language: row.language,
       voiceId: row.voiceId,
+      dedicatedNumber: row.dedicatedNumber || undefined,
       industry: row.industry,
       mentionAi: row.mentionAi,
       script: row.script,
@@ -348,4 +359,95 @@ export async function applyCallerIdentityKpiDelta(id: string, delta: CallerIdent
   all[index] = updated;
   fsWriteAll(all);
   return updated;
+}
+
+function buildFallbackManagedNumbers(): string[] {
+  const pool = (process.env.MANAGED_NUMBER_POOL || '')
+    .split(',')
+    .map(item => item.trim())
+    .filter(Boolean);
+
+  const defaults = [
+    (process.env.MANAGED_DEFAULT_NUMBER || '').trim(),
+    (process.env.MANAGED_TWILIO_PHONE_NUMBER || '').trim(),
+  ].filter(Boolean);
+
+  return [...pool, ...defaults];
+}
+
+async function listUsedDedicatedNumbers(excludeIdentityId?: string): Promise<Set<string>> {
+  if (usePostgresStore) {
+    const rows = await prisma.callerIdentity.findMany({
+      where: {
+        dedicatedNumber: { not: null },
+        ...(excludeIdentityId ? { id: { not: excludeIdentityId } } : {}),
+      },
+      select: { dedicatedNumber: true },
+    });
+
+    return new Set(rows.map(row => String(row.dedicatedNumber || '').trim()).filter(Boolean));
+  }
+
+  return new Set(
+    fsReadAll()
+      .filter(identity => identity.id !== excludeIdentityId)
+      .map(identity => String(identity.dedicatedNumber || '').trim())
+      .filter(Boolean)
+  );
+}
+
+function isPrismaUniqueConstraintError(error: unknown): boolean {
+  const code = (error as { code?: string } | null)?.code;
+  return code === 'P2002';
+}
+
+export async function assignDedicatedNumberToCallerIdentity(identityId: string): Promise<CallerIdentity | null> {
+  if (!identityId) return null;
+
+  const identity = await getCallerIdentity(identityId);
+  if (!identity) return null;
+  if (identity.dedicatedNumber) return identity;
+
+  const saveDedicatedNumber = async (candidate: string): Promise<CallerIdentity | null> => {
+    const normalized = candidate.trim();
+    if (!normalized) return null;
+
+    const usedNumbers = await listUsedDedicatedNumbers(identity.id);
+    if (usedNumbers.has(normalized)) {
+      return null;
+    }
+
+    return await saveCallerIdentity({
+      ...identity,
+      dedicatedNumber: normalized,
+    });
+  };
+
+  const provisionedNumber = await tryProvisionManagedNumber();
+  if (provisionedNumber) {
+    try {
+      const assigned = await saveDedicatedNumber(provisionedNumber);
+      if (assigned) return assigned;
+    } catch (error) {
+      if (!isPrismaUniqueConstraintError(error)) {
+        throw error;
+      }
+    }
+  }
+
+  const fallbackNumbers = buildFallbackManagedNumbers();
+  for (const candidate of fallbackNumbers) {
+    try {
+      const assigned = await saveDedicatedNumber(candidate);
+      if (assigned) return assigned;
+    } catch (error) {
+      if (!isPrismaUniqueConstraintError(error)) {
+        throw error;
+      }
+    }
+  }
+
+  throw new Error(
+    'No available managed number. Add more numbers to MANAGED_NUMBER_POOL or enable MANAGED_AUTO_PROVISION_NUMBER.'
+  );
 }

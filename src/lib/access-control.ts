@@ -23,6 +23,8 @@ export function shouldSkipAuthPath(pathname: string) {
   if (pathname === '/') return true;
   if (pathname.startsWith('/features')) return true;
   if (pathname.startsWith('/how-it-works')) return true;
+  if (pathname.startsWith('/docs')) return true;
+  if (pathname.startsWith('/faq')) return true;
   if (pathname.startsWith('/pricing')) return true;
   return false;
 }
