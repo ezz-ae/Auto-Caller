@@ -3,15 +3,32 @@ import twilio from 'twilio';
 import { getSettings } from '@/lib/store';
 import { generateCallTwiML } from '@/lib/twilio';
 
-// Handle when a call is answered
-export async function POST(request: NextRequest) {
+async function handleAnswer(request: NextRequest) {
   try {
-    const formData = await request.formData();
-    const callSid = formData.get('CallSid') as string;
-    const script = formData.get('script') as string;
-    const forward = formData.get('forward') as string;
-    const record = formData.get('record') === 'true';
-    const transcribe = formData.get('transcribe') === 'true';
+    const url = new URL(request.url);
+    const scriptFromQuery = url.searchParams.get('script');
+    const forwardFromQuery = url.searchParams.get('forward');
+    const recordFromQuery = url.searchParams.get('record');
+    const transcribeFromQuery = url.searchParams.get('transcribe');
+
+    let callSid = '';
+    let script = scriptFromQuery || '';
+    let forward = forwardFromQuery || '';
+    let record = recordFromQuery === 'true';
+    let transcribe = transcribeFromQuery === 'true';
+
+    if (request.method === 'POST') {
+      const formData = await request.formData();
+      callSid = (formData.get('CallSid') as string) || callSid;
+      script = script || (formData.get('script') as string) || '';
+      forward = forward || (formData.get('forward') as string) || '';
+      if (!recordFromQuery) {
+        record = formData.get('record') === 'true';
+      }
+      if (!transcribeFromQuery) {
+        transcribe = formData.get('transcribe') === 'true';
+      }
+    }
     
     const settings = getSettings();
     
@@ -48,4 +65,13 @@ export async function POST(request: NextRequest) {
       },
     });
   }
+}
+
+// Twilio can hit this endpoint with either GET or POST depending on flow configuration.
+export async function GET(request: NextRequest) {
+  return handleAnswer(request);
+}
+
+export async function POST(request: NextRequest) {
+  return handleAnswer(request);
 }

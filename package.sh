@@ -6,7 +6,7 @@
 
 set -e
 
-VERSION="1.0.0"
+VERSION="1.0.1"
 PACKAGE_NAME="auto-caller-pro-v${VERSION}"
 DIST_DIR="dist"
 

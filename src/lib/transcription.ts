@@ -44,7 +44,7 @@ export async function transcribeAudio(
   const client = getClient();
   
   // Create a File object from buffer
-  const file = new File([audioBuffer], 'recording.mp3', { type: 'audio/mpeg' });
+  const file = new File([new Uint8Array(audioBuffer)], 'recording.mp3', { type: 'audio/mpeg' });
   
   const response = await client.audio.transcriptions.create({
     file,
@@ -150,7 +150,9 @@ export async function processRecording(
     id: crypto.randomUUID(),
     recordingId: '',
     text,
-    confidence: segments.reduce((acc, s) => acc + (s.confidence || 0.8), 0) / segments.length,
+    confidence: segments.length > 0
+      ? segments.reduce((acc, s) => acc + (s.confidence || 0.8), 0) / segments.length
+      : 0.8,
     segments,
     summary: analysis.summary,
     sentiment: analysis.sentiment,
@@ -166,7 +168,7 @@ export async function processRecording(
 export async function quickTranscribe(audioBuffer: Buffer): Promise<string> {
   const client = getClient();
   
-  const file = new File([audioBuffer], 'recording.mp3', { type: 'audio/mpeg' });
+  const file = new File([new Uint8Array(audioBuffer)], 'recording.mp3', { type: 'audio/mpeg' });
   
   const response = await client.audio.transcriptions.create({
     file,
@@ -187,7 +189,7 @@ export async function detectVoicemail(audioBuffer: Buffer): Promise<{
 }> {
   const client = getClient();
   
-  const file = new File([audioBuffer], 'recording.mp3', { type: 'audio/mpeg' });
+  const file = new File([new Uint8Array(audioBuffer)], 'recording.mp3', { type: 'audio/mpeg' });
   
   // Quick transcription
   const response = await client.audio.transcriptions.create({

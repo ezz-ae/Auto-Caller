@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { updateCredits } from '@/lib/store'
 
 // PayPal webhook handler for automated payment notifications
 export async function POST(request: NextRequest) {
@@ -22,18 +21,9 @@ export async function POST(request: NextRequest) {
       }
       
       case 'PAYMENT.CAPTURE.COMPLETED': {
-        // Payment was captured successfully
-        const customId = body.resource?.custom_id
-        
-        if (customId) {
-          try {
-            const { tierId, credits } = JSON.parse(customId)
-            const newCredits = updateCredits(credits)
-            console.log(`Added ${credits} credits from webhook. Total: ${newCredits}`)
-          } catch (parseError) {
-            console.error('Failed to parse custom_id from webhook:', parseError)
-          }
-        }
+        // Credits are granted in /api/paypal/capture-order after explicit capture.
+        // Keeping webhook read-only avoids duplicate credits and unverified-credit abuse.
+        console.log('PAYMENT.CAPTURE.COMPLETED received')
         break
       }
       

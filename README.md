@@ -73,8 +73,8 @@ Add to your Claude Desktop config:
 {
   "mcpServers": {
     "auto-caller": {
-      "command": "node",
-      "args": ["./mcp-server.ts"]
+      "command": "bun",
+      "args": ["run", "mcp-server.ts"]
     }
   }
 }

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCredits, updateCredits, getSettings, saveCampaign, getCampaign, getAllCampaigns, deleteCampaign, updateCampaignResult } from '@/lib/store';
-import { makeCall, getCallStatus } from '@/lib/twilio';
+import { getCredits, updateCredits, getSettings, saveCampaign, getCampaign, getAllCampaigns, updateCampaignResult } from '@/lib/store';
+import { makeCall } from '@/lib/twilio';
 import { v4 as uuidv4 } from 'uuid';
 import { Campaign, CallResult } from '@/lib/types';
 
@@ -26,7 +26,13 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { numbers, voiceId, script, name } = body;
+    const { numbers, voiceId, script, name, record, transcribe } = body;
+
+    if (!Array.isArray(numbers) || numbers.length === 0) {
+      return NextResponse.json({
+        error: 'At least one phone number is required',
+      }, { status: 400 });
+    }
     
     // Check credits
     const credits = getCredits();
@@ -56,6 +62,8 @@ export async function POST(request: NextRequest) {
       currentIndex: 0,
       results: [],
       createdAt: new Date(),
+      recordCalls: typeof record === 'boolean' ? record : settings.recordCalls,
+      transcribeCalls: typeof transcribe === 'boolean' ? transcribe : settings.transcribeCalls,
     };
     
     saveCampaign(campaign);
@@ -129,14 +137,19 @@ async function startCalling(campaign: Campaign) {
         number,
         campaign.script,
         settings.forwardToNumber,
-        webhookUrl
+        webhookUrl,
+        {
+          record: campaign.recordCalls ?? settings.recordCalls,
+          transcribe: campaign.transcribeCalls ?? settings.transcribeCalls,
+        }
       );
       
       // Deduct credit
       updateCredits(-1);
       
       // Update result
-      result.status = 'connected';
+      result.callSid = call.sid;
+      result.status = 'calling';
       updateCampaignResult(campaign.id, result);
       
       // Wait between calls to avoid rate limits

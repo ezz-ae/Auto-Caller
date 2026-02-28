@@ -36,6 +36,8 @@ npm-debug.log*
 *.tmp
 *.temp
 .cache/
+tsconfig.tsbuildinfo
+Auto Caller.worktrees/
 
 # Package files (for distribution)
 *.zip

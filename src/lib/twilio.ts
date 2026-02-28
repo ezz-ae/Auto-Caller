@@ -43,19 +43,6 @@ export function generateCallTwiML(
     });
   }
   
-  // Start recording if enabled
-  if (options.record) {
-    response.record({
-      maxLength: 600, // 10 minutes max
-      action: `/api/calls/recording-complete?callSid=${callSid}`,
-      method: 'POST',
-      transcribe: options.transcribe || false,
-      transcribeCallback: options.transcriptionCallback,
-      playBeep: false,
-      trim: 'trim-silence',
-    });
-  }
-  
   // Pause slightly at start
   response.pause({ length: 1 });
   
@@ -149,6 +136,9 @@ export async function makeCall(
     timeout: 30,
     // Record the call from the beginning
     record: options.record || settings.recordCalls || false,
+    recordingStatusCallback: `${webhookUrl}/api/calls/recording-complete`,
+    recordingStatusCallbackEvent: ['completed'],
+    recordingStatusCallbackMethod: 'POST',
   });
   
   return {
@@ -204,13 +194,14 @@ export async function getCallRecordings(callSid: string): Promise<{
 // Download recording as buffer
 export async function downloadRecording(recordingSid: string): Promise<Buffer> {
   const client = getClient();
+  const settings = getSettings();
   
   const response = await client.recordings(recordingSid).fetch();
   const uri = `https://api.twilio.com${response.uri.replace('.json', '.mp3')}`;
   
   const res = await fetch(uri, {
     headers: {
-      'Authorization': 'Basic ' + Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64'),
+      'Authorization': 'Basic ' + Buffer.from(`${settings.twilioAccountSid}:${settings.twilioAuthToken}`).toString('base64'),
     },
   });
   
@@ -230,7 +221,7 @@ export async function getTranscription(recordingSid: string): Promise<{
 } | null> {
   const client = getClient();
   
-  const transcriptions = await client.transcriptions.list({ recordingSid });
+  const transcriptions = await (client as any).transcriptions.list({ recordingSid });
   
   if (transcriptions.length === 0) {
     return null;
@@ -239,7 +230,7 @@ export async function getTranscription(recordingSid: string): Promise<{
   const transcription = transcriptions[0];
   
   // Get the full text
-  const sentences = await client.transcriptions(transcription.sid).sentences.list();
+  const sentences = await (client as any).transcriptions(transcription.sid).sentences.list();
   const text = sentences.map(s => s.transcript).join(' ');
   
   return {

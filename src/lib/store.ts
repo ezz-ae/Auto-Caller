@@ -152,6 +152,52 @@ export function updateCampaignResult(campaignId: string, result: CallResult): vo
   saveCampaign(campaign);
 }
 
+export function findCampaignResultByCallSid(callSid: string): {
+  campaign: Campaign;
+  result: CallResult;
+  resultIndex: number;
+} | null {
+  const campaigns = getAllCampaigns();
+
+  for (const campaign of campaigns) {
+    const resultIndex = campaign.results.findIndex(r => r.callSid === callSid);
+    if (resultIndex >= 0) {
+      return {
+        campaign,
+        result: campaign.results[resultIndex],
+        resultIndex,
+      };
+    }
+  }
+
+  return null;
+}
+
+export function updateCampaignResultByCallSid(
+  callSid: string,
+  patch: Partial<CallResult>
+): { updated: boolean; campaignId?: string; resultId?: string } {
+  const match = findCampaignResultByCallSid(callSid);
+
+  if (!match) {
+    return { updated: false };
+  }
+
+  const updatedResult: CallResult = {
+    ...match.result,
+    ...patch,
+  };
+
+  match.campaign.results[match.resultIndex] = updatedResult;
+  saveCampaign(match.campaign);
+
+  return {
+    updated: true,
+    campaignId: match.campaign.id,
+    resultId: updatedResult.id,
+  };
+}
+
 export function deleteCampaign(id: string): void {
   ensureDataDir();
   

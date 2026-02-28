@@ -1,8 +1,8 @@
 {
   "mcpServers": {
     "auto-caller": {
-      "command": "node",
-      "args": ["mcp-server.js"],
+      "command": "bun",
+      "args": ["run", "mcp-server.ts"],
       "env": {
         "API_URL": "http://localhost:3000"
       }
