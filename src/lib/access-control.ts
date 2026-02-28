@@ -20,5 +20,9 @@ export function shouldSkipAuthPath(pathname: string) {
   if (pathname.startsWith('/_next/')) return true;
   if (pathname.startsWith('/favicon')) return true;
   if (pathname.startsWith('/login')) return true;
+  if (pathname === '/') return true;
+  if (pathname.startsWith('/features')) return true;
+  if (pathname.startsWith('/how-it-works')) return true;
+  if (pathname.startsWith('/pricing')) return true;
   return false;
 }

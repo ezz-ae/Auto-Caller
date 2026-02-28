@@ -14,7 +14,7 @@ export default function LoginPage() {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [nextPath, setNextPath] = useState('/');
+  const [nextPath, setNextPath] = useState('/dashboard');
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);

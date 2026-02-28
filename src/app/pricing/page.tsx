@@ -34,9 +34,9 @@ function getProductFeatures(product: BillingProduct): string[] {
   if (product.kind === 'number') {
     return [
       'Dedicated caller number for your workspace',
-      'Auto-provisioned from your managed Twilio account',
+      'Auto-provisioned instantly after activation',
       'Used across all outbound campaigns',
-      'No customer API setup required',
+      'No technical setup required from end users',
     ]
   }
 
@@ -44,8 +44,8 @@ function getProductFeatures(product: BillingProduct): string[] {
   return [
     `${credits.toLocaleString()} outbound call credits`,
     'Credits added instantly after payment capture',
-    'Managed AI calling infrastructure included',
-    'No Twilio/OpenAI/ElevenLabs account required from customers',
+    'Managed call delivery included',
+    'No external account setup required from customers',
   ]
 }
 
@@ -125,7 +125,7 @@ export default function PricingPage() {
 
           <Link href="/" className="flex items-center gap-2 text-zinc-400 hover:text-white transition">
             <ArrowLeft className="w-4 h-4" />
-            Back to Dashboard
+            Back to Home
           </Link>
         </div>
       </header>
@@ -197,7 +197,7 @@ export default function PricingPage() {
 
                   <div className="flex items-center justify-center gap-2 text-xs text-zinc-500">
                     <Wallet className="w-4 h-4" />
-                    Secure checkout via PayPal
+                    Secure checkout
                   </div>
                 </CardContent>
               </Card>
@@ -210,10 +210,10 @@ export default function PricingPage() {
 
           <Card className="bg-zinc-900 border-zinc-800">
             <CardHeader>
-              <CardTitle className="text-lg">Do customers need Twilio or OpenAI accounts?</CardTitle>
+              <CardTitle className="text-lg">Do customers need extra provider accounts?</CardTitle>
             </CardHeader>
             <CardContent className="text-zinc-400">
-              No. This is a fully managed platform model. You control provider accounts and billing while customers only
+              No. This is a fully managed platform model. You control account infrastructure and billing while customers only
               manage forwarding number, scripts, and campaigns.
             </CardContent>
           </Card>
@@ -223,7 +223,7 @@ export default function PricingPage() {
               <CardTitle className="text-lg">How are credits priced?</CardTitle>
             </CardHeader>
             <CardContent className="text-zinc-400">
-              Credit pricing is calculated server-side from your estimated Twilio call cost plus your margin multiplier
+              Credit pricing is calculated server-side from your estimated per-call operating cost plus your margin multiplier
               (for example, `2.0` = 100% markup).
             </CardContent>
           </Card>
@@ -233,8 +233,7 @@ export default function PricingPage() {
               <CardTitle className="text-lg">When is the phone number purchased?</CardTitle>
             </CardHeader>
             <CardContent className="text-zinc-400">
-              The platform provisions the number after successful checkout using your managed Twilio credentials, so you
-              do not need to pre-buy and hold inventory.
+              The platform provisions the number automatically after successful checkout, so you do not need to pre-buy and hold inventory.
             </CardContent>
           </Card>
         </div>

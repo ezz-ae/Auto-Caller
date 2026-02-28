@@ -104,9 +104,9 @@ function SuccessContent() {
         
         <CardContent>
           {status !== 'loading' && (
-            <Link href="/">
+            <Link href="/dashboard">
               <Button className="w-full bg-emerald-500 hover:bg-emerald-600">
-                Go to Dashboard
+                Open Workspace
               </Button>
             </Link>
           )}
