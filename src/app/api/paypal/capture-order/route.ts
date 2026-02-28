@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { updateCredits } from '@/lib/store'
+import { assignManagedNumber } from '@/lib/store'
 
 // PayPal API base URL
 const PAYPAL_API = process.env.PAYPAL_MODE === 'live' 
@@ -65,16 +66,30 @@ export async function POST(request: NextRequest) {
     
     if (customId) {
       try {
-        const { tierId, credits } = JSON.parse(customId)
-        
-        // Add credits to local storage
+        const parsed = JSON.parse(customId)
+        const kind = parsed.kind as 'credits' | 'number' | undefined
+        const credits = Number(parsed.credits || 0)
+        const productId = parsed.productId || parsed.tierId
+
+        if (kind === 'number') {
+          const assignedPhoneNumber = assignManagedNumber()
+          return NextResponse.json({
+            success: true,
+            message: `Payment successful! Your dedicated number is ready: ${assignedPhoneNumber}`,
+            assignedPhoneNumber,
+            productId,
+            credits: updateCredits(0),
+          })
+        }
+
+        // Default behavior: add credits
         const newCredits = updateCredits(credits)
         
         return NextResponse.json({
           success: true,
           message: `Payment successful! ${credits} credits added.`,
           credits: newCredits,
-          tierId,
+          productId,
         })
       } catch (parseError) {
         console.error('Failed to parse custom_id:', parseError)

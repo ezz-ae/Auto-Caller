@@ -38,25 +38,34 @@ export function getSettings(): {
   transcribeCalls: boolean;
   openaiApiKey: string;
   webSocketUrl: string;
+  managedMode: boolean;
+  assignedPhoneNumber: string;
+  businessName: string;
 } {
   ensureDataDir();
+  const managedMode = process.env.MANAGED_MODE === 'true';
   
+  const defaultSettings = {
+    elevenLabsApiKey: '',
+    twilioAccountSid: '',
+    twilioAuthToken: '',
+    twilioPhoneNumber: '',
+    forwardToNumber: '',
+    recordCalls: true,
+    transcribeCalls: true,
+    openaiApiKey: '',
+    webSocketUrl: '',
+    managedMode,
+    assignedPhoneNumber: '',
+    businessName: '',
+  };
+
   if (!fs.existsSync(SETTINGS_FILE)) {
-    return {
-      elevenLabsApiKey: '',
-      twilioAccountSid: '',
-      twilioAuthToken: '',
-      twilioPhoneNumber: '',
-      forwardToNumber: '',
-      recordCalls: true,
-      transcribeCalls: true,
-      openaiApiKey: '',
-      webSocketUrl: '',
-    };
+    return withManagedOverrides(defaultSettings);
   }
   
   const data = fs.readFileSync(SETTINGS_FILE, 'utf-8');
-  return JSON.parse(data);
+  return withManagedOverrides({ ...defaultSettings, ...JSON.parse(data) });
 }
 
 export function saveSettings(settings: Partial<{
@@ -69,6 +78,8 @@ export function saveSettings(settings: Partial<{
   transcribeCalls: boolean;
   openaiApiKey: string;
   webSocketUrl: string;
+  assignedPhoneNumber: string;
+  businessName: string;
 }>): void {
   ensureDataDir();
   
@@ -76,6 +87,63 @@ export function saveSettings(settings: Partial<{
   const updated = { ...current, ...settings };
   
   fs.writeFileSync(SETTINGS_FILE, JSON.stringify(updated, null, 2));
+}
+
+function withManagedOverrides(settings: {
+  elevenLabsApiKey: string;
+  twilioAccountSid: string;
+  twilioAuthToken: string;
+  twilioPhoneNumber: string;
+  forwardToNumber: string;
+  recordCalls: boolean;
+  transcribeCalls: boolean;
+  openaiApiKey: string;
+  webSocketUrl: string;
+  managedMode: boolean;
+  assignedPhoneNumber: string;
+  businessName: string;
+}) {
+  if (!settings.managedMode) {
+    return settings;
+  }
+
+  const managedSid = process.env.MANAGED_TWILIO_ACCOUNT_SID || '';
+  const managedToken = process.env.MANAGED_TWILIO_AUTH_TOKEN || '';
+  const managedOpenAI = process.env.MANAGED_OPENAI_API_KEY || process.env.OPENAI_API_KEY || '';
+  const managedElevenLabs = process.env.MANAGED_ELEVENLABS_API_KEY || '';
+  const managedCallerId = settings.assignedPhoneNumber || process.env.MANAGED_DEFAULT_NUMBER || process.env.MANAGED_TWILIO_PHONE_NUMBER || settings.twilioPhoneNumber;
+
+  return {
+    ...settings,
+    twilioAccountSid: managedSid || settings.twilioAccountSid,
+    twilioAuthToken: managedToken || settings.twilioAuthToken,
+    openaiApiKey: managedOpenAI || settings.openaiApiKey,
+    elevenLabsApiKey: managedElevenLabs || settings.elevenLabsApiKey,
+    twilioPhoneNumber: managedCallerId,
+  };
+}
+
+export function assignManagedNumber(): string {
+  const settings = getSettings();
+
+  if (settings.assignedPhoneNumber) {
+    return settings.assignedPhoneNumber;
+  }
+
+  const pool = (process.env.MANAGED_NUMBER_POOL || '')
+    .split(',')
+    .map(n => n.trim())
+    .filter(Boolean);
+
+  const fallbackNumber = process.env.MANAGED_DEFAULT_NUMBER || process.env.MANAGED_TWILIO_PHONE_NUMBER || '+12025550111';
+  const assignedPhoneNumber = pool[0] || fallbackNumber;
+
+  saveSettings({
+    assignedPhoneNumber,
+    twilioPhoneNumber: assignedPhoneNumber,
+  });
+
+  return assignedPhoneNumber;
 }
 
 // Credits

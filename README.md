@@ -109,6 +109,8 @@ Claude: "I've started the campaign. So far: 3 answered (forwarded
 | ✅ **Credits System** | Track your usage |
 | ✅ **Campaign History** | All calls logged locally |
 | ✅ **PayPal Integration** | Buy credits in-app |
+| ✅ **Managed Mode** | End users run without API keys |
+| ✅ **AI Script Copilot** | Chat to generate call scripts instantly |
 
 ---
 
@@ -169,13 +171,22 @@ Shows server status, credits, and quick dashboard access.
 
 ## Environment Variables (Optional)
 
-Create a `.env` file for PayPal integration:
+Create a `.env` file for PayPal / Managed Mode:
 
 ```env
 PAYPAL_MODE=sandbox  # or 'live' for production
 PAYPAL_CLIENT_ID=your_paypal_client_id
 PAYPAL_CLIENT_SECRET=your_paypal_client_secret
 NEXT_PUBLIC_APP_URL=http://localhost:3000
+
+# Managed Mode (no end-user API keys required)
+MANAGED_MODE=true
+MANAGED_TWILIO_ACCOUNT_SID=ACxxxxxxxx
+MANAGED_TWILIO_AUTH_TOKEN=xxxxxxxx
+MANAGED_TWILIO_PHONE_NUMBER=+12025550111
+MANAGED_OPENAI_API_KEY=sk-xxxxxxxx
+MANAGED_ELEVENLABS_API_KEY=xi-xxxxxxxx
+MANAGED_NUMBER_POOL=+12025550111,+12025550112
 ```
 
 ---

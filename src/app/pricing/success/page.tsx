@@ -11,6 +11,8 @@ function SuccessContent() {
   const searchParams = useSearchParams()
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [credits, setCredits] = useState<number | null>(null)
+  const [message, setMessage] = useState('')
+  const [assignedPhoneNumber, setAssignedPhoneNumber] = useState('')
   const initRef = useRef(false)
   
   useEffect(() => {
@@ -45,6 +47,8 @@ function SuccessContent() {
         
         if (data.success) {
           setCredits(data.credits)
+          setMessage(data.message || '')
+          setAssignedPhoneNumber(data.assignedPhoneNumber || '')
           setStatus('success')
         } else {
           setStatus('error')
@@ -80,7 +84,9 @@ function SuccessContent() {
               <CheckCircle className="w-16 h-16 mx-auto mb-4 text-emerald-400" />
               <CardTitle className="text-emerald-400">Payment Successful!</CardTitle>
               <CardDescription>
-                {credits ? `You now have ${credits.toLocaleString()} credits.` : 'Your credits have been added.'}
+                {assignedPhoneNumber
+                  ? `Your dedicated number is ready: ${assignedPhoneNumber}`
+                  : (message || (credits ? `You now have ${credits.toLocaleString()} credits.` : 'Your credits have been added.'))}
               </CardDescription>
             </>
           )}

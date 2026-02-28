@@ -92,6 +92,9 @@ export interface UserSettings {
   recordCalls?: boolean;
   transcribeCalls?: boolean;
   openaiApiKey?: string;
+  managedMode?: boolean;
+  assignedPhoneNumber?: string;
+  businessName?: string;
 }
 
 export interface CallStatus {

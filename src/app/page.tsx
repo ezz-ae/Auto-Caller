@@ -31,7 +31,9 @@ import {
   AlertCircle,
   RefreshCw,
   Download,
-  Sparkles
+  Sparkles,
+  Send,
+  Bot
 } from 'lucide-react'
 import { toast } from 'sonner'
 
@@ -44,6 +46,9 @@ interface Settings {
   recordCalls: boolean
   transcribeCalls: boolean
   openaiApiKey: string
+  managedMode?: boolean
+  assignedPhoneNumber?: string
+  businessName?: string
 }
 
 interface Voice {
@@ -90,6 +95,13 @@ interface Campaign {
   createdAt: string
 }
 
+interface CopilotMessage {
+  role: 'user' | 'assistant'
+  content: string
+  script?: string
+  objections?: string[]
+}
+
 export default function Dashboard() {
   // Settings state
   const [settings, setSettings] = useState<Settings>({
@@ -101,9 +113,14 @@ export default function Dashboard() {
     recordCalls: true,
     transcribeCalls: true,
     openaiApiKey: '',
+    managedMode: false,
+    assignedPhoneNumber: '',
+    businessName: '',
   })
   const [credits, setCredits] = useState(0)
   const [isConfigured, setIsConfigured] = useState(false)
+  const [managedMode, setManagedMode] = useState(false)
+  const [assignedPhoneNumber, setAssignedPhoneNumber] = useState('')
   
   // Call state
   const [numbers, setNumbers] = useState('')
@@ -126,7 +143,18 @@ export default function Dashboard() {
   // UI state
   const [activeTab, setActiveTab] = useState('call')
   const [loading, setLoading] = useState(false)
+  const [purchasingProduct, setPurchasingProduct] = useState<string | null>(null)
+  const [redirectUrl, setRedirectUrl] = useState<string | null>(null)
+  const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>([])
+  const [copilotInput, setCopilotInput] = useState('')
+  const [copilotLoading, setCopilotLoading] = useState(false)
   const initRef = useRef(false)
+
+  useEffect(() => {
+    if (redirectUrl) {
+      window.location.href = redirectUrl
+    }
+  }, [redirectUrl])
 
   useEffect(() => {
     if (initRef.current) return
@@ -140,6 +168,8 @@ export default function Dashboard() {
         setSettings(data.settings)
         setCredits(data.credits)
         setIsConfigured(data.isConfigured)
+        setManagedMode(!!data.settings?.managedMode)
+        setAssignedPhoneNumber(data.settings?.assignedPhoneNumber || '')
       } catch {
         toast.error('Failed to load settings')
       }
@@ -210,6 +240,8 @@ export default function Dashboard() {
       if (data.success) {
         setCredits(data.credits)
         setIsConfigured(true)
+        setManagedMode(!!settings.managedMode)
+        setAssignedPhoneNumber(settings.assignedPhoneNumber || assignedPhoneNumber)
         toast.success('Settings saved successfully')
       } else {
         toast.error('Failed to save settings')
@@ -218,6 +250,79 @@ export default function Dashboard() {
       toast.error('Failed to save settings')
     }
     setLoading(false)
+  }
+
+  const purchaseProduct = async (productId: string, price: number, creditsAmount = 0) => {
+    setPurchasingProduct(productId)
+    try {
+      const res = await fetch('/api/paypal/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          productId,
+          price,
+          credits: creditsAmount,
+        }),
+      })
+
+      const data = await res.json()
+
+      if (data.approvalUrl) {
+        setRedirectUrl(data.approvalUrl)
+      } else {
+        toast.error(data.error || 'Failed to create payment order')
+        setPurchasingProduct(null)
+      }
+    } catch {
+      toast.error('Failed to start payment')
+      setPurchasingProduct(null)
+    }
+  }
+
+  const askCopilot = async () => {
+    const prompt = copilotInput.trim()
+    if (!prompt) return
+
+    const userMessage: CopilotMessage = { role: 'user', content: prompt }
+    setCopilotMessages(prev => [...prev, userMessage])
+    setCopilotInput('')
+    setCopilotLoading(true)
+
+    try {
+      const res = await fetch('/api/script-assistant', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          prompt,
+          messages: copilotMessages,
+          context: {
+            businessName: settings.businessName || 'Auto Caller',
+            objective: 'Qualify lead and forward to agent',
+            audience: 'Potential buyers',
+            tone: 'Professional and confident',
+          },
+        }),
+      })
+
+      const data = await res.json()
+
+      if (!res.ok || !data.success) {
+        toast.error(data.error || 'Failed to generate script')
+        return
+      }
+
+      const assistantMessage: CopilotMessage = {
+        role: 'assistant',
+        content: data.reply || 'I generated a script for you.',
+        script: data.script || '',
+        objections: data.objections || [],
+      }
+      setCopilotMessages(prev => [...prev, assistantMessage])
+    } catch {
+      toast.error('Script assistant is unavailable')
+    } finally {
+      setCopilotLoading(false)
+    }
   }
 
   // Start calling
@@ -367,13 +472,24 @@ export default function Dashboard() {
           </div>
           
           <div className="flex items-center gap-4">
-            <a href="/pricing" className="text-xs text-zinc-400 hover:text-emerald-400 transition">
-              Upgrade
+            <a href={managedMode ? '#settings' : '/pricing'} className="text-xs text-zinc-400 hover:text-emerald-400 transition">
+              {managedMode ? 'Billing' : 'Upgrade'}
             </a>
+            {managedMode && assignedPhoneNumber && (
+              <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800 border border-zinc-700">
+                <span className="text-xs text-zinc-400">Number:</span>
+                <span className="text-xs font-semibold text-emerald-400">{assignedPhoneNumber}</span>
+              </div>
+            )}
             <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800 border border-zinc-700">
               <span className="text-xs text-zinc-400">Credits:</span>
               <span className="text-sm font-bold text-emerald-400">{credits}</span>
             </div>
+            {managedMode && (
+              <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">
+                Managed Mode
+              </Badge>
+            )}
             
             {isConfigured ? (
               <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
@@ -502,6 +618,76 @@ export default function Dashboard() {
                         />
                         <Label className="text-sm text-zinc-400">Transcribe</Label>
                       </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Action Buttons */}
+                <Card className="bg-zinc-900 border-zinc-800">
+                  <CardHeader>
+                    <CardTitle className="text-lg flex items-center gap-2">
+                      <Bot className="w-5 h-5 text-emerald-400" />
+                      AI Script Copilot
+                    </CardTitle>
+                    <CardDescription>
+                      Chat with AI to generate and refine your call script instantly
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    <div className="max-h-48 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 space-y-3">
+                      {copilotMessages.length === 0 ? (
+                        <p className="text-sm text-zinc-500">
+                          Ask for a script, objection handling, or tone variations.
+                        </p>
+                      ) : (
+                        copilotMessages.map((msg, idx) => (
+                          <div key={idx} className={`rounded-lg p-3 ${msg.role === 'user' ? 'bg-zinc-800/80' : 'bg-emerald-500/10 border border-emerald-500/20'}`}>
+                            <p className="text-xs uppercase tracking-wide text-zinc-400 mb-1">{msg.role === 'user' ? 'You' : 'Copilot'}</p>
+                            <p className="text-sm text-zinc-200 whitespace-pre-wrap">{msg.content}</p>
+                            {msg.script && (
+                              <div className="mt-3 p-3 rounded-md bg-zinc-900 border border-zinc-700 space-y-2">
+                                <p className="text-xs text-zinc-400">Suggested Script</p>
+                                <p className="text-sm text-zinc-200 whitespace-pre-wrap">{msg.script}</p>
+                                <Button
+                                  size="sm"
+                                  className="bg-emerald-500 hover:bg-emerald-600"
+                                  onClick={() => {
+                                    setScript(msg.script || '')
+                                    toast.success('Script applied to campaign')
+                                  }}
+                                >
+                                  Use This Script
+                                </Button>
+                              </div>
+                            )}
+                            {msg.objections && msg.objections.length > 0 && (
+                              <ul className="mt-2 text-xs text-zinc-300 space-y-1">
+                                {msg.objections.map((item, objectionIdx) => (
+                                  <li key={objectionIdx}>• {item}</li>
+                                ))}
+                              </ul>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <Input
+                        value={copilotInput}
+                        onChange={(e) => setCopilotInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !copilotLoading) {
+                            e.preventDefault()
+                            askCopilot()
+                          }
+                        }}
+                        placeholder="Example: Write a concise script for first-time home buyers in Dubai"
+                        className="bg-zinc-800 border-zinc-700"
+                      />
+                      <Button onClick={askCopilot} disabled={copilotLoading || !copilotInput.trim()}>
+                        {copilotLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -846,56 +1032,99 @@ export default function Dashboard() {
                   Configuration
                 </CardTitle>
                 <CardDescription>
-                  Enter your API keys. All data is stored locally.
+                  {managedMode
+                    ? 'Your account is fully managed. Configure forwarding, billing, and campaign preferences.'
+                    : 'Enter your API keys. All data is stored locally.'}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* ElevenLabs */}
-                <div className="space-y-4">
-                  <h3 className="font-medium text-emerald-400">ElevenLabs (Voice)</h3>
-                  <div className="space-y-2">
-                    <Label>API Key</Label>
-                    <Input
-                      type="password"
-                      placeholder="xi-xxxxxxxxxxxxx"
-                      value={settings.elevenLabsApiKey}
-                      onChange={(e) => setSettings({ ...settings, elevenLabsApiKey: e.target.value })}
-                      className="bg-zinc-800 border-zinc-700"
-                    />
+                {managedMode ? (
+                  <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4">
+                    <p className="text-sm text-emerald-300 font-medium">Managed Platform Active</p>
+                    <p className="text-xs text-zinc-300 mt-1">
+                      API keys are handled by the platform. You only manage your forwarding number, credits, and script workflow.
+                    </p>
                   </div>
-                </div>
+                ) : (
+                  <>
+                    {/* ElevenLabs */}
+                    <div className="space-y-4">
+                      <h3 className="font-medium text-emerald-400">ElevenLabs (Voice)</h3>
+                      <div className="space-y-2">
+                        <Label>API Key</Label>
+                        <Input
+                          type="password"
+                          placeholder="xi-xxxxxxxxxxxxx"
+                          value={settings.elevenLabsApiKey}
+                          onChange={(e) => setSettings({ ...settings, elevenLabsApiKey: e.target.value })}
+                          className="bg-zinc-800 border-zinc-700"
+                        />
+                      </div>
+                    </div>
 
-                {/* Twilio */}
+                    {/* Twilio */}
+                    <div className="space-y-4">
+                      <h3 className="font-medium text-emerald-400">Twilio (Calling)</h3>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="space-y-2">
+                          <Label>Account SID</Label>
+                          <Input
+                            type="password"
+                            placeholder="ACxxxxxxxxxxxxx"
+                            value={settings.twilioAccountSid}
+                            onChange={(e) => setSettings({ ...settings, twilioAccountSid: e.target.value })}
+                            className="bg-zinc-800 border-zinc-700"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Auth Token</Label>
+                          <Input
+                            type="password"
+                            placeholder="xxxxxxxxxxxxx"
+                            value={settings.twilioAuthToken}
+                            onChange={(e) => setSettings({ ...settings, twilioAuthToken: e.target.value })}
+                            className="bg-zinc-800 border-zinc-700"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Twilio Phone Number</Label>
+                        <Input
+                          placeholder="+1234567890"
+                          value={settings.twilioPhoneNumber}
+                          onChange={(e) => setSettings({ ...settings, twilioPhoneNumber: e.target.value })}
+                          className="bg-zinc-800 border-zinc-700"
+                        />
+                      </div>
+                    </div>
+
+                    {/* OpenAI for Transcription */}
+                    <div className="space-y-4">
+                      <h3 className="font-medium text-emerald-400">OpenAI (Transcription & Analysis)</h3>
+                      <div className="space-y-2">
+                        <Label>API Key</Label>
+                        <Input
+                          type="password"
+                          placeholder="sk-xxxxxxxxxxxxx"
+                          value={settings.openaiApiKey}
+                          onChange={(e) => setSettings({ ...settings, openaiApiKey: e.target.value })}
+                          className="bg-zinc-800 border-zinc-700"
+                        />
+                        <p className="text-xs text-zinc-500">Required for Whisper transcription and GPT-4 analysis</p>
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {/* Business Profile */}
                 <div className="space-y-4">
-                  <h3 className="font-medium text-emerald-400">Twilio (Calling)</h3>
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-2">
-                      <Label>Account SID</Label>
-                      <Input
-                        type="password"
-                        placeholder="ACxxxxxxxxxxxxx"
-                        value={settings.twilioAccountSid}
-                        onChange={(e) => setSettings({ ...settings, twilioAccountSid: e.target.value })}
-                        className="bg-zinc-800 border-zinc-700"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Auth Token</Label>
-                      <Input
-                        type="password"
-                        placeholder="xxxxxxxxxxxxx"
-                        value={settings.twilioAuthToken}
-                        onChange={(e) => setSettings({ ...settings, twilioAuthToken: e.target.value })}
-                        className="bg-zinc-800 border-zinc-700"
-                      />
-                    </div>
-                  </div>
+                  <h3 className="font-medium text-emerald-400">Business Profile</h3>
                   <div className="space-y-2">
-                    <Label>Twilio Phone Number</Label>
+                    <Label>Business Name</Label>
                     <Input
-                      placeholder="+1234567890"
-                      value={settings.twilioPhoneNumber}
-                      onChange={(e) => setSettings({ ...settings, twilioPhoneNumber: e.target.value })}
+                      placeholder="Your company name"
+                      value={settings.businessName || ''}
+                      onChange={(e) => setSettings({ ...settings, businessName: e.target.value })}
                       className="bg-zinc-800 border-zinc-700"
                     />
                   </div>
@@ -913,22 +1142,6 @@ export default function Dashboard() {
                       className="bg-zinc-800 border-zinc-700"
                     />
                     <p className="text-xs text-zinc-500">When a prospect answers, the call will be forwarded to this number</p>
-                  </div>
-                </div>
-
-                {/* OpenAI for Transcription */}
-                <div className="space-y-4">
-                  <h3 className="font-medium text-emerald-400">OpenAI (Transcription & Analysis)</h3>
-                  <div className="space-y-2">
-                    <Label>API Key</Label>
-                    <Input
-                      type="password"
-                      placeholder="sk-xxxxxxxxxxxxx"
-                      value={settings.openaiApiKey}
-                      onChange={(e) => setSettings({ ...settings, openaiApiKey: e.target.value })}
-                      className="bg-zinc-800 border-zinc-700"
-                    />
-                    <p className="text-xs text-zinc-500">Required for Whisper transcription and GPT-4 analysis</p>
                   </div>
                 </div>
 
@@ -952,6 +1165,57 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
+
+                {/* Managed Billing */}
+                {managedMode && (
+                  <div className="space-y-4">
+                    <h3 className="font-medium text-emerald-400">Billing & Number</h3>
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <div className="rounded-lg border border-zinc-700 bg-zinc-800/60 p-4 space-y-3">
+                        <p className="text-sm font-semibold">Dedicated Number</p>
+                        <p className="text-xs text-zinc-400">
+                          {assignedPhoneNumber
+                            ? `Active number: ${assignedPhoneNumber}`
+                            : 'No number assigned yet. Purchase to activate.'}
+                        </p>
+                        <Button
+                          disabled={!!assignedPhoneNumber || purchasingProduct === 'number_activation'}
+                          onClick={() => purchaseProduct('number_activation', 39, 0)}
+                          className="w-full bg-blue-600 hover:bg-blue-700"
+                        >
+                          {assignedPhoneNumber ? 'Number Active' : (purchasingProduct === 'number_activation' ? 'Processing...' : 'Buy Number - $39')}
+                        </Button>
+                      </div>
+                      <div className="rounded-lg border border-zinc-700 bg-zinc-800/60 p-4 space-y-3">
+                        <p className="text-sm font-semibold">Top Up Credits</p>
+                        <div className="grid grid-cols-3 gap-2">
+                          <Button
+                            size="sm"
+                            disabled={purchasingProduct !== null}
+                            onClick={() => purchaseProduct('credits_500', 49, 500)}
+                          >
+                            500
+                          </Button>
+                          <Button
+                            size="sm"
+                            disabled={purchasingProduct !== null}
+                            onClick={() => purchaseProduct('credits_1500', 129, 1500)}
+                          >
+                            1.5K
+                          </Button>
+                          <Button
+                            size="sm"
+                            disabled={purchasingProduct !== null}
+                            onClick={() => purchaseProduct('credits_5000', 349, 5000)}
+                          >
+                            5K
+                          </Button>
+                        </div>
+                        <p className="text-xs text-zinc-500">Checkout is handled securely via PayPal.</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <Button 
                   onClick={saveSettings}
