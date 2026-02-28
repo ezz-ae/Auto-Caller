@@ -6,9 +6,9 @@ import { MarketingFooter, MarketingHeader } from '@/components/marketing/site-sh
 
 const faqs = [
   {
-    question: 'Do customers need Twilio, ElevenLabs, PayPal, or AI provider accounts?',
+    question: 'Do customers need separate telephony, voice, billing, or AI accounts?',
     answer:
-      'No. In managed mode, provider credentials are controlled by the platform owner and kept in server environment variables.',
+      'No. In managed mode, all infrastructure credentials are controlled by the platform owner and kept in server environment variables.',
   },
   {
     question: 'What does a customer do inside the dashboard?',
@@ -28,7 +28,7 @@ const faqs = [
   {
     question: 'How are credits priced?',
     answer:
-      'Credit packs are fixed at 30/60/90/140/200 credits, priced from estimated Twilio call cost and your configured margin multiplier, then sold through PayPal.',
+      'Credit packs are fixed at 30/60/90/140/200 credits, priced from your estimated call cost and margin multiplier, then sold through checkout.',
   },
   {
     question: 'How do I secure workspace access?',
@@ -38,12 +38,12 @@ const faqs = [
   {
     question: 'What AI provider is used?',
     answer:
-      'Google AI (Gemini) is primary for script copilot and transcript analysis. OpenAI can remain as optional fallback.',
+      'The platform uses a managed AI layer for script copilot, conversation guidance, and transcript analysis.',
   },
   {
     question: 'Can I deploy to Vercel + Neon and go live today?',
     answer:
-      'Yes. Set production env vars, run db push once, configure Twilio webhooks, and deploy. The project is built for this setup.',
+      'Yes. Set production env vars, run db push once, configure call webhooks, and deploy. The project is built for this setup.',
   },
 ]
 

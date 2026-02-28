@@ -7,6 +7,7 @@ import {
 } from '@/lib/store';
 import { getCallRecordings, downloadRecording } from '@/lib/twilio';
 import { requireUserIdFromRequest } from '@/lib/request-user';
+import { isUnauthorizedError } from '@/lib/route-errors';
 
 // Get recordings
 export async function GET(request: NextRequest) {
@@ -30,6 +31,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ recordings });
     
   } catch (error) {
+    if (isUnauthorizedError(error)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     return NextResponse.json({ error: 'Failed to get recordings' }, { status: 500 });
   }
 }
@@ -50,6 +54,9 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true });
     
   } catch (error) {
+    if (isUnauthorizedError(error)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     return NextResponse.json({ error: 'Failed to delete recording' }, { status: 500 });
   }
 }

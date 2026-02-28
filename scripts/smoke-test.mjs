@@ -1,12 +1,30 @@
 #!/usr/bin/env node
 
 const baseUrl = process.env.APP_URL || 'http://localhost:3000';
+const smokeEmail = process.env.SMOKE_EMAIL || process.env.SMOKE_USERNAME || '';
+const smokePassword = process.env.SMOKE_PASSWORD || '';
 
-async function expectJson(pathname, expectedStatus = 200) {
-  const res = await fetch(`${baseUrl}${pathname}`);
+function mergeHeaders(...entries) {
+  return Object.assign({}, ...entries.filter(Boolean));
+}
+
+function extractCookieHeader(setCookie) {
+  if (!setCookie) return '';
+  return setCookie
+    .split(/,(?=\s*[\w.-]+=)/)
+    .map(chunk => chunk.split(';')[0].trim())
+    .filter(Boolean)
+    .join('; ');
+}
+
+async function expectJson(pathname, expectedStatus = 200, headers = {}) {
+  const res = await fetch(`${baseUrl}${pathname}`, { headers });
   const contentType = res.headers.get('content-type') || '';
 
   if (res.status !== expectedStatus) {
+    if (res.status === 401 && !smokeEmail) {
+      throw new Error(`${pathname} returned 401. Set SMOKE_EMAIL and SMOKE_PASSWORD for authenticated smoke tests.`);
+    }
     throw new Error(`${pathname} returned ${res.status}, expected ${expectedStatus}`);
   }
 
@@ -19,16 +37,42 @@ async function expectJson(pathname, expectedStatus = 200) {
 
 async function run() {
   console.log(`Running smoke test against ${baseUrl}`);
+  let authHeaders = {};
 
-  await expectJson('/api/settings');
-  await expectJson('/api/voices');
-  await expectJson('/api/calls');
-  await expectJson('/api/recordings');
-  await expectJson('/api/team-members');
+  if (smokeEmail && smokePassword) {
+    const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: smokeEmail,
+        password: smokePassword,
+        rememberDevice: true,
+      }),
+    });
+
+    if (!loginRes.ok) {
+      throw new Error(`/api/auth/login returned ${loginRes.status}. Verify SMOKE_EMAIL and SMOKE_PASSWORD.`);
+    }
+
+    const cookieHeader = extractCookieHeader(loginRes.headers.get('set-cookie') || '');
+    if (!cookieHeader) {
+      throw new Error('Login succeeded but no session cookie was returned.');
+    }
+
+    authHeaders = { Cookie: cookieHeader };
+  } else {
+    console.log('SMOKE_EMAIL/SMOKE_PASSWORD not set. Protected endpoints may return 401.');
+  }
+
+  await expectJson('/api/settings', 200, authHeaders);
+  await expectJson('/api/voices', 200, authHeaders);
+  await expectJson('/api/calls', 200, authHeaders);
+  await expectJson('/api/recordings', 200, authHeaders);
+  await expectJson('/api/team-members', 200, authHeaders);
 
   const badCallRes = await fetch(`${baseUrl}/api/calls`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: mergeHeaders({ 'Content-Type': 'application/json' }, authHeaders),
     body: JSON.stringify({ numbers: [] }),
   });
 

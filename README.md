@@ -235,10 +235,16 @@ Run the API smoke test against local or deployed app:
 
 ```bash
 # local
-APP_URL=http://localhost:3000 npm run smoke:test
+APP_URL=http://localhost:3000 \
+SMOKE_EMAIL=admin@acaller.ai \
+SMOKE_PASSWORD='YOUR_PASSWORD' \
+npm run smoke:test
 
 # production
-APP_URL=https://YOUR_DOMAIN npm run smoke:test
+APP_URL=https://YOUR_DOMAIN \
+SMOKE_EMAIL=admin@acaller.ai \
+SMOKE_PASSWORD='YOUR_PASSWORD' \
+npm run smoke:test
 ```
 
 ## Notes

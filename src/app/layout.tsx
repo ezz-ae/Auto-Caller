@@ -6,6 +6,11 @@ import { CookieConsent } from "@/components/cookie-consent";
 export const metadata: Metadata = {
   title: "Acaller | AI Outbound Calling Platform",
   description: "Launch outbound call campaigns, connect live leads, and optimize conversion with AI caller identities.",
+  icons: {
+    icon: '/logo.svg',
+    shortcut: '/logo.svg',
+    apple: '/logo.svg',
+  },
 };
 
 export default function RootLayout({

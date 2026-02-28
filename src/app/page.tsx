@@ -25,7 +25,7 @@ const outcomes = [
 
 const faqs = [
   {
-    q: 'Do customers need Twilio, ElevenLabs, or AI accounts?',
+    q: 'Do customers need separate vendor accounts?',
     a: 'No. Acaller runs in managed mode. Customers only use the dashboard.',
   },
   {
@@ -138,7 +138,7 @@ export default function MarketingHomePage() {
                 </div>
                 <div>
                   <p className="font-medium text-zinc-100">Managed infrastructure model</p>
-                  <p className="text-sm text-zinc-400">Customers do not touch provider APIs, you control service quality and margin.</p>
+                  <p className="text-sm text-zinc-400">Customers stay inside your workspace while you control quality, reliability, and margin.</p>
                 </div>
               </div>
             </CardContent>

@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 
 const CONSENT_KEY = 'acaller.cookieConsent.v1';
@@ -12,14 +12,10 @@ function setConsent(value: 'accepted' | 'declined') {
 }
 
 export function CookieConsent() {
-  const [visible, setVisible] = useState(false);
-
-  useEffect(() => {
-    const stored = window.localStorage.getItem(CONSENT_KEY);
-    if (!stored) {
-      setVisible(true);
-    }
-  }, []);
+  const [visible, setVisible] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return !window.localStorage.getItem(CONSENT_KEY);
+  });
 
   if (!visible) return null;
 

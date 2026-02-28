@@ -3,6 +3,7 @@ import { getSettings, saveSettings, getCredits, setCredits, updateCredits } from
 import { assignManagedNumber } from '@/lib/store';
 import { resetClient } from '@/lib/twilio';
 import { requireUserIdFromRequest } from '@/lib/request-user';
+import { isUnauthorizedError } from '@/lib/route-errors';
 
 export async function GET(request: NextRequest) {
   try {
@@ -35,6 +36,9 @@ export async function GET(request: NextRequest) {
         : !!(settings.twilioAccountSid && settings.twilioAuthToken && settings.twilioPhoneNumber && settings.forwardToNumber),
     });
   } catch (error) {
+    if (isUnauthorizedError(error)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     return NextResponse.json({ error: 'Failed to get settings' }, { status: 500 });
   }
 }
@@ -118,6 +122,9 @@ export async function POST(request: NextRequest) {
       assignedPhoneNumber,
     });
   } catch (error) {
+    if (isUnauthorizedError(error)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     return NextResponse.json({ error: 'Failed to save settings' }, { status: 500 });
   }
 }
@@ -133,6 +140,9 @@ export async function PUT(request: NextRequest) {
     
     return NextResponse.json({ success: true, credits: await getCredits(userId) });
   } catch (error) {
+    if (isUnauthorizedError(error)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     return NextResponse.json({ error: 'Failed to update credits' }, { status: 500 });
   }
 }

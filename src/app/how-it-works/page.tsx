@@ -76,7 +76,7 @@ export default function HowItWorksPage() {
         <section className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5 md:p-6 space-y-3">
           <p className="text-lg font-semibold">Go-live standard</p>
           <p className="text-sm text-zinc-200">
-            Before onboarding customers, verify Twilio callbacks, PayPal capture, scheduled dispatch, and transcript processing.
+            Before onboarding customers, verify call webhooks, billing capture, scheduled dispatch, and transcript processing.
           </p>
           <p className="text-sm text-zinc-300 flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-300" />

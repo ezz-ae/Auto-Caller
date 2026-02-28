@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { requireUserIdFromRequest } from '@/lib/request-user'
+import { resolvePublicAppUrl } from '@/lib/public-app-url'
 
 // PayPal API base URL (sandbox or live)
 const PAYPAL_API = process.env.PAYPAL_MODE === 'live'
@@ -109,6 +110,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'callerIdentityId is required for number activation' }, { status: 400 })
     }
 
+    const appUrl = resolvePublicAppUrl(request)
+
     // Get access token
     const accessToken = await getAccessToken()
 
@@ -141,8 +144,8 @@ export async function POST(request: NextRequest) {
           brand_name: '1hundred.ai - Auto Caller Pro',
           landing_page: 'NO_PREFERENCE',
           user_action: 'PAY_NOW',
-          return_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pricing/success`,
-          cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/pricing/cancel`,
+          return_url: `${appUrl}/pricing/success`,
+          cancel_url: `${appUrl}/pricing/cancel`,
         },
       }),
     })

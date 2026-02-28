@@ -6,6 +6,7 @@ import { Campaign } from '@/lib/types';
 import { runCampaign } from '@/lib/campaign-runner';
 import { dispatchDueScheduledCampaigns } from '@/lib/campaign-scheduler';
 import { requireUserIdFromRequest } from '@/lib/request-user';
+import { isUnauthorizedError } from '@/lib/route-errors';
 
 function normalizePhoneKey(raw: string): string {
   return String(raw || '').replace(/[^\d+]/g, '');
@@ -66,6 +67,9 @@ export async function GET(request: NextRequest) {
     const campaigns = await getAllCampaigns(userId);
     return NextResponse.json({ campaigns });
   } catch (error) {
+    if (isUnauthorizedError(error)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     return NextResponse.json({ error: 'Failed to get campaigns' }, { status: 500 });
   }
 }
@@ -214,6 +218,9 @@ export async function POST(request: NextRequest) {
       message: `Started calling ${numbers.length} numbers` 
     });
   } catch (error: any) {
+    if (isUnauthorizedError(error)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     return NextResponse.json({ error: error.message || 'Failed to start campaign' }, { status: 500 });
   }
 }
@@ -237,6 +244,9 @@ export async function DELETE(request: NextRequest) {
     
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (isUnauthorizedError(error)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     return NextResponse.json({ error: 'Failed to stop campaign' }, { status: 500 });
   }
 }

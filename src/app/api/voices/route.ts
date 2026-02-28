@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getVoices } from '@/lib/elevenlabs';
 import { NextRequest } from 'next/server';
 import { requireUserIdFromRequest } from '@/lib/request-user';
+import { isUnauthorizedError } from '@/lib/route-errors';
 
 const HUMAN_PREFERRED_IDS = new Set([
   '21m00Tcm4TlvDq8ikWAM', // Rachel
@@ -78,6 +79,9 @@ export async function GET(request: NextRequest) {
       voices: [...twilioVoices, ...elevenVoices],
     });
   } catch (error: any) {
+    if (isUnauthorizedError(error)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     return NextResponse.json({ 
       error: error.message || 'Failed to get voices' 
     }, { status: 500 });

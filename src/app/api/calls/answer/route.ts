@@ -5,6 +5,7 @@ import { getCampaign, getSettings, saveCampaign, updateCampaignResultByCallSid }
 import { getCallerIdentity } from '@/lib/caller-identity-store';
 import { generateConversationDecision, ConversationTurn } from '@/lib/conversation-agent';
 import { generateCallTwiML, isTwilioNativeVoice } from '@/lib/twilio';
+import { resolvePublicAppUrl } from '@/lib/public-app-url';
 
 interface ConversationState {
   turn: number;
@@ -436,7 +437,7 @@ async function handleAnswer(request: NextRequest) {
     const settings = await getSettings(callUserId);
     const callerIdentity = callerIdentityId ? await getCallerIdentity(callerIdentityId, callUserId) : null;
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = resolvePublicAppUrl(request);
     const legacyScript = pick('target') || pick('script') || callerIdentity?.script || 'Goal: qualify lead and connect to specialist';
     const forward = pick('forward') || settings.forwardToNumber;
     const language = pick('language') || callerIdentity?.language || 'en-US';

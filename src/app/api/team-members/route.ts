@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { deleteTeamMember, listTeamMembers, saveTeamMember } from '@/lib/team-store';
 import { requireUserIdFromRequest } from '@/lib/request-user';
+import { isUnauthorizedError } from '@/lib/route-errors';
 
 export async function GET(request: NextRequest) {
   try {
@@ -8,6 +9,9 @@ export async function GET(request: NextRequest) {
     const members = await listTeamMembers(userId);
     return NextResponse.json({ members });
   } catch (error) {
+    if (isUnauthorizedError(error)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     console.error('Failed to list team members:', error);
     return NextResponse.json({ error: 'Failed to load team members' }, { status: 500 });
   }
@@ -32,6 +36,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, member });
   } catch (error) {
+    if (isUnauthorizedError(error)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     console.error('Failed to save team member:', error);
     return NextResponse.json({ error: 'Failed to save team member' }, { status: 500 });
   }
@@ -50,6 +57,9 @@ export async function DELETE(request: NextRequest) {
     await deleteTeamMember(id, userId);
     return NextResponse.json({ success: true });
   } catch (error) {
+    if (isUnauthorizedError(error)) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
     console.error('Failed to delete team member:', error);
     return NextResponse.json({ error: 'Failed to delete team member' }, { status: 500 });
   }

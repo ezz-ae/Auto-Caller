@@ -3,6 +3,7 @@ import { applyCallerIdentityKpiDelta, getCallerIdentity } from '@/lib/caller-ide
 import { getCampaign, getSettings, saveCampaign, updateCampaignResult, updateCredits } from '@/lib/store';
 import { makeCall } from '@/lib/twilio';
 import { Campaign, CallResult } from '@/lib/types';
+import { resolvePublicAppUrl } from '@/lib/public-app-url';
 
 function normalizePhoneKey(raw: string): string {
   return String(raw || '').replace(/[^\d+]/g, '');
@@ -14,7 +15,7 @@ export async function runCampaign(campaign: Campaign): Promise<void> {
     ? await getCallerIdentity(campaign.callerIdentityId, campaign.userId)
     : null;
   const fromNumber = selectedIdentity?.dedicatedNumber || settings.twilioPhoneNumber;
-  const webhookUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+  const webhookUrl = resolvePublicAppUrl();
 
   if (campaign.callerIdentityId && !selectedIdentity?.dedicatedNumber) {
     const latest = await getCampaign(campaign.id, campaign.userId);

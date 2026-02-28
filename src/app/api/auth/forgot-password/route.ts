@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { isAccountAuthEnabled } from '@/lib/access-control';
 import { createPasswordResetRequest } from '@/lib/account-auth';
+import { resolvePublicAppUrl } from '@/lib/public-app-url';
 
 async function sendPasswordResetEmail(payload: {
   to: string;
@@ -56,7 +57,7 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    const appUrl = String(process.env.NEXT_PUBLIC_APP_URL || new URL(request.url).origin).replace(/\/$/, '');
+    const appUrl = resolvePublicAppUrl(request);
     const resetUrl = `${appUrl}/reset-password?token=${encodeURIComponent(reset.resetToken)}`;
     const emailSent = await sendPasswordResetEmail({ to: reset.email, resetUrl });
 

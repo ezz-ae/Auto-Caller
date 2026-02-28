@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { saveRecording, getRecordingByCallSid, findCampaignResultByCallSid, getSettings } from '@/lib/store';
 import { v4 as uuidv4 } from 'uuid';
 import { Recording } from '@/lib/types';
+import { resolvePublicAppUrl } from '@/lib/public-app-url';
 
 // Handle recording completion from Twilio
 export async function POST(request: NextRequest) {
@@ -64,7 +65,7 @@ export async function POST(request: NextRequest) {
     // Trigger transcription if enabled
     const settings = await getSettings(recording.userId);
     if (settings.transcribeCalls) {
-      const transcribeUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/transcriptions`;
+      const transcribeUrl = `${resolvePublicAppUrl(request)}/api/transcriptions`;
 
       // Fire and forget transcription
       fetch(transcribeUrl, {
