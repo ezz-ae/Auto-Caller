@@ -162,6 +162,14 @@ interface AgentProfile {
   intro: string
 }
 
+interface WorkspaceAgent {
+  id: string
+  profileId: string
+  name: string
+  createdAt: string
+  updatedAt: string
+}
+
 interface TeamMember {
   id: string
   name: string
@@ -420,11 +428,14 @@ export default function Dashboard() {
   const [copilotInput, setCopilotInput] = useState('')
   const [copilotLoading, setCopilotLoading] = useState(false)
   const [agentProfiles] = useState<AgentProfile[]>(AGENT_CATALOG)
-  const [activeAgentId, setActiveAgentId] = useState('sara')
+  const [workspaceAgents, setWorkspaceAgents] = useState<WorkspaceAgent[]>([])
+  const [activeAgentId, setActiveAgentId] = useState('')
   const [agentSessionStarted, setAgentSessionStarted] = useState(false)
-  const [agentMessages, setAgentMessages] = useState<AgentMessage[]>([])
+  const [agentMessagesByAgent, setAgentMessagesByAgent] = useState<Record<string, AgentMessage[]>>({})
   const [agentInput, setAgentInput] = useState('')
   const [agentLoading, setAgentLoading] = useState(false)
+  const [newAgentDraftNames, setNewAgentDraftNames] = useState<Record<string, string>>({})
+  const [showAdvancedCallerInputs, setShowAdvancedCallerInputs] = useState(false)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [teamForm, setTeamForm] = useState({ name: '', email: '', role: 'Agent' })
   const [teamLoading, setTeamLoading] = useState(false)
@@ -610,6 +621,7 @@ export default function Dashboard() {
 
   const resetCallerIdentityForm = () => {
     setEditingCallerIdentityId(null)
+    setShowAdvancedCallerInputs(false)
     setIdentityForm({
       name: '',
       position: '',
@@ -627,6 +639,7 @@ export default function Dashboard() {
 
   const editCallerIdentity = (identity: CallerIdentity) => {
     setEditingCallerIdentityId(identity.id)
+    setShowAdvancedCallerInputs(true)
     setIdentityForm({
       name: identity.name || '',
       position: identity.position || '',
@@ -821,11 +834,66 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    const storedAgentId = window.localStorage.getItem('acaller.activeAgentId')
+    const storedActiveWorkspaceAgentId = window.localStorage.getItem('acaller.activeWorkspaceAgentId')
+    const storedWorkspaceAgents = window.localStorage.getItem('acaller.workspaceAgents')
+    const storedMessagesMap = window.localStorage.getItem('acaller.agentMessagesByAgent')
+    const legacyStoredAgentId = window.localStorage.getItem('acaller.activeAgentId')
+    const legacyStoredMessages = window.localStorage.getItem('acaller.agentMessages')
     const storedSessionState = window.localStorage.getItem('acaller.agentSessionStarted')
-    if (storedAgentId && agentProfiles.some(agent => agent.id === storedAgentId)) {
-      setActiveAgentId(storedAgentId)
+
+    const parsedWorkspaceAgents: WorkspaceAgent[] = (() => {
+      if (!storedWorkspaceAgents) return []
+      try {
+        const parsed = JSON.parse(storedWorkspaceAgents) as WorkspaceAgent[]
+        if (!Array.isArray(parsed)) return []
+        return parsed.filter(item => item?.id && item?.profileId && item?.name)
+      } catch {
+        return []
+      }
+    })()
+    setWorkspaceAgents(parsedWorkspaceAgents)
+
+    const parsedMessagesMap: Record<string, AgentMessage[]> = (() => {
+      if (!storedMessagesMap) return {}
+      try {
+        const parsed = JSON.parse(storedMessagesMap) as Record<string, AgentMessage[]>
+        if (!parsed || typeof parsed !== 'object') return {}
+        return parsed
+      } catch {
+        return {}
+      }
+    })()
+    setAgentMessagesByAgent(parsedMessagesMap)
+
+    if (storedActiveWorkspaceAgentId && parsedWorkspaceAgents.some(agent => agent.id === storedActiveWorkspaceAgentId)) {
+      setActiveAgentId(storedActiveWorkspaceAgentId)
+    } else if (parsedWorkspaceAgents[0]?.id) {
+      setActiveAgentId(parsedWorkspaceAgents[0].id)
+    } else if (legacyStoredAgentId && agentProfiles.some(profile => profile.id === legacyStoredAgentId)) {
+      const profile = agentProfiles.find(item => item.id === legacyStoredAgentId) || agentProfiles[0]
+      const seededId = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+      const seededAgent: WorkspaceAgent = {
+        id: seededId,
+        profileId: profile?.id || 'sara',
+        name: profile?.name || 'Sara',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      }
+      setWorkspaceAgents([seededAgent])
+      setActiveAgentId(seededId)
+
+      if (legacyStoredMessages) {
+        try {
+          const parsedLegacyMessages = JSON.parse(legacyStoredMessages) as AgentMessage[]
+          if (Array.isArray(parsedLegacyMessages) && parsedLegacyMessages.length > 0) {
+            setAgentMessagesByAgent({ [seededId]: parsedLegacyMessages })
+          }
+        } catch {
+          // ignore malformed legacy data
+        }
+      }
     }
+
     if (storedSessionState === '1') {
       setAgentSessionStarted(true)
     }
@@ -833,15 +901,27 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (typeof window === 'undefined') return
-    window.localStorage.setItem('acaller.activeAgentId', activeAgentId)
+    window.localStorage.setItem('acaller.workspaceAgents', JSON.stringify(workspaceAgents))
+    window.localStorage.setItem('acaller.agentMessagesByAgent', JSON.stringify(agentMessagesByAgent))
+    window.localStorage.setItem('acaller.activeWorkspaceAgentId', activeAgentId)
     window.localStorage.setItem('acaller.agentSessionStarted', agentSessionStarted ? '1' : '0')
-  }, [activeAgentId, agentSessionStarted])
+  }, [workspaceAgents, agentMessagesByAgent, activeAgentId, agentSessionStarted])
 
   useEffect(() => {
-    if (!agentSessionStarted && agentMessages.length > 0) {
+    if (!agentSessionStarted && workspaceAgents.length > 0) {
       setAgentSessionStarted(true)
     }
-  }, [agentMessages.length, agentSessionStarted])
+  }, [workspaceAgents.length, agentSessionStarted])
+
+  useEffect(() => {
+    if (workspaceAgents.length === 0) {
+      if (activeAgentId) setActiveAgentId('')
+      return
+    }
+    if (!activeAgentId || !workspaceAgents.some(agent => agent.id === activeAgentId)) {
+      setActiveAgentId(workspaceAgents[0].id)
+    }
+  }, [workspaceAgents, activeAgentId])
 
   useEffect(() => {
     if (initRef.current) return
@@ -1049,55 +1129,84 @@ export default function Dashboard() {
     window.speechSynthesis.speak(utterance)
   }
 
-  const applyAgentAction = (action?: AgentMessage['action']) => {
-    if (!action || action === 'none') return
-    if (action === 'open_billing') setActiveTab('billing')
-    if (action === 'open_call') setActiveTab('call')
-    if (action === 'open_callers') setActiveTab('callers')
-    if (action === 'open_settings') setActiveTab('settings')
+  const getActionLabel = (action?: AgentMessage['action']) => {
+    if (!action || action === 'none') return ''
+    if (action === 'open_billing') return 'Billing'
+    if (action === 'open_call') return 'Call Center'
+    if (action === 'open_callers') return 'Callers'
+    if (action === 'open_settings') return 'Settings'
+    return ''
   }
 
-  const startAgentSession = (agentId: string) => {
-    const profile = agentProfiles.find(agent => agent.id === agentId) || agentProfiles[0]
-    if (!profile) return
+  const createAgentWelcomeMessage = (profile: AgentProfile, agentDisplayName: string): AgentMessage => ({
+    id: `agent-welcome-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    role: 'assistant',
+    content: `Hi, I’m ${agentDisplayName}. I’ll run your call center setup with you. Tell me your offer, target list type, and expected report format, and I’ll guide each step.`,
+    action: 'none',
+    checklist: [
+      'Define call target and ideal customer profile',
+      'Create caller identity with voice and language',
+      'Upload numbers and launch or schedule campaign',
+    ],
+  })
 
-    setActiveAgentId(profile.id)
+  const startAgentSession = (profileId: string, customName = '') => {
+    const profile = agentProfiles.find(agent => agent.id === profileId) || agentProfiles[0]
+    if (!profile) return
+    const now = new Date().toISOString()
+    const nextAgentId = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+    const safeName = customName.trim() || profile.name
+
+    const nextAgent: WorkspaceAgent = {
+      id: nextAgentId,
+      profileId: profile.id,
+      name: safeName,
+      createdAt: now,
+      updatedAt: now,
+    }
+
+    setWorkspaceAgents(prev => [nextAgent, ...prev])
+    setActiveAgentId(nextAgentId)
     setAgentSessionStarted(true)
     setActiveTab('overview')
+    setNewAgentDraftNames(prev => ({ ...prev, [profile.id]: '' }))
+    setAgentInput('')
 
-    setAgentMessages(prev => {
-      if (prev.length > 0) return prev
-      return [
-        {
-          id: `agent-welcome-${Date.now()}`,
-          role: 'assistant',
-          content: `Hi, I’m ${profile.name}. I’ll run your call center setup with you. Tell me your offer, target list type, and expected report format, and I’ll guide each step.`,
-          action: 'none',
-          checklist: [
-            'Define call target and ideal customer profile',
-            'Create caller identity with voice and language',
-            'Upload numbers and launch or schedule campaign',
-          ],
-        },
-      ]
+    setAgentMessagesByAgent(prev => {
+      if (prev[nextAgentId]?.length) return prev
+      return {
+        ...prev,
+        [nextAgentId]: [createAgentWelcomeMessage(profile, safeName)],
+      }
     })
   }
 
   const askAgent = async () => {
+    if (!activeAgentId) {
+      toast.error('Create an agent first from Hire an agent or Agents tab')
+      setActiveTab('agents')
+      return
+    }
+
     const prompt = agentInput.trim()
     if (!prompt) return
 
     const messageId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const userMessage: AgentMessage = { id: messageId, role: 'user', content: prompt, action: 'none' }
-    const nextMessages = [...agentMessages, userMessage]
-    setAgentMessages(nextMessages)
+    const currentMessages = agentMessagesByAgent[activeAgentId] || []
+    const nextMessages = [...currentMessages, userMessage]
+    setAgentMessagesByAgent(prev => ({ ...prev, [activeAgentId]: nextMessages }))
+    setWorkspaceAgents(prev => prev.map(agent => (
+      agent.id === activeAgentId ? { ...agent, updatedAt: new Date().toISOString() } : agent
+    )))
     setAgentInput('')
     setAgentLoading(true)
 
     try {
       const selectedIdentity = callerIdentities.find(item => item.id === selectedCallerIdentityId)
-      const selectedAgent = agentProfiles.find(agent => agent.id === activeAgentId) || agentProfiles[0]
-      const selectedAgentName = selectedAgent?.name || 'Sara'
+      const selectedWorkspaceAgent = workspaceAgents.find(agent => agent.id === activeAgentId)
+      const selectedProfile = agentProfiles.find(agent => agent.id === selectedWorkspaceAgent?.profileId) || agentProfiles[0]
+      const selectedAgentName = selectedWorkspaceAgent?.name || selectedProfile?.name || 'Sara'
       const res = await fetch('/api/agent-assistant', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1142,8 +1251,13 @@ export default function Dashboard() {
         action: (data.action || 'none') as AgentMessage['action'],
         checklist: Array.isArray(data.checklist) ? data.checklist : [],
       }
-      setAgentMessages(prev => [...prev, assistantMessage])
-      applyAgentAction(assistantMessage.action)
+      setAgentMessagesByAgent(prev => ({
+        ...prev,
+        [activeAgentId]: [...(prev[activeAgentId] || []), assistantMessage],
+      }))
+      setWorkspaceAgents(prev => prev.map(agent => (
+        agent.id === activeAgentId ? { ...agent, updatedAt: new Date().toISOString() } : agent
+      )))
     } catch {
       toast.error('Agent is unavailable')
     } finally {
@@ -1416,12 +1530,11 @@ export default function Dashboard() {
   }
 
   const handleTabChange = (tab: string) => {
-    const nextTab = tab === 'agent' ? 'overview' : tab
-    setActiveTab(nextTab)
+    setActiveTab(tab)
     if (tab === 'recordings') {
       fetchRecordings()
     }
-    if (nextTab === 'history' || nextTab === 'overview' || nextTab === 'leads' || nextTab === 'callbacks') {
+    if (tab === 'history' || tab === 'overview' || tab === 'leads' || tab === 'callbacks') {
       fetchCampaigns()
     }
   }
@@ -1491,8 +1604,12 @@ export default function Dashboard() {
     },
   ]
   const nextStep = startSteps.find(step => !step.done)
-  const activeAgentProfile = agentProfiles.find(agent => agent.id === activeAgentId) || agentProfiles[0]
-  const activeAgentName = activeAgentProfile?.name || 'Sara'
+  const activeWorkspaceAgent = workspaceAgents.find(agent => agent.id === activeAgentId) || null
+  const activeAgentProfile =
+    agentProfiles.find(agent => agent.id === activeWorkspaceAgent?.profileId) ||
+    agentProfiles[0]
+  const activeAgentName = activeWorkspaceAgent?.name || activeAgentProfile?.name || 'Sara'
+  const agentMessages = activeAgentId ? (agentMessagesByAgent[activeAgentId] || []) : []
   const isNewWorkspace = campaigns.length === 0 && callerIdentities.length === 0 && teamMembers.length === 0
   const shouldStartWithAgent = isNewWorkspace && !agentSessionStarted
 
@@ -1525,6 +1642,8 @@ export default function Dashboard() {
   const activeTabTitle =
     activeTab === 'overview'
       ? 'Overview'
+      : activeTab === 'agents'
+        ? 'Agents'
       : activeTab === 'call'
         ? 'Call Center'
       : activeTab === 'callers'
@@ -1544,6 +1663,8 @@ export default function Dashboard() {
   const activeTabHint =
     activeTab === 'overview'
       ? 'Use this page to follow the next step.'
+      : activeTab === 'agents'
+        ? 'Create agents and review each agent conversation history.'
       : activeTab === 'call'
         ? 'Upload numbers and start or schedule campaigns.'
       : activeTab === 'callers'
@@ -1572,6 +1693,12 @@ export default function Dashboard() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
+        <div className="rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-3">
+          <p className="text-sm text-zinc-200">Conversation-first mode is active.</p>
+          <p className="text-xs text-zinc-400 mt-1">
+            Keep this form minimal. Your agent chat will collect strategy details, rules, and goals over time.
+          </p>
+        </div>
         <div className="grid gap-3 md:grid-cols-2">
           <Input
             placeholder="Caller name (e.g., Sara)"
@@ -1619,22 +1746,40 @@ export default function Dashboard() {
               ))}
             </SelectContent>
           </Select>
-          <Input
-            placeholder="Industry override (optional)"
-            value={identityForm.industry}
-            onChange={e => setIdentityForm(prev => ({ ...prev, industry: e.target.value }))}
-            className="bg-zinc-800 border-zinc-700"
-          />
-          <Input
-            placeholder="Campaign goal (new launch, follow-up, reactivation...)"
-            value={identityForm.campaignGoal}
-            onChange={e => setIdentityForm(prev => ({ ...prev, campaignGoal: e.target.value }))}
-            className="bg-zinc-800 border-zinc-700"
-          />
         </div>
         <p className="text-xs text-zinc-500">
           Voice list is filtered by selected gender + language. Most human voices are listed first.
         </p>
+        <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+          <div>
+            <p className="text-sm font-medium text-zinc-200">Advanced caller inputs</p>
+            <p className="text-xs text-zinc-500">Only open this if you want to manually override what the agent already collected.</p>
+          </div>
+          <Button
+            type="button"
+            variant="secondary"
+            className="bg-zinc-800 hover:bg-zinc-700"
+            onClick={() => setShowAdvancedCallerInputs(prev => !prev)}
+          >
+            {showAdvancedCallerInputs ? 'Hide Advanced' : 'Show Advanced'}
+          </Button>
+        </div>
+        {showAdvancedCallerInputs && (
+          <>
+            <div className="grid gap-3 md:grid-cols-2">
+              <Input
+                placeholder="Industry override (optional)"
+                value={identityForm.industry}
+                onChange={e => setIdentityForm(prev => ({ ...prev, industry: e.target.value }))}
+                className="bg-zinc-800 border-zinc-700"
+              />
+              <Input
+                placeholder="Campaign goal (new launch, follow-up, reactivation...)"
+                value={identityForm.campaignGoal}
+                onChange={e => setIdentityForm(prev => ({ ...prev, campaignGoal: e.target.value }))}
+                className="bg-zinc-800 border-zinc-700"
+              />
+            </div>
         <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 space-y-3">
           <p className="text-sm font-medium text-zinc-200">Voice Quality Test</p>
           <Textarea
@@ -1706,6 +1851,8 @@ export default function Dashboard() {
             onCheckedChange={(checked) => setIdentityForm(prev => ({ ...prev, mentionAi: checked }))}
           />
         </div>
+          </>
+        )}
 
         <div className="flex flex-wrap gap-2">
           <Button
@@ -1831,7 +1978,7 @@ export default function Dashboard() {
       
       {/* Header */}
       <header className="sticky top-0 z-20 border-b border-zinc-800/80 bg-zinc-950/70 backdrop-blur-xl">
-        <div className="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between">
+        <div className="w-full px-4 md:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-emerald-700 ring-1 ring-emerald-300/30 flex items-center justify-center shadow-lg shadow-emerald-500/20">
               <Phone className="w-5 h-5 text-white" />
@@ -1892,7 +2039,7 @@ export default function Dashboard() {
       </header>
 
       {/* Main Content */}
-      <main className="mx-auto max-w-7xl px-4 py-6 space-y-6">
+      <main className="w-full px-4 md:px-6 py-6 space-y-6">
         <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <Card className="bg-zinc-900/80 border-zinc-800 shadow-lg shadow-black/30">
             <CardContent className="pt-6">
@@ -1920,7 +2067,7 @@ export default function Dashboard() {
           </Card>
         </section>
 
-        <div className={`grid gap-6 ${agentSessionStarted ? 'xl:grid-cols-[360px_minmax(0,1fr)]' : ''}`}>
+        <div className={`grid gap-6 ${agentSessionStarted ? 'xl:grid-cols-[420px_minmax(0,1fr)]' : ''}`}>
           {agentSessionStarted && (
             <aside className="xl:sticky xl:top-24 xl:h-[calc(100vh-7rem)]">
               <Card className="h-full bg-zinc-900/90 border-zinc-800 shadow-lg shadow-black/30">
@@ -1930,31 +2077,33 @@ export default function Dashboard() {
                       <Bot className="w-4 h-4 text-emerald-400" />
                       Agent Chat
                     </CardTitle>
-                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30 max-w-[180px] truncate">
                       {activeAgentName}
                     </Badge>
                   </div>
                   <p className="text-xs text-zinc-400">
                     {activeAgentProfile?.language} • {activeAgentProfile?.expertise}
                   </p>
-                  <div className="grid grid-cols-2 gap-2">
-                    {agentProfiles.map(profile => (
-                      <Button
-                        key={profile.id}
-                        type="button"
-                        size="sm"
-                        variant={activeAgentId === profile.id ? 'default' : 'secondary'}
-                        className={activeAgentId === profile.id ? '' : 'bg-zinc-800 hover:bg-zinc-700'}
-                        onClick={() => setActiveAgentId(profile.id)}
-                      >
-                        {profile.name}
-                      </Button>
-                    ))}
+                  <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 p-2">
+                    <span className="text-xs text-zinc-400">{workspaceAgents.length} active agents in this account</span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      className="bg-zinc-800 hover:bg-zinc-700"
+                      onClick={() => setActiveTab('agents')}
+                    >
+                      Open Agents
+                    </Button>
                   </div>
                 </CardHeader>
                 <CardContent className="h-[calc(100%-8rem)] flex flex-col gap-3">
                   <div className="flex-1 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 space-y-3">
-                    {agentMessages.length === 0 ? (
+                    {!activeAgentId ? (
+                      <p className="text-sm text-zinc-500">
+                        Create an agent in the Agents tab to start a dedicated conversation history.
+                      </p>
+                    ) : agentMessages.length === 0 ? (
                       <p className="text-sm text-zinc-500">
                         Ask {activeAgentName} to plan campaigns, set caller identities, assign numbers, and review lead outcomes.
                       </p>
@@ -1986,15 +2135,10 @@ export default function Dashboard() {
                               ))}
                             </ul>
                           )}
-                          {msg.action && msg.action !== 'none' && (
-                            <Button
-                              type="button"
-                              size="sm"
-                              className="mt-2 bg-emerald-600 hover:bg-emerald-700"
-                              onClick={() => applyAgentAction(msg.action)}
-                            >
-                              Open Suggested Tab
-                            </Button>
+                          {msg.action && msg.action !== 'none' && getActionLabel(msg.action) && (
+                            <p className="mt-2 text-xs text-zinc-400">
+                              Suggested workspace: <span className="text-emerald-300">{getActionLabel(msg.action)}</span>
+                            </p>
                           )}
                         </div>
                       ))
@@ -2012,8 +2156,9 @@ export default function Dashboard() {
                       }}
                       placeholder={`Message ${activeAgentName}...`}
                       className="bg-zinc-800 border-zinc-700"
+                      disabled={!activeAgentId}
                     />
-                    <Button onClick={askAgent} disabled={agentLoading || !agentInput.trim()}>
+                    <Button onClick={askAgent} disabled={agentLoading || !agentInput.trim() || !activeAgentId}>
                       {agentLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </Button>
                   </div>
@@ -2078,10 +2223,14 @@ export default function Dashboard() {
               {isCalling ? 'Campaign currently running' : 'No active campaign'}
             </div>
           </div>
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 xl:grid-cols-9 gap-2 h-auto bg-transparent p-0">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 xl:grid-cols-10 gap-2 h-auto bg-transparent p-0">
             <TabsTrigger value="overview" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <LayoutDashboard className="w-4 h-4 mr-2" />
               Overview
+            </TabsTrigger>
+            <TabsTrigger value="agents" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
+              <Bot className="w-4 h-4 mr-2" />
+              Agents
             </TabsTrigger>
             <TabsTrigger value="call" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <Phone className="w-4 h-4 mr-2" />
@@ -2185,14 +2334,10 @@ export default function Dashboard() {
                   <Button
                     variant="secondary"
                     className="w-full justify-start bg-zinc-800 hover:bg-zinc-700"
-                    onClick={() => {
-                      if (!agentSessionStarted) {
-                        startAgentSession(activeAgentId)
-                      }
-                    }}
+                    onClick={() => setActiveTab('agents')}
                   >
                     <MessageSquare className="w-4 h-4 mr-2" />
-                    Open Agent Chat
+                    Open Agents
                   </Button>
                   <Button variant="secondary" className="w-full justify-start bg-zinc-800 hover:bg-zinc-700" onClick={() => setActiveTab('callers')}>
                     <Users className="w-4 h-4 mr-2" />
@@ -2360,9 +2505,85 @@ export default function Dashboard() {
                 </CardContent>
               </Card>
             </div>
-          </TabsContent>
+	          </TabsContent>
 
-          {/* Call Center Tab */}
+	          <TabsContent value="agents" className="space-y-6 animate-in fade-in-50 duration-200">
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Bot className="w-5 h-5 text-emerald-400" />
+                    Agent Memory
+                  </CardTitle>
+                  <CardDescription>
+                    Every created agent has its own conversation history and workspace memory.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-5">
+                  <div className="space-y-2">
+                    {workspaceAgents.length === 0 ? (
+                      <p className="text-sm text-zinc-500">No agents created yet. Create your first one below.</p>
+                    ) : (
+                      workspaceAgents.map(agent => {
+                        const profile = agentProfiles.find(item => item.id === agent.profileId)
+                        const historyCount = agentMessagesByAgent[agent.id]?.length || 0
+                        const isActive = agent.id === activeAgentId
+                        return (
+                          <button
+                            key={agent.id}
+                            type="button"
+                            onClick={() => setActiveAgentId(agent.id)}
+                            className={`w-full rounded-lg border p-3 text-left transition ${
+                              isActive
+                                ? 'border-emerald-500/50 bg-emerald-500/10'
+                                : 'border-zinc-800 bg-zinc-950/40 hover:border-zinc-700'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <p className="text-sm font-medium text-zinc-200">{agent.name}</p>
+                              <Badge className="bg-zinc-800 text-zinc-200 border-zinc-700">{historyCount} messages</Badge>
+                            </div>
+                            <p className="text-xs text-zinc-400 mt-1">
+                              {profile?.language || 'Language N/A'} • {profile?.expertise || 'General'}
+                            </p>
+                            <p className="text-xs text-zinc-500 mt-1">
+                              Last updated {new Date(agent.updatedAt).toLocaleString()}
+                            </p>
+                          </button>
+                        )
+                      })
+                    )}
+                  </div>
+
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-4 space-y-3">
+                    <p className="text-sm font-medium text-zinc-200">Create New Agent</p>
+                    <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                      {agentProfiles.map(profile => (
+                        <div key={profile.id} className="rounded-lg border border-zinc-800 bg-zinc-900/70 p-3 space-y-2">
+                          <p className="text-sm font-medium text-zinc-100">{profile.name}</p>
+                          <p className="text-xs text-zinc-400">{profile.language} • {profile.style}</p>
+                          <p className="text-xs text-zinc-500">{profile.expertise}</p>
+                          <Input
+                            value={newAgentDraftNames[profile.id] || ''}
+                            onChange={e => setNewAgentDraftNames(prev => ({ ...prev, [profile.id]: e.target.value }))}
+                            placeholder={`Name this ${profile.name} agent`}
+                            className="bg-zinc-800 border-zinc-700"
+                          />
+                          <Button
+                            type="button"
+                            className="w-full"
+                            onClick={() => startAgentSession(profile.id, newAgentDraftNames[profile.id] || '')}
+                          >
+                            Create and Start
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+	          {/* Call Center Tab */}
           <TabsContent value="call" className="space-y-6 animate-in fade-in-50 duration-200">
             <Card className="bg-zinc-900 border-zinc-800">
               <CardContent className="pt-6">
