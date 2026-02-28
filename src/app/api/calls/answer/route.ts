@@ -11,6 +11,7 @@ async function handleAnswer(request: NextRequest) {
     const recordFromQuery = url.searchParams.get('record');
     const transcribeFromQuery = url.searchParams.get('transcribe');
     const languageFromQuery = url.searchParams.get('language');
+    const voiceIdFromQuery = url.searchParams.get('voiceId');
 
     let callSid = '';
     let script = scriptFromQuery || '';
@@ -18,6 +19,7 @@ async function handleAnswer(request: NextRequest) {
     let record = recordFromQuery === 'true';
     let transcribe = transcribeFromQuery === 'true';
     let language = languageFromQuery || 'en-US';
+    let voiceId = voiceIdFromQuery || 'alice';
 
     if (request.method === 'POST') {
       const formData = await request.formData();
@@ -32,6 +34,9 @@ async function handleAnswer(request: NextRequest) {
       }
       if (!languageFromQuery) {
         language = (formData.get('language') as string) || language;
+      }
+      if (!voiceIdFromQuery) {
+        voiceId = (formData.get('voiceId') as string) || voiceId;
       }
     }
     
@@ -48,6 +53,7 @@ async function handleAnswer(request: NextRequest) {
         transcriptionCallback: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/api/calls/transcription`,
         webSocketUrl: settings.webSocketUrl,
         language,
+        voiceId,
       }
     );
     

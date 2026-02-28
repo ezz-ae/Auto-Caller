@@ -168,6 +168,7 @@ async function startCalling(campaign: Campaign) {
           transcribe: campaign.transcribeCalls ?? settings.transcribeCalls,
           language: campaign.language || 'en-US',
           callerIdentityId: campaign.callerIdentityId,
+          voiceId: campaign.voiceId,
         }
       );
       

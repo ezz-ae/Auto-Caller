@@ -5,6 +5,28 @@ import { getSettings } from './store';
 
 let twilioClient: ReturnType<typeof twilio> | null = null;
 
+function resolveTwilioVoice(voiceId?: string): string {
+  if (!voiceId) return 'alice';
+
+  // Twilio-native voices
+  if (voiceId === 'alice' || voiceId.startsWith('Polly.')) {
+    return voiceId;
+  }
+
+  // Map popular preset IDs/names to Twilio Polly voices.
+  const map: Record<string, string> = {
+    '21m00Tcm4TlvDq8ikWAM': 'Polly.Joanna', // Rachel
+    'AZnzlk1XvdvUeBnXmlld': 'Polly.Salli', // Domi
+    'ErXwobaYiN019PkySvjV': 'Polly.Matthew', // Antoni
+    'TxGEqnHWrfWFT1GWmBXj': 'Polly.Joey', // Josh
+    'EXAVITQu4vr4xnSDxMaL': 'Polly.Amy', // Bella
+    'MF3mGyEYCl7XYWbV9V6O': 'Polly.Emma', // Elli
+    'pNInz6obpgDQGcFmaJgB': 'Polly.Brian', // Adam
+  };
+
+  return map[voiceId] || 'alice';
+}
+
 async function getClient() {
   if (twilioClient) return twilioClient;
   
@@ -33,6 +55,7 @@ export function generateCallTwiML(
     transcriptionCallback?: string;
     webSocketUrl?: string;
     language?: string;
+    voiceId?: string;
   } = {}
 ): string {
   const VoiceResponse = twilio.twiml.VoiceResponse;
@@ -49,7 +72,7 @@ export function generateCallTwiML(
   
   // Speak the script
   response.say({
-    voice: 'alice',
+    voice: resolveTwilioVoice(options.voiceId) as any,
     language: (options.language || 'en-US') as any,
   }, script);
   
@@ -112,6 +135,7 @@ export async function makeCall(
     transcribe?: boolean;
     language?: string;
     callerIdentityId?: string;
+    voiceId?: string;
   } = {}
 ): Promise<{ sid: string; status: string }> {
   const client = await getClient();
@@ -128,6 +152,7 @@ export async function makeCall(
     record: String(options.record || settings.recordCalls || false),
     transcribe: String(options.transcribe || settings.transcribeCalls || false),
     language: options.language || 'en-US',
+    voiceId: options.voiceId || 'alice',
   });
 
   const statusUrl = new URL(`${webhookUrl}/api/calls/status`);
