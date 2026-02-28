@@ -16,7 +16,24 @@ export function isAuthorizedWithToken(token?: string | null) {
 }
 
 export function shouldSkipAuthPath(pathname: string) {
-  if (pathname.startsWith('/api/')) return true;
+  if (pathname === '/api' || pathname === '/api/') return true;
+  if (pathname.startsWith('/api/')) {
+    const publicApiPrefixes = [
+      '/api/auth/login',
+      '/api/auth/logout',
+      '/api/calls/answer',
+      '/api/calls/status',
+      '/api/calls/recording-complete',
+      '/api/calls/handle-forward',
+      '/api/calls/voicemail-recorded',
+      '/api/calls/transcription',
+      '/api/calls/tts',
+      '/api/cron/dispatch-scheduled',
+      '/api/paypal/webhook',
+    ];
+
+    return publicApiPrefixes.some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  }
   if (pathname.startsWith('/_next/')) return true;
   if (pathname.startsWith('/favicon')) return true;
   if (pathname.startsWith('/login')) return true;

@@ -22,6 +22,10 @@ export function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
+  if (pathname === '/api' || pathname.startsWith('/api/')) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const loginUrl = request.nextUrl.clone();
   loginUrl.pathname = '/login';
   loginUrl.searchParams.set('next', `${pathname}${search}`);
