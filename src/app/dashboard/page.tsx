@@ -524,6 +524,12 @@ export default function Dashboard() {
   const [agentInput, setAgentInput] = useState('')
   const [agentLoading, setAgentLoading] = useState(false)
   const [agentUploads, setAgentUploads] = useState<UploadedChatFile[]>([])
+  const [contentInput, setContentInput] = useState({
+    offer: '',
+    audience: '',
+    goal: '',
+    notes: '',
+  })
   const [voiceChatEnabled, setVoiceChatEnabled] = useState(false)
   const [liveVoiceCallEnabled, setLiveVoiceCallEnabled] = useState(false)
   const [agentListening, setAgentListening] = useState(false)
@@ -1921,6 +1927,30 @@ export default function Dashboard() {
     await askAgent(nextPrompt, liveVoiceCallEnabled || voiceChatEnabled)
   }
 
+  const submitContentInputToAgent = async () => {
+    const offer = contentInput.offer.trim()
+    const audience = contentInput.audience.trim()
+    const goal = contentInput.goal.trim()
+    const notes = contentInput.notes.trim()
+
+    if (!offer && !audience && !goal && !notes) {
+      toast.error('Add at least one content input field')
+      return
+    }
+
+    const prompt = [
+      'Use this structured content input to create/update my setup and ask for approval before applying:',
+      offer ? `Offer: ${offer}` : '',
+      audience ? `Audience: ${audience}` : '',
+      goal ? `Goal: ${goal}` : '',
+      notes ? `Notes/constraints: ${notes}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n')
+
+    await askAgent(prompt, liveVoiceCallEnabled || voiceChatEnabled)
+  }
+
   const startAgentListening = () => {
     if (!activeAgentId) {
       toast.error('Create an agent first from Hire an agent or Agents tab')
@@ -2424,6 +2454,7 @@ export default function Dashboard() {
     agentProfiles[0]
   const activeAgentName = activeWorkspaceAgent?.name || activeAgentProfile?.name || 'Sara'
   const agentMessages = activeAgentId ? (agentMessagesByAgent[activeAgentId] || []) : []
+  const showSideAssistant = agentSessionStarted && activeTab !== 'agents'
 
   const filteredRecordings = recordings.filter(recording => {
     const query = recordingSearch.trim().toLowerCase()
@@ -2912,8 +2943,8 @@ export default function Dashboard() {
           </section>
         )}
 
-        <div className={`grid gap-10 ${agentSessionStarted ? 'xl:grid-cols-[420px_minmax(0,1fr)]' : ''}`}>
-          {agentSessionStarted && activeTab !== 'agents' && (
+        <div className={`grid gap-10 ${showSideAssistant ? 'xl:grid-cols-[420px_minmax(0,1fr)]' : ''}`}>
+          {showSideAssistant && (
             <aside className="xl:sticky xl:top-24 xl:h-[calc(100vh-7rem)]">
               <Card className="h-full bg-zinc-900/90 border-zinc-800 shadow-lg shadow-black/30">
                 <CardHeader className="space-y-3 pb-4">
@@ -3093,7 +3124,7 @@ export default function Dashboard() {
                         disabled={!activeAgentId || agentLoading}
                       >
                         {liveVoiceCallEnabled ? <Square className="w-4 h-4 mr-2" /> : <Phone className="w-4 h-4 mr-2" />}
-                        {liveVoiceCallEnabled ? 'End Live' : 'Start Live'}
+                        {liveVoiceCallEnabled ? 'End Voice Call' : 'Start Voice Call'}
                       </Button>
                     </div>
                     <div className="flex gap-2">
@@ -3116,7 +3147,7 @@ export default function Dashboard() {
                   </div>
                     <p className="text-[11px] text-zinc-500">
                       {liveVoiceCallEnabled
-                        ? 'Live call mode is active: speak naturally, wait for reply, and the mic re-opens automatically.'
+                        ? 'Voice call mode is active: speak naturally, wait for reply, and the mic re-opens automatically.'
                         : 'Voice mode: press Talk, speak naturally, and the agent replies back in voice using your selected caller voice.'}
                       {agentSpeaking ? ' Replying now…' : agentListening ? ' Listening…' : ''}
                     </p>
@@ -3220,6 +3251,48 @@ export default function Dashboard() {
                           {agent.name}
                         </button>
                       ))}
+                    </div>
+
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/30 p-3 space-y-3">
+                      <p className="text-xs text-zinc-500">Structured content input</p>
+                      <div className="grid gap-2 md:grid-cols-3">
+                        <Input
+                          value={contentInput.offer}
+                          onChange={(e) => setContentInput(prev => ({ ...prev, offer: e.target.value }))}
+                          placeholder="Offer"
+                          className="bg-zinc-800 border-zinc-700"
+                        />
+                        <Input
+                          value={contentInput.audience}
+                          onChange={(e) => setContentInput(prev => ({ ...prev, audience: e.target.value }))}
+                          placeholder="Audience"
+                          className="bg-zinc-800 border-zinc-700"
+                        />
+                        <Input
+                          value={contentInput.goal}
+                          onChange={(e) => setContentInput(prev => ({ ...prev, goal: e.target.value }))}
+                          placeholder="Goal"
+                          className="bg-zinc-800 border-zinc-700"
+                        />
+                      </div>
+                      <Textarea
+                        value={contentInput.notes}
+                        onChange={(e) => setContentInput(prev => ({ ...prev, notes: e.target.value }))}
+                        placeholder="Extra notes, rules, data context, or report expectations"
+                        className="min-h-[72px] bg-zinc-800 border-zinc-700 text-sm"
+                      />
+                      <div className="flex justify-end">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          className="bg-zinc-800 hover:bg-zinc-700"
+                          onClick={() => void submitContentInputToAgent()}
+                          disabled={agentLoading}
+                        >
+                          Send Content Input
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="rounded-lg border border-zinc-800 bg-zinc-950/30 p-3">
@@ -3370,7 +3443,7 @@ export default function Dashboard() {
                         disabled={agentLoading}
                       >
                         {liveVoiceCallEnabled ? <Square className="w-4 h-4 mr-2" /> : <Phone className="w-4 h-4 mr-2" />}
-                        {liveVoiceCallEnabled ? 'End Live' : 'Start Live'}
+                        {liveVoiceCallEnabled ? 'End Voice Call' : 'Start Voice Call'}
                       </Button>
                       <Button
                         type="button"
@@ -3400,7 +3473,7 @@ export default function Dashboard() {
                       <div className="flex items-center justify-between">
                         <p className="text-[11px] text-zinc-500">
                           {liveVoiceCallEnabled
-                            ? 'Live call mode active. The assistant keeps listening after each reply.'
+                            ? 'Voice call mode active. The assistant keeps listening after each reply.'
                             : 'You can type, upload files, or talk by voice.'}
                           {agentSpeaking ? ' Replying now…' : agentListening ? ' Listening…' : ''}
                         </p>
