@@ -1,9 +1,10 @@
 import Link from 'next/link'
-import { ArrowRight, CheckCircle2, Clock3, Headphones, Phone, ShieldCheck, Sparkles, TrendingUp, UserRound } from 'lucide-react'
+import { ArrowRight, Clock3, Headphones, Phone, ShieldCheck, Sparkles, TrendingUp, UserRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/site-shell'
+import { DemoCallHero } from '@/components/marketing/demo-call-hero'
 
 const outcomes = [
   {
@@ -71,25 +72,7 @@ export default function MarketingHomePage() {
             </div>
           </div>
 
-          <Card className="bg-zinc-900/80 border-zinc-800 shadow-xl shadow-black/30">
-            <CardHeader>
-              <CardTitle className="text-lg">Simple Workflow</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <p className="flex items-start gap-2 text-sm text-zinc-200">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
-                Create caller identities
-              </p>
-              <p className="flex items-start gap-2 text-sm text-zinc-200">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
-                Upload numbers and assign a caller
-              </p>
-              <p className="flex items-start gap-2 text-sm text-zinc-200">
-                <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
-                Start campaigns and track results
-              </p>
-            </CardContent>
-          </Card>
+          <DemoCallHero />
         </section>
 
         <section className="grid gap-6 md:grid-cols-3">

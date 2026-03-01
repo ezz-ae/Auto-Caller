@@ -16,6 +16,7 @@ Production-ready outbound AI calling platform with:
 - Team accounts directory in `Settings` (owner/agent/manager operational records)
 - Caller identities in dedicated `Callers` tab (name, position, voice, language, disclosure mode, conversation constraints, KPI counters)
 - Number upload flow with direct caller assignment + optional schedule in `Call Center`
+- Landing-page `Try Live AI Call Demo` form with consent gate, cooldown, and IP rate limits
 - Target blueprint-driven calling (goal, audience, offer, qualification, CTA) instead of fixed script reading
 - Lead notes support (`number | user comment | target comment`) attached to per-call results
 - Auto callback scheduling when lead says “call me later” (server-side scheduled follow-up campaign)
@@ -228,6 +229,19 @@ AI provider:
   - `AI_CALL_ALLOW_LAUGH=true` to permit occasional light laughter cues when context is positive
 - Optional fallback: `OPENAI_API_KEY`.
 - Optional OpenAI live-call model override: `OPENAI_CALL_MODEL`.
+
+Landing page demo call:
+- Set `DEMO_CALL_ENABLED=true`.
+- Demo Twilio credentials can be set with `DEMO_TWILIO_*` or fallback to `MANAGED_TWILIO_*`.
+- Configure optional voice/lang via:
+  - `DEMO_CALL_AGENT_NAME`
+  - `DEMO_CALL_BUSINESS_NAME`
+  - `DEMO_CALL_LANGUAGE`
+  - `DEMO_CALL_TWILIO_VOICE`
+  - `DEMO_CALL_MAX_TURNS`
+- Abuse controls:
+  - IP window limit: `DEMO_CALL_MAX_PER_IP_15M` (default 5)
+  - per-phone cooldown: 24 hours (built-in)
 
 ## 7. Useful Commands
 
