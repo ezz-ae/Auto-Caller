@@ -3,12 +3,21 @@ import { saveRecording, getRecordingByCallSid, findCampaignResultByCallSid, getS
 import { v4 as uuidv4 } from 'uuid';
 import { Recording } from '@/lib/types';
 import { resolvePublicAppUrl } from '@/lib/public-app-url';
+import { formDataToParams, isValidTwilioWebhook } from '@/lib/twilio-webhook-auth';
 
 // Handle recording completion from Twilio
 export async function POST(request: NextRequest) {
   try {
     const userId = new URL(request.url).searchParams.get('userId') || undefined;
     const formData = await request.formData();
+    const validWebhook = await isValidTwilioWebhook({
+      request,
+      formParams: formDataToParams(formData),
+      userId,
+    });
+    if (!validWebhook) {
+      return NextResponse.json({ error: 'Invalid Twilio signature' }, { status: 403 });
+    }
     
     const callSid = formData.get('CallSid') as string;
     const recordingSid = formData.get('RecordingSid') as string;

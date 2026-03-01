@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const emailSent = await sendPasswordResetEmail({ to: reset.email, resetUrl });
 
     if (!emailSent) {
-      console.info('Password reset email not sent (email provider missing). Reset URL:', resetUrl);
+      console.info('Password reset email not sent (email provider missing).');
     }
 
     const response: Record<string, unknown> = {

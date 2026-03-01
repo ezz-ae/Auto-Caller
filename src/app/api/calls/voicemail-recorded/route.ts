@@ -8,10 +8,19 @@ import {
   updateCampaignResultByCallSid,
 } from '@/lib/store';
 import { Recording } from '@/lib/types';
+import { formDataToParams, isValidTwilioWebhook } from '@/lib/twilio-webhook-auth';
 
 async function handleVoicemail(request: NextRequest) {
   const formData = await request.formData();
   const userId = new URL(request.url).searchParams.get('userId') || undefined;
+  const validWebhook = await isValidTwilioWebhook({
+    request,
+    formParams: formDataToParams(formData),
+    userId,
+  });
+  if (!validWebhook) {
+    return NextResponse.json({ error: 'Invalid Twilio signature' }, { status: 403 });
+  }
 
   const callSid = (formData.get('CallSid') || '') as string;
   const recordingSid = (formData.get('RecordingSid') || '') as string;

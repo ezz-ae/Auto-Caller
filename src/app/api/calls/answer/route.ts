@@ -6,6 +6,8 @@ import { getCallerIdentity } from '@/lib/caller-identity-store';
 import { generateConversationDecision, ConversationTurn } from '@/lib/conversation-agent';
 import { generateCallTwiML, isTwilioNativeVoice } from '@/lib/twilio';
 import { resolvePublicAppUrl } from '@/lib/public-app-url';
+import { createSignedTtsParams } from '@/lib/tts-auth';
+import { formDataToParams, isValidTwilioWebhook } from '@/lib/twilio-webhook-auth';
 
 interface ConversationState {
   turn: number;
@@ -199,12 +201,22 @@ function buildTtsAudioUrl(params: {
   language: string;
   userId?: string;
 }): string {
+  const script = clipText(params.text, 320);
+  const userId = String(params.userId || '').trim();
   const url = new URL(`${params.appUrl}/api/calls/tts`);
-  url.searchParams.set('script', clipText(params.text, 320));
+  url.searchParams.set('script', script);
   url.searchParams.set('voiceId', params.voiceId);
   url.searchParams.set('language', params.language || 'en-US');
-  if (params.userId) {
-    url.searchParams.set('userId', params.userId);
+  if (userId) {
+    url.searchParams.set('userId', userId);
+    const { exp, sig } = createSignedTtsParams({
+      script,
+      voiceId: params.voiceId,
+      language: params.language || 'en-US',
+      userId,
+    });
+    url.searchParams.set('exp', String(exp));
+    url.searchParams.set('sig', sig);
   }
   return url.toString();
 }
@@ -430,6 +442,17 @@ async function handleAnswer(request: NextRequest) {
     const url = new URL(request.url);
     const method = request.method.toUpperCase();
     const formData = method === 'POST' ? await request.formData() : null;
+    const webhookUserId =
+      String(url.searchParams.get('userId') || formData?.get('userId') || '').trim() || 'default';
+    const webhookParams = formData ? formDataToParams(formData) : {};
+    const validWebhook = await isValidTwilioWebhook({
+      request,
+      formParams: webhookParams,
+      userId: webhookUserId,
+    });
+    if (!validWebhook) {
+      return NextResponse.json({ error: 'Invalid Twilio signature' }, { status: 403 });
+    }
 
     const pick = (name: string) => {
       const queryValue = url.searchParams.get(name);

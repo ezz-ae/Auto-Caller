@@ -3,6 +3,7 @@ import twilio from 'twilio';
 import { updateCampaignResultByCallSid } from '@/lib/store';
 import { syncParentFollowUpStatusFromChild } from '@/lib/follow-up-status';
 import { CallResult } from '@/lib/types';
+import { formDataToParams, isValidTwilioWebhook } from '@/lib/twilio-webhook-auth';
 
 function mapDialStatus(dialStatus: string): CallResult['status'] {
   const statusMap: Record<string, CallResult['status']> = {
@@ -20,6 +21,15 @@ function mapDialStatus(dialStatus: string): CallResult['status'] {
 async function handleForward(request: NextRequest) {
   const formData = await request.formData();
   const url = new URL(request.url);
+  const userId = String(url.searchParams.get('userId') || formData.get('userId') || '').trim() || undefined;
+  const validWebhook = await isValidTwilioWebhook({
+    request,
+    formParams: formDataToParams(formData),
+    userId,
+  });
+  if (!validWebhook) {
+    return NextResponse.json({ error: 'Invalid Twilio signature' }, { status: 403 });
+  }
 
   const callSid = (url.searchParams.get('callSid') || formData.get('CallSid') || '') as string;
   const dialCallStatus = (formData.get('DialCallStatus') || formData.get('CallStatus') || '') as string;

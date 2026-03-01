@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSettings, saveSettings, getCredits, setCredits, updateCredits } from '@/lib/store';
+import { getSettings, saveSettings, getCredits } from '@/lib/store';
 import { assignManagedNumber } from '@/lib/store';
 import { resetClient } from '@/lib/twilio';
 import { requireUserIdFromRequest } from '@/lib/request-user';
@@ -102,11 +102,6 @@ export async function POST(request: NextRequest) {
       toSave.transcribeCalls = body.transcribeCalls;
     }
     
-    // Handle credit updates
-    if (typeof body.addCredits === 'number') {
-      await updateCredits(body.addCredits, userId);
-    }
-    
     await saveSettings(toSave, userId);
 
     let assignedPhoneNumber = current.assignedPhoneNumber || '';
@@ -131,14 +126,11 @@ export async function POST(request: NextRequest) {
 
 export async function PUT(request: NextRequest) {
   try {
-    const userId = requireUserIdFromRequest(request);
-    const body = await request.json();
-    
-    if (typeof body.credits === 'number') {
-      await setCredits(body.credits, userId);
-    }
-    
-    return NextResponse.json({ success: true, credits: await getCredits(userId) });
+    requireUserIdFromRequest(request);
+    return NextResponse.json(
+      { error: 'Direct credit updates are disabled. Use billing checkout endpoints.' },
+      { status: 403 }
+    );
   } catch (error) {
     if (isUnauthorizedError(error)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });

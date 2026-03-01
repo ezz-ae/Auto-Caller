@@ -2,12 +2,21 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getRecordingByCallSid, updateRecordingTranscript } from '@/lib/store';
 import { Transcript } from '@/lib/types';
 import { v4 as uuidv4 } from 'uuid';
+import { formDataToParams, isValidTwilioWebhook } from '@/lib/twilio-webhook-auth';
 
 // Handle transcription callback from Twilio
 export async function POST(request: NextRequest) {
   try {
     const userId = new URL(request.url).searchParams.get('userId') || undefined;
     const formData = await request.formData();
+    const validWebhook = await isValidTwilioWebhook({
+      request,
+      formParams: formDataToParams(formData),
+      userId,
+    });
+    if (!validWebhook) {
+      return NextResponse.json({ error: 'Invalid Twilio signature' }, { status: 403 });
+    }
     
     const callSid = formData.get('CallSid') as string;
     const transcriptionSid = formData.get('TranscriptionSid') as string;

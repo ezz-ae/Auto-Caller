@@ -21,11 +21,12 @@ function getSessionSecret(): string {
   const explicitSecret = String(process.env.APP_SESSION_SECRET || '').trim();
   if (explicitSecret) return explicitSecret;
 
+  if (isAccountAuthEnabled() && process.env.NODE_ENV === 'production') {
+    throw new Error('APP_SESSION_SECRET is required in production when AUTH_MODE=accounts');
+  }
+
   const fallbackSecret = String(process.env.APP_ACCESS_PASSWORD || process.env.CRON_SECRET || '').trim();
   if (fallbackSecret) return fallbackSecret;
-
-  const dbUrl = String(process.env.DATABASE_URL || '').trim();
-  if (dbUrl) return dbUrl;
 
   return 'dev-only-session-secret';
 }

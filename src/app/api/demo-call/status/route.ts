@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDemoSessionByCallSid, recordDemoAttempt, setDemoSessionStatus } from '@/lib/demo-call-store';
+import { formDataToParams, isValidTwilioWebhook } from '@/lib/twilio-webhook-auth';
 
 function mapTwilioStatus(status: string): 'queued' | 'in_progress' | 'completed' | 'failed' | 'no_answer' {
   const normalized = String(status || '').trim().toLowerCase();
@@ -13,6 +14,15 @@ function mapTwilioStatus(status: string): 'queued' | 'in_progress' | 'completed'
 export async function POST(request: NextRequest) {
   try {
     const form = await request.formData();
+    const validWebhook = await isValidTwilioWebhook({
+      request,
+      formParams: formDataToParams(form),
+      allowDemoToken: true,
+    });
+    if (!validWebhook) {
+      return NextResponse.json({ error: 'Invalid Twilio signature' }, { status: 403 });
+    }
+
     const callSid = String(form.get('CallSid') || '').trim();
     const callStatus = String(form.get('CallStatus') || '').trim();
 

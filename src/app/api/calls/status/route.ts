@@ -3,6 +3,7 @@ import { updateCampaignResultByCallSid } from '@/lib/store';
 import { applyCallerIdentityKpiDelta } from '@/lib/caller-identity-store';
 import { syncParentFollowUpStatusFromChild } from '@/lib/follow-up-status';
 import { CallResult } from '@/lib/types';
+import { formDataToParams, isValidTwilioWebhook } from '@/lib/twilio-webhook-auth';
 
 // Handle call status updates from Twilio
 export async function POST(request: NextRequest) {
@@ -11,6 +12,14 @@ export async function POST(request: NextRequest) {
     const callerIdentityId = url.searchParams.get('callerIdentityId') || '';
     const userId = url.searchParams.get('userId') || undefined;
     const formData = await request.formData();
+    const validWebhook = await isValidTwilioWebhook({
+      request,
+      formParams: formDataToParams(formData),
+      userId,
+    });
+    if (!validWebhook) {
+      return NextResponse.json({ error: 'Invalid Twilio signature' }, { status: 403 });
+    }
     
     const callSid = formData.get('CallSid') as string;
     const callStatus = formData.get('CallStatus') as string;

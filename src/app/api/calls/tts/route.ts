@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { generateSpeech } from '@/lib/elevenlabs';
 import { getUserIdFromRequest } from '@/lib/request-user';
+import { verifySignedTtsParams } from '@/lib/tts-auth';
 
 function getParamsFromRequest(request: NextRequest) {
   const url = new URL(request.url);
@@ -14,7 +15,28 @@ function getParamsFromRequest(request: NextRequest) {
 async function synthesize(request: NextRequest) {
   try {
     const { script, voiceId, language, userId: userIdFromQuery } = getParamsFromRequest(request);
-    const userId = userIdFromQuery || getUserIdFromRequest(request, { fallbackToDefault: true }) || 'default';
+    const url = new URL(request.url);
+    const sig = String(url.searchParams.get('sig') || '').trim();
+    const exp = Number(url.searchParams.get('exp') || 0);
+    const hasSignedParams = Boolean(sig && exp);
+
+    const signedAuthorized = hasSignedParams && verifySignedTtsParams({
+      script,
+      voiceId,
+      language,
+      userId: userIdFromQuery,
+      exp,
+      sig,
+    });
+
+    const authUserId = getUserIdFromRequest(request);
+    if (!signedAuthorized && !authUserId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userId = signedAuthorized
+      ? userIdFromQuery
+      : authUserId || '';
 
     if (!script) {
       return NextResponse.json({ error: 'script is required' }, { status: 400 });
@@ -32,7 +54,7 @@ async function synthesize(request: NextRequest) {
     return new NextResponse(payload, {
       headers: {
         'Content-Type': 'audio/mpeg',
-        'Cache-Control': 'public, max-age=120',
+        'Cache-Control': 'private, no-store',
       },
     });
   } catch (error) {
