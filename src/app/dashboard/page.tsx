@@ -50,7 +50,6 @@ import {
 import { StatCard } from './components/StatCard'
 import { OverviewTab } from './components/OverviewTab'
 import { VoiceAgentsTab } from './components/VoiceAgentsTab'
-import { AssistantTab } from './components/AssistantTab'
 import { CallCenterTab } from './components/CallCenterTab'
 import { LeadSourcesTab } from './components/LeadSourcesTab'
 import { RecordingsTab } from './components/RecordingsTab'
@@ -457,7 +456,7 @@ export default function Dashboard() {
   const csvInputRef = useRef<HTMLInputElement>(null)
   
   // UI state
-  const [activeTab, setActiveTab] = useState('overview')
+  const [activeTab, setActiveTab] = useState('agents')
   const [leadSearch, setLeadSearch] = useState('')
   const [callbackFilter, setCallbackFilter] = useState<string>('all')
   const [loading, setLoading] = useState(false)
@@ -1497,7 +1496,7 @@ export default function Dashboard() {
     setWorkspaceAgents(prev => [nextAgent, ...prev])
     setActiveAgentId(nextAgentId)
     setAgentSessionStarted(true)
-    setActiveTab('overview')
+    setActiveTab('agents')
     setNewAgentDraftNames(prev => ({ ...prev, [profile.id]: '' }))
     setAgentInput('')
 
@@ -1632,6 +1631,13 @@ export default function Dashboard() {
         maybeResumeLiveListening()
       }
     }
+  }
+
+  const sendOnboardingPrompt = async (prompt: string) => {
+    const nextPrompt = String(prompt || '').trim()
+    if (!nextPrompt) return
+    setAgentInput(nextPrompt)
+    await askAgent(nextPrompt, liveVoiceCallEnabled || voiceChatEnabled)
   }
 
   const startAgentListening = () => {
@@ -2055,6 +2061,51 @@ export default function Dashboard() {
     ? Math.round((campaigns.reduce((sum, c) => sum + (c.results?.filter(r => r.status === 'connected').length || 0), 0) / totalCalls) * 100)
     : 0
   const connectedCalls = campaigns.reduce((sum, c) => sum + (c.results?.filter(r => r.status === 'connected').length || 0), 0)
+  const topStats = [
+    totalCalls > 0
+      ? {
+          label: 'Total Calls',
+          value: totalCalls,
+          description: 'Across all historical campaigns',
+          icon: Phone,
+        }
+      : null,
+    totalCalls > 0
+      ? {
+          label: 'Success Rate',
+          value: `${successRate}%`,
+          description: 'Calls that resulted in engagement',
+          trend: successRate > 50 ? 'Healthy' : 'Needs Review',
+          trendColor: successRate > 50 ? 'text-emerald-400' : 'text-amber-400',
+          icon: TrendingUp,
+        }
+      : null,
+    transcribedCount > 0
+      ? {
+          label: 'Transcribed',
+          value: transcribedCount,
+          description: 'Calls with full AI analysis',
+          icon: Mic,
+        }
+      : null,
+    callbacksDueNow > 0
+      ? {
+          label: 'Callbacks Due',
+          value: callbacksDueNow,
+          description: 'Scheduled callbacks overdue now',
+          trend: 'Action needed',
+          trendColor: 'text-amber-400',
+          icon: CalendarClock,
+        }
+      : null,
+  ].filter(Boolean) as Array<{
+    label: string
+    value: string | number
+    description: string
+    icon: any
+    trend?: string
+    trendColor?: string
+  }>
   const preparedNumbers = extractNumbers(numbers).length
   const readinessItems = [
     { label: 'Forwarding number configured', ready: !!settings.forwardToNumber?.trim(), tab: 'settings' },
@@ -2570,36 +2621,21 @@ export default function Dashboard() {
 
         {/* Main Content */}
         <main className="flex-1 px-6 md:px-10 py-8 space-y-8">
-        <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard 
-            label="Total Calls" 
-            value={totalCalls} 
-            description="Across all historical campaigns"
-            icon={Phone}
-          />
-          <StatCard 
-            label="Success Rate" 
-            value={`${successRate}%`} 
-            description="Calls that resulted in engagement"
-            trend={successRate > 50 ? "Healthy" : "Needs Review"}
-            trendColor={successRate > 50 ? "text-emerald-400" : "text-amber-400"}
-            icon={TrendingUp}
-          />
-          <StatCard 
-            label="Transcribed" 
-            value={transcribedCount} 
-            description="Calls with full AI analysis"
-            icon={Mic}
-          />
-          <StatCard
-            label="Callbacks Due"
-            value={callbacksDueNow}
-            description="Scheduled callbacks overdue now"
-            trend={callbacksDueNow > 0 ? 'Action needed' : 'All clear'}
-            trendColor={callbacksDueNow > 0 ? 'text-amber-400' : 'text-emerald-400'}
-            icon={CalendarClock}
-          />
-        </section>
+        {topStats.length > 0 && (
+          <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+            {topStats.map((stat) => (
+              <StatCard
+                key={stat.label}
+                label={stat.label}
+                value={stat.value}
+                description={stat.description}
+                trend={stat.trend}
+                trendColor={stat.trendColor}
+                icon={stat.icon}
+              />
+            ))}
+          </section>
+        )}
 
         <div className={`grid gap-10 ${agentSessionStarted ? 'xl:grid-cols-[420px_minmax(0,1fr)]' : ''}`}>
           {agentSessionStarted && (
@@ -2689,6 +2725,29 @@ export default function Dashboard() {
                       ))
                     )}
                   </div>
+                  {activeAgentId && (
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/30 p-2">
+                      <p className="text-[11px] text-zinc-500 mb-2">Onboarding with one tap</p>
+                      <div className="flex flex-wrap gap-2">
+                        {[
+                          'Set up my first caller identity with best voice and language.',
+                          'Guide me to connect forwarding and compliance settings.',
+                          'Help me import leads and schedule my first campaign.',
+                          'Check if my credits and number setup are enough to launch.',
+                        ].map((prompt) => (
+                          <button
+                            key={prompt}
+                            type="button"
+                            className="text-xs px-2.5 py-1.5 rounded-md border border-zinc-700 bg-zinc-900/60 text-zinc-300 hover:text-white hover:border-emerald-500/40 hover:bg-zinc-800"
+                            onClick={() => void sendOnboardingPrompt(prompt)}
+                            disabled={agentLoading}
+                          >
+                            {prompt.length > 54 ? `${prompt.slice(0, 54)}...` : prompt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <div className="flex gap-2">
                       <Button
@@ -2839,26 +2898,118 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="agents" className="space-y-6 animate-in fade-in-50 duration-200">
-            <AssistantTab 
-              activeAgentId={activeAgentId}
-              activeAgentName={activeAgentName}
-              activeAgentProfile={activeAgentProfile}
-              workspaceAgents={workspaceAgents}
-              agentMessages={agentMessages}
-              agentInput={agentInput}
-              setAgentInput={setAgentInput}
-              askAgent={askAgent}
-              agentLoading={agentLoading}
-              speakAgentMessage={speakAgentMessage}
-              getActionLabel={getActionLabel}
-              setActiveAgentId={setActiveAgentId}
-              setActiveTab={setActiveTab}
-              agentMessagesByAgent={agentMessagesByAgent}
-              agentProfiles={agentProfiles}
-              newAgentDraftNames={newAgentDraftNames}
-              setNewAgentDraftNames={setNewAgentDraftNames}
-              startAgentSession={startAgentSession}
-            />
+            <Card className="bg-zinc-900 border-zinc-800">
+              <CardHeader>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <Bot className="w-5 h-5 text-emerald-400" />
+                  Agent Command Center
+                </CardTitle>
+                <CardDescription>
+                  Chat and live voice are always on the left. Use this page to trigger onboarding tasks without filling long forms.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                  {[
+                    {
+                      label: 'Create Caller Identity',
+                      prompt: 'Create my first caller identity and choose the most human voice for my language.',
+                    },
+                    {
+                      label: 'Connect Calling Setup',
+                      prompt: 'Set my forwarding number, quiet hours, and compliance settings so I can launch safely.',
+                    },
+                    {
+                      label: 'Import Leads + Schedule',
+                      prompt: 'Help me import my lead list and schedule the first campaign with the best timing.',
+                    },
+                    {
+                      label: 'Launch Readiness Check',
+                      prompt: 'Run a full launch readiness check and tell me exactly what is missing.',
+                    },
+                  ].map((item) => (
+                    <Button
+                      key={item.label}
+                      type="button"
+                      variant="secondary"
+                      className="h-auto py-4 px-4 bg-zinc-800/60 hover:bg-zinc-700/70 justify-start text-left whitespace-normal"
+                      onClick={() => void sendOnboardingPrompt(item.prompt)}
+                      disabled={agentLoading}
+                    >
+                      {item.label}
+                    </Button>
+                  ))}
+                </div>
+
+                <div className="grid gap-6 xl:grid-cols-2">
+                  <Card className="bg-zinc-950/40 border-zinc-800">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">Your Active Agents</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {workspaceAgents.length === 0 ? (
+                        <p className="text-sm text-zinc-500">No active agents yet. Hire one below to begin onboarding.</p>
+                      ) : (
+                        workspaceAgents.map(agent => {
+                          const profile = agentProfiles.find(item => item.id === agent.profileId)
+                          const isActive = agent.id === activeAgentId
+                          const historyCount = agentMessagesByAgent[agent.id]?.length || 0
+                          return (
+                            <button
+                              key={agent.id}
+                              type="button"
+                              onClick={() => setActiveAgentId(agent.id)}
+                              className={`w-full rounded-lg border p-3 text-left transition ${
+                                isActive
+                                  ? 'border-emerald-500/40 bg-emerald-500/10'
+                                  : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700'
+                              }`}
+                            >
+                              <p className="text-sm font-medium text-zinc-100">{agent.name}</p>
+                              <p className="text-xs text-zinc-500 mt-1">
+                                {profile?.language || 'multi'} • {profile?.expertise || 'general'} • {historyCount} messages
+                              </p>
+                            </button>
+                          )
+                        })
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-zinc-950/40 border-zinc-800">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-base">Hire Another Agent</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3">
+                      {agentProfiles.map(profile => (
+                        <div key={profile.id} className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 space-y-2">
+                          <div>
+                            <p className="text-sm font-medium text-zinc-100">{profile.name}</p>
+                            <p className="text-xs text-zinc-500">{profile.language} • {profile.expertise}</p>
+                          </div>
+                          <div className="flex gap-2">
+                            <Input
+                              value={newAgentDraftNames[profile.id] || ''}
+                              onChange={e => setNewAgentDraftNames((prev: Record<string, string>) => ({ ...prev, [profile.id]: e.target.value }))}
+                              placeholder={`Name for ${profile.name}`}
+                              className="bg-zinc-800 border-zinc-700"
+                            />
+                            <Button
+                              type="button"
+                              variant="secondary"
+                              className="bg-zinc-800 hover:bg-zinc-700"
+                              onClick={() => startAgentSession(profile.id, newAgentDraftNames[profile.id] || '')}
+                            >
+                              Hire
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="call" className="space-y-6 animate-in fade-in-50 duration-200">

@@ -62,6 +62,16 @@ export function OverviewTab({
   getIntelligenceStatusTone,
   getPriorityTone
 }: OverviewTabProps) {
+  const hasPerformanceData = totalCalls > 0 || connectedCalls > 0
+  const hasDailyData =
+    dailyReport.totalCalls > 0 ||
+    dailyReport.connectedCalls > 0 ||
+    dailyReport.followUpsScheduled > 0 ||
+    dailyReport.leadsTouched > 0
+  const showResourceCard = credits > 0 || callerNumbersActive > 0 || callerIdentities.length > 0
+  const summaryCardsCount =
+    (hasPerformanceData ? 1 : 0) + (currentCampaign ? 1 : 0) + (showResourceCard ? 1 : 0)
+
   return (
     <div className="space-y-10 animate-in fade-in-50 duration-200">
       <div className="grid gap-8 xl:grid-cols-3">
@@ -175,7 +185,9 @@ export function OverviewTab({
         </Card>
       </div>
 
+      {summaryCardsCount > 0 && (
       <div className="grid gap-8 lg:grid-cols-3">
+        {hasPerformanceData && (
         <Card className="bg-zinc-900 border-zinc-800 shadow-xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg flex items-center gap-2">
@@ -201,7 +213,9 @@ export function OverviewTab({
             </div>
           </CardContent>
         </Card>
+        )}
 
+        {currentCampaign && (
         <Card className="bg-zinc-900 border-zinc-800 shadow-xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg flex items-center gap-2 text-white">
@@ -234,7 +248,9 @@ export function OverviewTab({
             )}
           </CardContent>
         </Card>
+        )}
 
+        {showResourceCard && (
         <Card className="bg-zinc-900 border-zinc-800 shadow-xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg flex items-center gap-2 text-white">
@@ -258,9 +274,12 @@ export function OverviewTab({
             </div>
           </CardContent>
         </Card>
+        )}
       </div>
+      )}
 
-      <div className="grid gap-8 lg:grid-cols-2">
+      <div className={`grid gap-8 ${hasDailyData ? 'lg:grid-cols-2' : 'lg:grid-cols-1'}`}>
+        {hasDailyData && (
         <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-emerald-500/5">
           <CardHeader className="pb-8">
             <CardTitle className="text-xl flex items-center gap-2">
@@ -299,6 +318,7 @@ export function OverviewTab({
             </Button>
           </CardContent>
         </Card>
+        )}
 
         <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-emerald-500/10">
           <CardHeader className="pb-8">
