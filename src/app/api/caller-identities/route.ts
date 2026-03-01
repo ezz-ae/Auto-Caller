@@ -5,6 +5,15 @@ import { requireUserIdFromRequest } from '@/lib/request-user';
 
 const DEFAULT_FEMALE_VOICE_ID = process.env.ELEVENLABS_DEFAULT_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
 
+function resolveDefaultVoiceId(input: { ttsProvider?: string; csmSpeaker?: number }): string {
+  if (input.ttsProvider === 'csm') {
+    const speaker = Number(input.csmSpeaker);
+    const safeSpeaker = Number.isFinite(speaker) && speaker >= 0 ? Math.floor(speaker) : 0;
+    return `csm_speaker_${safeSpeaker}`;
+  }
+  return DEFAULT_FEMALE_VOICE_ID;
+}
+
 function buildDefaultIdentityTargetBlueprint(input: {
   name: string;
   position: string;
@@ -62,7 +71,7 @@ export async function POST(request: NextRequest) {
     const requestedGender = String(body?.gender || 'any').trim().toLowerCase();
     const gender = ['male', 'female', 'any'].includes(requestedGender) ? requestedGender : 'any';
     const language = String(body?.language || 'en-US').trim();
-    const voiceId = String(body?.voiceId || DEFAULT_FEMALE_VOICE_ID).trim();
+    const voiceId = String(body?.voiceId || resolveDefaultVoiceId(settings)).trim();
     const industry = String(body?.industry || settings.industry || '').trim();
     const mentionAi = Boolean(body?.mentionAi);
     const sayThisRules = String(body?.sayThisRules || settings.sayThisRules || '').trim();

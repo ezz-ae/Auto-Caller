@@ -26,6 +26,7 @@ function buildPayload(params: {
   script: string;
   voiceId: string;
   language: string;
+  format?: string;
   userId: string;
   exp: number;
 }): string {
@@ -33,6 +34,7 @@ function buildPayload(params: {
     params.script,
     params.voiceId,
     params.language,
+    params.format || '',
     params.userId,
     String(params.exp),
   ].join('|');
@@ -42,6 +44,7 @@ export function createSignedTtsParams(input: {
   script: string;
   voiceId: string;
   language: string;
+  format?: string;
   userId: string;
   ttlSeconds?: number;
 }): { exp: number; sig: string } {
@@ -51,6 +54,7 @@ export function createSignedTtsParams(input: {
     script: input.script,
     voiceId: input.voiceId,
     language: input.language,
+    format: input.format,
     userId: input.userId,
     exp,
   });
@@ -62,6 +66,7 @@ export function verifySignedTtsParams(input: {
   script: string;
   voiceId: string;
   language: string;
+  format?: string;
   userId: string;
   exp: number;
   sig: string;
@@ -73,6 +78,7 @@ export function verifySignedTtsParams(input: {
     script: input.script,
     voiceId: input.voiceId,
     language: input.language,
+    format: input.format,
     userId: input.userId,
     exp: input.exp,
   });

@@ -208,6 +208,7 @@ function buildTtsAudioUrl(params: {
   text: string;
   voiceId: string;
   language: string;
+  format?: 'wav' | 'mp3' | 'ulaw_8khz';
   userId?: string;
 }): string {
   const script = clipText(params.text, 320);
@@ -216,12 +217,16 @@ function buildTtsAudioUrl(params: {
   url.searchParams.set('script', script);
   url.searchParams.set('voiceId', params.voiceId);
   url.searchParams.set('language', params.language || 'en-US');
+  if (params.format) {
+    url.searchParams.set('format', params.format);
+  }
   if (userId) {
     url.searchParams.set('userId', userId);
     const { exp, sig } = createSignedTtsParams({
       script,
       voiceId: params.voiceId,
       language: params.language || 'en-US',
+      format: params.format || '',
       userId,
     });
     url.searchParams.set('exp', String(exp));
@@ -237,6 +242,7 @@ function appendSpeech(
     appUrl: string;
     voiceId: string;
     language: string;
+    ttsFormat?: 'wav' | 'mp3' | 'ulaw_8khz';
     userId?: string;
   }
 ) {
@@ -249,6 +255,7 @@ function appendSpeech(
       text: spoken,
       voiceId: options.voiceId,
       language: options.language,
+      format: options.ttsFormat,
       userId: options.userId,
     }));
     return;
@@ -339,6 +346,7 @@ function buildConversationTwiml(params: {
   callSid: string;
   language: string;
   voiceId: string;
+  ttsFormat?: 'wav' | 'mp3' | 'ulaw_8khz';
   callerIdentityId: string;
   userId?: string;
   record: boolean;
@@ -377,6 +385,7 @@ function buildConversationTwiml(params: {
     appUrl: params.appUrl,
     voiceId: params.voiceId,
     language: params.language,
+    ttsFormat: params.ttsFormat,
     userId: params.userId,
   });
 
@@ -391,6 +400,7 @@ function buildForwardTwiml(params: {
   forward: string;
   language: string;
   voiceId: string;
+  ttsFormat?: 'wav' | 'mp3' | 'ulaw_8khz';
   userId?: string;
   record: boolean;
   spokenText: string;
@@ -401,6 +411,7 @@ function buildForwardTwiml(params: {
     appUrl: params.appUrl,
     voiceId: params.voiceId,
     language: params.language,
+    ttsFormat: params.ttsFormat,
     userId: params.userId,
   });
 
@@ -408,6 +419,7 @@ function buildForwardTwiml(params: {
     appUrl: params.appUrl,
     voiceId: params.voiceId,
     language: params.language,
+    ttsFormat: params.ttsFormat,
     userId: params.userId,
   });
 
@@ -432,6 +444,7 @@ function buildEndTwiml(params: {
   appUrl: string;
   language: string;
   voiceId: string;
+  ttsFormat?: 'wav' | 'mp3' | 'ulaw_8khz';
   userId?: string;
   spokenText: string;
 }): string {
@@ -440,6 +453,7 @@ function buildEndTwiml(params: {
     appUrl: params.appUrl,
     voiceId: params.voiceId,
     language: params.language,
+    ttsFormat: params.ttsFormat,
     userId: params.userId,
   });
   response.hangup();
@@ -484,6 +498,10 @@ async function handleAnswer(request: NextRequest) {
     const forward = pick('forward') || settings.forwardToNumber;
     const language = pick('language') || callerIdentity?.language || 'en-US';
     const voiceId = pick('voiceId') || callerIdentity?.voiceId || 'alice';
+    const ttsFormat: 'wav' | 'mp3' | 'ulaw_8khz' | undefined =
+      settings.ttsProvider === 'csm' && !isTwilioNativeVoice(voiceId)
+        ? 'ulaw_8khz'
+        : undefined;
     const record = parseBoolean(pick('record'), settings.recordCalls);
     const transcribe = parseBoolean(pick('transcribe'), settings.transcribeCalls);
 
@@ -493,6 +511,7 @@ async function handleAnswer(request: NextRequest) {
         language,
         voiceId,
         userId: callUserId,
+        ttsFormat,
         spokenText: 'Thanks for answering. Our team line is currently unavailable. We will call you back shortly.',
       });
 
@@ -512,7 +531,7 @@ async function handleAnswer(request: NextRequest) {
         language,
         voiceId,
         ttsAudioUrl: !isTwilioNativeVoice(voiceId)
-          ? buildTtsAudioUrl({ appUrl, text: legacyScript, voiceId, language, userId: callUserId })
+          ? buildTtsAudioUrl({ appUrl, text: legacyScript, voiceId, language, format: ttsFormat, userId: callUserId })
           : '',
       });
 
@@ -560,6 +579,7 @@ async function handleAnswer(request: NextRequest) {
           voiceId,
           callerIdentityId,
           userId: callUserId,
+          ttsFormat,
           record,
           transcribe,
           mode: 'conversation',
@@ -580,6 +600,7 @@ async function handleAnswer(request: NextRequest) {
           language,
           voiceId,
           userId: callUserId,
+          ttsFormat,
           spokenText: "No worries at all. I'll try you another time. Take care!",
         });
 
@@ -598,8 +619,9 @@ async function handleAnswer(request: NextRequest) {
         language,
         voiceId,
         callerIdentityId,
-        userId: callUserId,
-        record,
+          userId: callUserId,
+          ttsFormat,
+          record,
         transcribe,
         mode: 'conversation',
         state: conversationState,
@@ -647,6 +669,7 @@ async function handleAnswer(request: NextRequest) {
         language,
         voiceId,
         userId: callUserId,
+        ttsFormat,
         spokenText: "Understood. We will not call this number again. Thank you for your time.",
       });
 
@@ -677,6 +700,7 @@ async function handleAnswer(request: NextRequest) {
         language,
         voiceId,
         userId: callUserId,
+        ttsFormat,
         spokenText: callbackText,
       });
 
@@ -737,6 +761,7 @@ async function handleAnswer(request: NextRequest) {
         language,
         voiceId,
         userId: callUserId,
+        ttsFormat,
         record,
         spokenText: reply || 'Great, I can connect you now with our team.',
       });
@@ -758,6 +783,7 @@ async function handleAnswer(request: NextRequest) {
         language,
         voiceId,
         userId: callUserId,
+        ttsFormat,
         spokenText: reply || 'Thank you for your time today. Have a great day.',
       });
 
@@ -774,6 +800,7 @@ async function handleAnswer(request: NextRequest) {
       voiceId,
       callerIdentityId,
       userId: callUserId,
+      ttsFormat,
       record,
       transcribe,
       mode: 'conversation',

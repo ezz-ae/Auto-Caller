@@ -31,6 +31,7 @@ async function synthesize(request: NextRequest) {
       script,
       voiceId,
       language,
+      format,
       userId: userIdFromQuery,
       exp,
       sig,
