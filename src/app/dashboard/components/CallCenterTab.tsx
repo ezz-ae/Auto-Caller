@@ -249,37 +249,14 @@ export function CallCenterTab({
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-8">
-              <div className="grid gap-6 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">Voice Engine</Label>
-                  <Select value={selectedVoice} onValueChange={setSelectedVoice} disabled={isCalling}>
-                    <SelectTrigger className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {voices.map(voice => (
-                        <SelectItem key={voice.id} value={voice.id}>
-                          {voice.name} ({voice.labels?.gender || 'N/A'})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">Outreach Language</Label>
-                  <Select value={selectedLanguage} onValueChange={setSelectedLanguage} disabled={isCalling}>
-                    <SelectTrigger className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LANGUAGE_OPTIONS.map(option => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
+              <div className="rounded-xl border border-zinc-800 bg-zinc-950/30 p-4">
+                <p className="text-xs uppercase tracking-widest text-zinc-500 font-bold">Voice & Language</p>
+                <p className="mt-2 text-sm text-zinc-300">
+                  Managed by your selected agent profile. Voice selection is controlled by admin presets for quality consistency.
+                </p>
+                <p className="mt-1 text-xs text-zinc-500">
+                  Current: {selectedCallerIdentity?.name || 'No agent selected'} • {selectedCallerIdentity?.language || selectedLanguage || 'en-US'} • Voice {selectedCallerIdentity?.voiceId || selectedVoice}
+                </p>
               </div>
 
               <div className="space-y-3">
@@ -458,66 +435,20 @@ export function CallCenterTab({
             </CardContent>
           </Card>
 
-          <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden border-emerald-500/5">
-            <CardHeader className="pb-6 bg-zinc-950/50 border-b border-zinc-800/50">
+          <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-emerald-500/5">
+            <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
                 <Bot className="w-5 h-5 text-emerald-400" />
-                AI Strategy Copilot
+                Assistant-first Workflow
               </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-6 pt-8 px-8 pb-8">
-              <div className="max-h-[300px] overflow-y-auto pr-2 space-y-4 scrollbar-thin scrollbar-thumb-zinc-800">
-                {copilotMessages.length === 0 ? (
-                  <div className="text-center py-8">
-                     <p className="text-sm text-zinc-500 italic">"Ask me to generate a script or refine your campaign goal."</p>
-                  </div>
-                ) : (
-                  copilotMessages.map((msg, idx) => (
-                    <div key={idx} className={`rounded-2xl p-4 ${msg.role === 'user' ? 'bg-zinc-800/50 ml-6' : 'bg-emerald-500/5 border border-emerald-500/10 mr-6'}`}>
-                      <p className="text-[10px] uppercase tracking-widest font-bold text-zinc-500 mb-2">{msg.role === 'user' ? 'You' : 'Copilot'}</p>
-                      <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">{msg.content}</p>
-                      {msg.script && (
-                        <div className="mt-4 p-4 rounded-xl bg-zinc-950 border border-zinc-800 space-y-3 shadow-inner">
-                          <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest">Suggested Blueprint</p>
-                          <p className="text-xs text-zinc-400 leading-relaxed line-clamp-4 italic">"{msg.script}"</p>
-                          <Button
-                            size="sm"
-                            className="w-full bg-emerald-500 hover:bg-emerald-600 text-xs font-bold rounded-lg"
-                            onClick={() => {
-                              setScript(msg.script || '')
-                              toast.success('Strategy applied to blueprint')
-                            }}
-                          >
-                            Apply This Strategy
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-
-              <div className="flex gap-2">
-                <Input
-                  value={copilotInput}
-                  onChange={(e) => setCopilotInput(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !copilotLoading) {
-                      e.preventDefault()
-                      askCopilot()
-                    }
-                  }}
-                  placeholder="e.g. Help me draft an intro..."
-                  className="bg-zinc-800/50 border-zinc-700 h-11 rounded-xl text-xs placeholder:text-zinc-600 px-4"
-                />
-                <Button 
-                   onClick={askCopilot} 
-                   disabled={copilotLoading || !copilotInput.trim()}
-                   className="h-11 w-11 rounded-xl bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 flex items-center justify-center shrink-0"
-                >
-                  {copilotLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                </Button>
-              </div>
+            <CardContent className="space-y-3 text-sm text-zinc-300">
+              <p>
+                Strategy chat is now centralized in the main Assistant workspace to avoid duplicate bots and conflicting instructions.
+              </p>
+              <p className="text-zinc-500">
+                Use the Assistant tab for blueprint generation, file context, and verification. Call Center stays focused on execution.
+              </p>
             </CardContent>
           </Card>
         </div>

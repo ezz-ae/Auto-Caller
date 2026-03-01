@@ -206,6 +206,15 @@ interface AgentFormDraft {
   verificationQuestion?: string
 }
 
+interface UploadedChatFile {
+  id: string
+  name: string
+  size: number
+  kind: string
+  snippet?: string
+  importedNumbers?: number
+}
+
 interface AgentProfile {
   id: string
   name: string
@@ -352,6 +361,15 @@ const AGENT_CATALOG: AgentProfile[] = [
   },
 ]
 
+const AGENT_ADMIN_PRESETS: Record<string, { voiceId: string; language: string; gender: 'male' | 'female' | 'any'; position: string }> = {
+  sara: { voiceId: '21m00Tcm4TlvDq8ikWAM', language: 'en-US', gender: 'female', position: 'Sales Advisor' },
+  ali: { voiceId: 'ErXwobaYiN019PkySvjV', language: 'ar-SA', gender: 'male', position: 'Follow-up Specialist' },
+  maya: { voiceId: 'AZnzlk1XvdvUeBnXmlld', language: 'en-US', gender: 'female', position: 'Qualification Specialist' },
+  omar: { voiceId: 'TxGEqnHWrfWFT1GWmBXj', language: 'ar-SA', gender: 'male', position: 'Appointment Specialist' },
+  lina: { voiceId: 'EXAVITQu4vr4xnSDxMaL', language: 'en-US', gender: 'female', position: 'Retention Specialist' },
+  noah: { voiceId: 'pNInz6obpgDQGcFmaJgB', language: 'en-GB', gender: 'male', position: 'Enterprise Specialist' },
+}
+
 function normalizeGender(gender?: string): 'female' | 'male' | 'any' {
   const value = String(gender || '').trim().toLowerCase()
   if (value.includes('female')) return 'female'
@@ -486,6 +504,7 @@ export default function Dashboard() {
   const voicePreviewAudioRef = useRef<HTMLAudioElement>(null)
   const agentVoiceAudioRef = useRef<HTMLAudioElement>(null)
   const agentRecognitionRef = useRef<any>(null)
+  const agentFileInputRef = useRef<HTMLInputElement>(null)
   const csvInputRef = useRef<HTMLInputElement>(null)
   
   // UI state
@@ -504,11 +523,11 @@ export default function Dashboard() {
   const [agentMessagesByAgent, setAgentMessagesByAgent] = useState<Record<string, AgentMessage[]>>({})
   const [agentInput, setAgentInput] = useState('')
   const [agentLoading, setAgentLoading] = useState(false)
+  const [agentUploads, setAgentUploads] = useState<UploadedChatFile[]>([])
   const [voiceChatEnabled, setVoiceChatEnabled] = useState(false)
   const [liveVoiceCallEnabled, setLiveVoiceCallEnabled] = useState(false)
   const [agentListening, setAgentListening] = useState(false)
   const [agentSpeaking, setAgentSpeaking] = useState(false)
-  const [newAgentDraftNames, setNewAgentDraftNames] = useState<Record<string, string>>({})
   const [showAdvancedCallerInputs, setShowAdvancedCallerInputs] = useState(false)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
   const [teamForm, setTeamForm] = useState({ name: '', email: '', role: 'Agent' })
@@ -1466,7 +1485,7 @@ export default function Dashboard() {
     if (!action || action === 'none') return ''
     if (action === 'open_billing') return 'Billing'
     if (action === 'open_call') return 'Call Center'
-    if (action === 'open_callers') return 'Callers'
+    if (action === 'open_callers') return 'Assistant'
     if (action === 'open_settings') return 'Settings'
     return ''
   }
@@ -1475,7 +1494,7 @@ export default function Dashboard() {
     if (!action || action === 'none') return null
     if (action === 'open_billing') return 'billing'
     if (action === 'open_call') return 'call'
-    if (action === 'open_callers') return 'callers'
+    if (action === 'open_callers') return 'agents'
     if (action === 'open_settings') return 'settings'
     return null
   }
@@ -1511,12 +1530,13 @@ export default function Dashboard() {
     ],
   })
 
-  const startAgentSession = (profileId: string, customName = '') => {
+  const startAgentSession = (profileId: string) => {
     const profile = agentProfiles.find(agent => agent.id === profileId) || agentProfiles[0]
     if (!profile) return
     const now = new Date().toISOString()
     const nextAgentId = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    const safeName = customName.trim() || profile.name
+    const safeName = profile.name
+    const preset = AGENT_ADMIN_PRESETS[profile.id] || AGENT_ADMIN_PRESETS.sara
 
     const nextAgent: WorkspaceAgent = {
       id: nextAgentId,
@@ -1530,8 +1550,17 @@ export default function Dashboard() {
     setActiveAgentId(nextAgentId)
     setAgentSessionStarted(true)
     setActiveTab('agents')
-    setNewAgentDraftNames(prev => ({ ...prev, [profile.id]: '' }))
     setAgentInput('')
+    setSelectedVoice(preset.voiceId)
+    setSelectedLanguage(preset.language)
+    setIdentityForm(prev => ({
+      ...prev,
+      name: prev.name || safeName,
+      position: prev.position || preset.position,
+      gender: preset.gender,
+      language: preset.language,
+      voiceId: preset.voiceId,
+    }))
 
     setAgentMessagesByAgent(prev => {
       if (prev[nextAgentId]?.length) return prev
@@ -1658,7 +1687,7 @@ export default function Dashboard() {
     }
   }
 
-  const approveAndApplyDraft = (draft?: AgentFormDraft, verificationQuestion?: string) => {
+  const approveAndApplyDraft = async (draft?: AgentFormDraft, verificationQuestion?: string) => {
     if (!draft) return
     const summary = summarizeAgentDraft(draft)
     const prompt = verificationQuestion || draft.verificationQuestion || 'Apply these drafted values to your inputs now?'
@@ -1668,7 +1697,111 @@ export default function Dashboard() {
 
     if (!confirmed) return
     applyAgentDraftToInputs(draft)
-    toast.success('Draft applied to inputs. Please review and save.')
+
+    if (draft.callerIdentity?.name && draft.callerIdentity?.position) {
+      try {
+        const activeProfileId = activeAgentProfile?.id || 'sara'
+        const preset = AGENT_ADMIN_PRESETS[activeProfileId] || AGENT_ADMIN_PRESETS.sara
+        const res = await fetch('/api/caller-identities', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: draft.callerIdentity.name,
+            position: draft.callerIdentity.position || preset.position,
+            gender: preset.gender,
+            language: preset.language,
+            voiceId: preset.voiceId,
+            industry: draft.callerIdentity.industry || settings.industry || '',
+            mentionAi: !!draft.callerIdentity.mentionAi,
+            campaignGoal: draft.callerIdentity.campaignGoal || '',
+            script: draft.callerIdentity.script || script,
+            sayThisRules: draft.callerIdentity.sayThisRules || settings.sayThisRules || '',
+            avoidThisRules: draft.callerIdentity.avoidThisRules || settings.avoidThisRules || '',
+          }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (res.ok && data?.success && data?.identity?.id) {
+          await fetchCallerIdentities()
+          setSelectedCallerIdentityId(data.identity.id)
+          setSelectedLanguage(data.identity.language || preset.language)
+          setSelectedVoice(data.identity.voiceId || preset.voiceId)
+          toast.success('Draft applied and caller identity created.')
+          return
+        }
+      } catch {
+        // Keep form-applied behavior even if background save fails.
+      }
+    }
+
+    toast.success('Draft applied to inputs.')
+  }
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  }
+
+  const handleAgentFileUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || [])
+    if (files.length === 0) return
+    if (!activeAgentId) {
+      toast.error('Create an agent first before uploading files')
+      event.target.value = ''
+      return
+    }
+
+    const uploaded: UploadedChatFile[] = []
+    const summaries: string[] = []
+
+    for (const file of files) {
+      const isTextLike =
+        file.type.startsWith('text/') ||
+        /\.(csv|txt|json|md|log)$/i.test(file.name)
+
+      let snippet = ''
+      let importedNumbers = 0
+
+      if (isTextLike) {
+        try {
+          const rawText = await file.text()
+          snippet = rawText.replace(/\s+/g, ' ').trim().slice(0, 400)
+          const parsedNumbers = extractNumbers(rawText)
+          if (parsedNumbers.length > 0) {
+            importedNumbers = parsedNumbers.length
+            const merged = Array.from(new Set([...extractNumbers(numbers), ...parsedNumbers]))
+            setNumbers(merged.join('\n'))
+          }
+        } catch {
+          // Skip parse failure and keep file metadata only.
+        }
+      }
+
+      uploaded.push({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: file.name,
+        size: file.size,
+        kind: file.type || 'file',
+        snippet,
+        importedNumbers,
+      })
+
+      summaries.push(
+        `- ${file.name} (${formatFileSize(file.size)})${importedNumbers > 0 ? `, ${importedNumbers} numbers detected` : ''}${snippet ? `\n  Preview: ${snippet}` : ''}`
+      )
+    }
+
+    setAgentUploads(prev => [...uploaded, ...prev].slice(0, 12))
+    event.target.value = ''
+
+    const uploadPrompt = [
+      'I uploaded files for onboarding/campaign setup.',
+      'Use these files to draft inputs and ask me for confirmation before applying.',
+      '',
+      ...summaries,
+    ].join('\n')
+
+    await askAgent(uploadPrompt, liveVoiceCallEnabled || voiceChatEnabled)
   }
 
   const askAgent = async (promptOverride?: string, preferVoiceReply = false) => {
@@ -2291,8 +2424,6 @@ export default function Dashboard() {
     agentProfiles[0]
   const activeAgentName = activeWorkspaceAgent?.name || activeAgentProfile?.name || 'Sara'
   const agentMessages = activeAgentId ? (agentMessagesByAgent[activeAgentId] || []) : []
-  const isNewWorkspace = campaigns.length === 0 && callerIdentities.length === 0 && teamMembers.length === 0
-  const shouldStartWithAgent = isNewWorkspace && !agentSessionStarted
 
   const filteredRecordings = recordings.filter(recording => {
     const query = recordingSearch.trim().toLowerCase()
@@ -2677,12 +2808,8 @@ export default function Dashboard() {
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
           {([
-            { tab: 'overview', icon: LayoutDashboard, label: 'Overview', badge: null },
             { tab: 'agents', icon: Bot, label: 'Assistant', badge: null },
             { tab: 'call', icon: Phone, label: 'Call Center', badge: null },
-            { tab: 'sources', icon: Download, label: 'Lead Sources', badge: null },
-            { tab: 'callers', icon: Users, label: 'Voice Agents', badge: null },
-            { tab: 'recordings', icon: Mic, label: 'Recordings', badge: null },
             { tab: 'leads', icon: ClipboardList, label: 'Leads', badge: null },
             { tab: 'callbacks', icon: CalendarClock, label: 'Callbacks', badge: callbacksDueNow > 0 ? String(callbacksDueNow) : null },
             { tab: 'history', icon: History, label: 'History', badge: null },
@@ -2786,7 +2913,7 @@ export default function Dashboard() {
         )}
 
         <div className={`grid gap-10 ${agentSessionStarted ? 'xl:grid-cols-[420px_minmax(0,1fr)]' : ''}`}>
-          {agentSessionStarted && (
+          {agentSessionStarted && activeTab !== 'agents' && (
             <aside className="xl:sticky xl:top-24 xl:h-[calc(100vh-7rem)]">
               <Card className="h-full bg-zinc-900/90 border-zinc-800 shadow-lg shadow-black/30">
                 <CardHeader className="space-y-3 pb-4">
@@ -3000,41 +3127,6 @@ export default function Dashboard() {
           )}
 
           <div className="space-y-6 min-w-0">
-            {shouldStartWithAgent && (
-              <Card className="bg-zinc-900 border-zinc-800">
-                <CardHeader>
-                  <CardTitle className="text-xl flex items-center gap-2">
-                    <MessageSquare className="w-5 h-5 text-emerald-400" />
-                    Hire an agent
-                  </CardTitle>
-                  <CardDescription>
-                    Choose who should run your onboarding. After you start, chat stays on the left while you build campaigns on the right.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex gap-3 overflow-x-auto pb-2">
-                    {agentProfiles.map(profile => (
-                      <div key={profile.id} className="min-w-[260px] rounded-xl border border-zinc-800 bg-zinc-950/40 p-4 space-y-3">
-                        <div>
-                          <p className="text-base font-semibold text-zinc-100">{profile.name}</p>
-                          <p className="text-xs text-zinc-400">{profile.language} • {profile.style}</p>
-                        </div>
-                        <p className="text-sm text-zinc-300">{profile.expertise}</p>
-                        <p className="text-xs text-zinc-500">{profile.intro}</p>
-                        <Button type="button" className="w-full" onClick={() => startAgentSession(profile.id)}>
-                          Start with {profile.name}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-xs text-zinc-500">
-                    Available agents are fully aware of your callers, campaigns, numbers, credits, callback queue, and target blueprint.
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-
-            {!shouldStartWithAgent && (
               <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
                 {activeTab === 'overview' && nextStep && (
                   <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3 flex items-center justify-between gap-4">
@@ -3075,116 +3167,251 @@ export default function Dashboard() {
           </TabsContent>
 
           <TabsContent value="agents" className="space-y-6 animate-in fade-in-50 duration-200">
-            <Card className="bg-zinc-900 border-zinc-800">
-              <CardHeader>
-                <CardTitle className="text-xl flex items-center gap-2">
-                  <Bot className="w-5 h-5 text-emerald-400" />
-                  Agent Command Center
-                </CardTitle>
-                <CardDescription>
-                  Chat and live voice are always on the left. Use this page to trigger onboarding tasks without filling long forms.
-                </CardDescription>
+            <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
+              <CardHeader className="pb-4">
+                <div className="flex items-center justify-between gap-4">
+                  <div>
+                    <CardTitle className="text-2xl flex items-center gap-2">
+                      <Bot className="w-6 h-6 text-emerald-400" />
+                      Smart Chat Workspace
+                    </CardTitle>
+                    <CardDescription className="mt-1">
+                      One place for onboarding and execution. Chat, voice call, and file uploads.
+                    </CardDescription>
+                  </div>
+                  {activeAgentId && (
+                    <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+                      {activeAgentName}
+                    </Badge>
+                  )}
+                </div>
               </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                  {[
-                    {
-                      label: 'Create Caller Identity',
-                      prompt: 'Create my first caller identity and choose the most human voice for my language.',
-                    },
-                    {
-                      label: 'Connect Calling Setup',
-                      prompt: 'Set my forwarding number, quiet hours, and compliance settings so I can launch safely.',
-                    },
-                    {
-                      label: 'Import Leads + Schedule',
-                      prompt: 'Help me import my lead list and schedule the first campaign with the best timing.',
-                    },
-                    {
-                      label: 'Launch Readiness Check',
-                      prompt: 'Run a full launch readiness check and tell me exactly what is missing.',
-                    },
-                  ].map((item) => (
-                    <Button
-                      key={item.label}
-                      type="button"
-                      variant="secondary"
-                      className="h-auto py-4 px-4 bg-zinc-800/60 hover:bg-zinc-700/70 justify-start text-left whitespace-normal"
-                      onClick={() => void sendOnboardingPrompt(item.prompt)}
-                      disabled={agentLoading}
-                    >
-                      {item.label}
-                    </Button>
-                  ))}
-                </div>
-
-                <div className="grid gap-6 xl:grid-cols-2">
-                  <Card className="bg-zinc-950/40 border-zinc-800">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base">Your Active Agents</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      {workspaceAgents.length === 0 ? (
-                        <p className="text-sm text-zinc-500">No active agents yet. Hire one below to begin onboarding.</p>
-                      ) : (
-                        workspaceAgents.map(agent => {
-                          const profile = agentProfiles.find(item => item.id === agent.profileId)
-                          const isActive = agent.id === activeAgentId
-                          const historyCount = agentMessagesByAgent[agent.id]?.length || 0
-                          return (
-                            <button
-                              key={agent.id}
-                              type="button"
-                              onClick={() => setActiveAgentId(agent.id)}
-                              className={`w-full rounded-lg border p-3 text-left transition ${
-                                isActive
-                                  ? 'border-emerald-500/40 bg-emerald-500/10'
-                                  : 'border-zinc-800 bg-zinc-900/50 hover:border-zinc-700'
-                              }`}
-                            >
-                              <p className="text-sm font-medium text-zinc-100">{agent.name}</p>
-                              <p className="text-xs text-zinc-500 mt-1">
-                                {profile?.language || 'multi'} • {profile?.expertise || 'general'} • {historyCount} messages
-                              </p>
-                            </button>
-                          )
-                        })
-                      )}
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-zinc-950/40 border-zinc-800">
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-base">Hire Another Agent</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-3">
-                      {agentProfiles.map(profile => (
-                        <div key={profile.id} className="rounded-lg border border-zinc-800 bg-zinc-900/50 p-3 space-y-2">
-                          <div>
-                            <p className="text-sm font-medium text-zinc-100">{profile.name}</p>
-                            <p className="text-xs text-zinc-500">{profile.language} • {profile.expertise}</p>
-                          </div>
-                          <div className="flex gap-2">
-                            <Input
-                              value={newAgentDraftNames[profile.id] || ''}
-                              onChange={e => setNewAgentDraftNames((prev: Record<string, string>) => ({ ...prev, [profile.id]: e.target.value }))}
-                              placeholder={`Name for ${profile.name}`}
-                              className="bg-zinc-800 border-zinc-700"
-                            />
-                            <Button
-                              type="button"
-                              variant="secondary"
-                              className="bg-zinc-800 hover:bg-zinc-700"
-                              onClick={() => startAgentSession(profile.id, newAgentDraftNames[profile.id] || '')}
-                            >
-                              Hire
-                            </Button>
-                          </div>
-                        </div>
+              <CardContent className="space-y-4">
+                {!activeAgentId ? (
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {agentProfiles.map(profile => (
+                      <button
+                        key={profile.id}
+                        type="button"
+                        onClick={() => startAgentSession(profile.id)}
+                        className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4 text-left hover:border-emerald-500/40 transition"
+                      >
+                        <p className="text-base font-semibold text-zinc-100">{profile.name}</p>
+                        <p className="text-xs text-zinc-400 mt-1">{profile.language} • {profile.style}</p>
+                        <p className="text-sm text-zinc-300 mt-2">{profile.expertise}</p>
+                        <p className="text-xs text-zinc-500 mt-2">{profile.intro}</p>
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap gap-2">
+                      {workspaceAgents.map(agent => (
+                        <button
+                          key={agent.id}
+                          type="button"
+                          onClick={() => setActiveAgentId(agent.id)}
+                          className={`px-3 py-1.5 rounded-full text-xs border transition ${
+                            agent.id === activeAgentId
+                              ? 'border-emerald-500/40 bg-emerald-500/15 text-emerald-300'
+                              : 'border-zinc-700 bg-zinc-900/60 text-zinc-400 hover:text-zinc-200'
+                          }`}
+                        >
+                          {agent.name}
+                        </button>
                       ))}
-                    </CardContent>
-                  </Card>
-                </div>
+                    </div>
+
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/30 p-3">
+                      <p className="text-xs text-zinc-500 mb-2">Run multiple agents in parallel (same wallet)</p>
+                      <div className="flex flex-wrap gap-2">
+                        {agentProfiles.map(profile => (
+                          <Button
+                            key={`add-${profile.id}`}
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            className="bg-zinc-800 hover:bg-zinc-700 text-xs"
+                            onClick={() => startAgentSession(profile.id)}
+                            disabled={agentLoading}
+                          >
+                            + Start {profile.name}
+                          </Button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 h-[58vh] overflow-y-auto p-4 space-y-3">
+                      {agentMessages.length === 0 ? (
+                        <div className="text-sm text-zinc-500">
+                          Start by describing your business and goal. I will create and verify all setup inputs with you.
+                        </div>
+                      ) : (
+                        agentMessages.map(msg => (
+                          <div
+                            key={msg.id}
+                            className={`rounded-lg p-3 ${msg.role === 'user' ? 'bg-zinc-800/80' : 'bg-emerald-500/10 border border-emerald-500/20'}`}
+                          >
+                            <div className="flex items-center justify-between mb-1">
+                              <p className="text-xs uppercase tracking-wide text-zinc-400">{msg.role === 'user' ? 'You' : activeAgentName}</p>
+                              {msg.role === 'assistant' && (
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  className="bg-zinc-800 hover:bg-zinc-700 text-xs"
+                                  onClick={() => speakAgentMessage(msg.content)}
+                                >
+                                  Voice
+                                </Button>
+                              )}
+                            </div>
+                            <p className="text-sm text-zinc-200 whitespace-pre-wrap">{msg.content}</p>
+                            {msg.checklist && msg.checklist.length > 0 && (
+                              <ul className="mt-2 text-xs text-zinc-300 space-y-1">
+                                {msg.checklist.map((item, idx) => (
+                                  <li key={idx}>• {item}</li>
+                                ))}
+                              </ul>
+                            )}
+                            {msg.formDraft && (
+                              <div className="mt-3 rounded-md border border-emerald-500/20 bg-emerald-500/10 p-2 space-y-2">
+                                <p className="text-xs text-emerald-300 font-medium">
+                                  Draft ready for inputs. Approve to write values into your forms.
+                                </p>
+                                <div className="flex flex-wrap gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-500"
+                                    onClick={() => approveAndApplyDraft(msg.formDraft, msg.verificationQuestion)}
+                                  >
+                                    Approve & Apply
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="secondary"
+                                    className="h-7 px-2 text-xs bg-zinc-800 hover:bg-zinc-700"
+                                    onClick={() => {
+                                      const ask = msg.verificationQuestion || 'Revise this draft with these changes:'
+                                      setAgentInput(ask)
+                                    }}
+                                  >
+                                    Revise Draft
+                                  </Button>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+
+                    <input
+                      ref={agentFileInputRef}
+                      type="file"
+                      multiple
+                      accept=".csv,.txt,.json,.md,.log,text/*,application/json"
+                      onChange={handleAgentFileUpload}
+                      className="hidden"
+                    />
+
+                    {agentUploads.length > 0 && (
+                      <div className="rounded-lg border border-zinc-800 bg-zinc-950/30 p-2">
+                        <p className="text-[11px] text-zinc-500 mb-2">Recent uploads</p>
+                        <div className="flex flex-wrap gap-2">
+                          {agentUploads.slice(0, 6).map(file => (
+                            <span key={file.id} className="text-xs px-2 py-1 rounded-md border border-zinc-700 bg-zinc-900/70 text-zinc-300">
+                              {file.name} ({formatFileSize(file.size)})
+                              {file.importedNumbers ? ` • ${file.importedNumbers} leads` : ''}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant={voiceChatEnabled ? 'default' : 'secondary'}
+                        className={voiceChatEnabled ? '' : 'bg-zinc-800 hover:bg-zinc-700'}
+                        onClick={() => {
+                          if (liveVoiceCallEnabled) {
+                            toast.error('End Live Call first to disable voice mode')
+                            return
+                          }
+                          const next = !voiceChatEnabled
+                          setVoiceChatEnabled(next)
+                          if (!next) {
+                            stopAgentListening()
+                            stopAgentVoicePlayback()
+                          }
+                        }}
+                      >
+                        <Volume2 className="w-4 h-4 mr-2" />
+                        {voiceChatEnabled ? 'Voice On' : 'Voice Off'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className={agentListening ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-zinc-800 hover:bg-zinc-700'}
+                        onClick={agentListening ? stopAgentListening : startAgentListening}
+                        disabled={agentLoading || liveVoiceCallEnabled}
+                      >
+                        {agentListening ? <Square className="w-4 h-4 mr-2" /> : <Mic className="w-4 h-4 mr-2" />}
+                        {agentListening ? 'Listening…' : 'Talk'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={liveVoiceCallEnabled ? 'default' : 'secondary'}
+                        className={liveVoiceCallEnabled ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-zinc-800 hover:bg-zinc-700'}
+                        onClick={toggleLiveVoiceCall}
+                        disabled={agentLoading}
+                      >
+                        {liveVoiceCallEnabled ? <Square className="w-4 h-4 mr-2" /> : <Phone className="w-4 h-4 mr-2" />}
+                        {liveVoiceCallEnabled ? 'End Live' : 'Start Live'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className="bg-zinc-800 hover:bg-zinc-700"
+                        onClick={() => agentFileInputRef.current?.click()}
+                        disabled={agentLoading}
+                      >
+                        <Upload className="w-4 h-4 mr-2" />
+                        Upload Files
+                      </Button>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Textarea
+                        value={agentInput}
+                        onChange={(e) => setAgentInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && (e.metaKey || e.ctrlKey) && !agentLoading) {
+                            e.preventDefault()
+                            void askAgent()
+                          }
+                        }}
+                        placeholder={`Tell ${activeAgentName} what you need. Press Cmd/Ctrl + Enter to send.`}
+                        className="min-h-[120px] bg-zinc-800 border-zinc-700 text-base"
+                      />
+                      <div className="flex items-center justify-between">
+                        <p className="text-[11px] text-zinc-500">
+                          {liveVoiceCallEnabled
+                            ? 'Live call mode active. The assistant keeps listening after each reply.'
+                            : 'You can type, upload files, or talk by voice.'}
+                          {agentSpeaking ? ' Replying now…' : agentListening ? ' Listening…' : ''}
+                        </p>
+                        <Button onClick={() => void askAgent()} disabled={agentLoading || !agentInput.trim()}>
+                          {agentLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
+                          Send
+                        </Button>
+                      </div>
+                    </div>
+                  </>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -3371,7 +3598,6 @@ export default function Dashboard() {
               </Button>
 	          </TabsContent>
               </Tabs>
-            )}
           </div>
         </div>
         </main>
