@@ -473,6 +473,7 @@ export default function Dashboard() {
   const [agentInput, setAgentInput] = useState('')
   const [agentLoading, setAgentLoading] = useState(false)
   const [voiceChatEnabled, setVoiceChatEnabled] = useState(false)
+  const [liveVoiceCallEnabled, setLiveVoiceCallEnabled] = useState(false)
   const [agentListening, setAgentListening] = useState(false)
   const [agentSpeaking, setAgentSpeaking] = useState(false)
   const [newAgentDraftNames, setNewAgentDraftNames] = useState<Record<string, string>>({})
@@ -496,6 +497,7 @@ export default function Dashboard() {
   const [syncingGoogleDrive, setSyncingGoogleDrive] = useState(false)
   const [loadingLeadInbox, setLoadingLeadInbox] = useState(false)
   const initRef = useRef(false)
+  const liveResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fetchCampaigns = useCallback(async () => {
     try {
@@ -988,15 +990,20 @@ export default function Dashboard() {
   useEffect(() => {
     if (workspaceAgents.length === 0) {
       if (activeAgentId) setActiveAgentId('')
+      if (liveVoiceCallEnabled) {
+        setLiveVoiceCallEnabled(false)
+        setVoiceChatEnabled(false)
+      }
       return
     }
     if (!activeAgentId || !workspaceAgents.some(agent => agent.id === activeAgentId)) {
       setActiveAgentId(workspaceAgents[0].id)
     }
-  }, [workspaceAgents, activeAgentId])
+  }, [workspaceAgents, activeAgentId, liveVoiceCallEnabled])
 
   useEffect(() => {
     return () => {
+      clearLiveResumeTimer()
       if (agentRecognitionRef.current) {
         try {
           agentRecognitionRef.current.stop()
@@ -1343,7 +1350,15 @@ export default function Dashboard() {
     }
   }
 
+  const clearLiveResumeTimer = () => {
+    if (liveResumeTimerRef.current) {
+      clearTimeout(liveResumeTimerRef.current)
+      liveResumeTimerRef.current = null
+    }
+  }
+
   const stopAgentVoicePlayback = () => {
+    clearLiveResumeTimer()
     if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
       window.speechSynthesis.cancel()
     }
@@ -1355,10 +1370,28 @@ export default function Dashboard() {
     setAgentSpeaking(false)
   }
 
+  const maybeResumeLiveListening = (delayMs = 450) => {
+    if (!liveVoiceCallEnabled) return
+    if (agentLoading || agentListening || agentSpeaking) return
+    if (!activeAgentId) return
+    clearLiveResumeTimer()
+    liveResumeTimerRef.current = setTimeout(() => {
+      liveResumeTimerRef.current = null
+      if (!liveVoiceCallEnabled || agentLoading || agentListening || agentSpeaking || !activeAgentId) return
+      startAgentListening()
+    }, delayMs)
+  }
+
+  const handleAgentVoicePlaybackEnded = () => {
+    setAgentSpeaking(false)
+    maybeResumeLiveListening()
+  }
+
   const speakAgentMessage = async (text: string) => {
     const spoken = text.trim()
     if (!spoken) return
 
+    stopAgentListening()
     stopAgentVoicePlayback()
 
     const selectedVoiceId = selectedCallerIdentity?.voiceId || selectedVoice
@@ -1386,8 +1419,14 @@ export default function Dashboard() {
     utterance.pitch = 1
     utterance.lang = selectedVoiceLanguage
     utterance.onstart = () => setAgentSpeaking(true)
-    utterance.onend = () => setAgentSpeaking(false)
-    utterance.onerror = () => setAgentSpeaking(false)
+    utterance.onend = () => {
+      setAgentSpeaking(false)
+      maybeResumeLiveListening()
+    }
+    utterance.onerror = () => {
+      setAgentSpeaking(false)
+      maybeResumeLiveListening()
+    }
     window.speechSynthesis.speak(utterance)
   }
 
@@ -1477,6 +1516,7 @@ export default function Dashboard() {
   }
 
   const stopAgentListening = () => {
+    clearLiveResumeTimer()
     const recognition = agentRecognitionRef.current
     if (recognition) {
       try {
@@ -1512,6 +1552,7 @@ export default function Dashboard() {
     )))
     setAgentInput('')
     setAgentLoading(true)
+    let repliedInVoice = false
 
     try {
       const selectedIdentity = callerIdentities.find(item => item.id === selectedCallerIdentityId)
@@ -1573,7 +1614,8 @@ export default function Dashboard() {
         agent.id === activeAgentId ? { ...agent, updatedAt: new Date().toISOString() } : agent
       )))
 
-      if (voiceChatEnabled || preferVoiceReply) {
+      if (voiceChatEnabled || preferVoiceReply || liveVoiceCallEnabled) {
+        repliedInVoice = true
         void speakAgentMessage(assistantMessage.content)
       }
 
@@ -1586,6 +1628,9 @@ export default function Dashboard() {
       toast.error('Agent is unavailable')
     } finally {
       setAgentLoading(false)
+      if (liveVoiceCallEnabled && !repliedInVoice) {
+        maybeResumeLiveListening()
+      }
     }
   }
 
@@ -1595,7 +1640,7 @@ export default function Dashboard() {
       setActiveTab('agents')
       return
     }
-    if (agentLoading) return
+    if (agentLoading || agentSpeaking) return
 
     const Recognition = getBrowserSpeechRecognition()
     if (!Recognition) {
@@ -1626,10 +1671,16 @@ export default function Dashboard() {
       if (errorCode !== 'no-speech' && errorCode !== 'aborted') {
         toast.error('Voice input failed')
       }
+      if (liveVoiceCallEnabled && errorCode !== 'aborted') {
+        maybeResumeLiveListening(800)
+      }
     }
     recognition.onend = () => {
       setAgentListening(false)
       agentRecognitionRef.current = null
+      if (liveVoiceCallEnabled && !agentLoading && !agentSpeaking) {
+        maybeResumeLiveListening(550)
+      }
     }
 
     try {
@@ -1639,6 +1690,29 @@ export default function Dashboard() {
       stopAgentListening()
       toast.error('Could not start microphone capture')
     }
+  }
+
+  const toggleLiveVoiceCall = () => {
+    if (!activeAgentId) {
+      toast.error('Create an agent first from Hire an agent or Agents tab')
+      setActiveTab('agents')
+      return
+    }
+
+    const next = !liveVoiceCallEnabled
+    setLiveVoiceCallEnabled(next)
+    if (next) {
+      setVoiceChatEnabled(true)
+      stopAgentVoicePlayback()
+      stopAgentListening()
+      maybeResumeLiveListening(200)
+      toast.success('Live voice call started')
+      return
+    }
+
+    stopAgentListening()
+    stopAgentVoicePlayback()
+    toast.success('Live voice call ended')
   }
 
   // Start calling
@@ -2384,7 +2458,7 @@ export default function Dashboard() {
       {/* Hidden audio elements */}
       <audio ref={audioRef} onEnded={() => setPlayingRecording(null)} />
       <audio ref={voicePreviewAudioRef} onEnded={() => setPreviewingVoice(null)} />
-      <audio ref={agentVoiceAudioRef} onEnded={() => setAgentSpeaking(false)} onPause={() => setAgentSpeaking(false)} />
+      <audio ref={agentVoiceAudioRef} onEnded={handleAgentVoicePlaybackEnded} onPause={handleAgentVoicePlaybackEnded} />
 
       {/* Sidebar */}
       <aside className="fixed left-0 top-0 h-screen w-60 border-r border-zinc-800/70 bg-zinc-900/60 backdrop-blur-xl flex flex-col z-30 overflow-hidden">
@@ -2622,6 +2696,10 @@ export default function Dashboard() {
                         variant={voiceChatEnabled ? 'default' : 'secondary'}
                         className={voiceChatEnabled ? '' : 'bg-zinc-800 hover:bg-zinc-700'}
                         onClick={() => {
+                          if (liveVoiceCallEnabled) {
+                            toast.error('End Live Call first to disable voice mode')
+                            return
+                          }
                           const next = !voiceChatEnabled
                           setVoiceChatEnabled(next)
                           if (!next) {
@@ -2639,10 +2717,20 @@ export default function Dashboard() {
                         variant="secondary"
                         className={agentListening ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-zinc-800 hover:bg-zinc-700'}
                         onClick={agentListening ? stopAgentListening : startAgentListening}
-                        disabled={!activeAgentId || agentLoading}
+                        disabled={!activeAgentId || agentLoading || liveVoiceCallEnabled}
                       >
                         {agentListening ? <Square className="w-4 h-4 mr-2" /> : <Mic className="w-4 h-4 mr-2" />}
                         {agentListening ? 'Listening…' : 'Talk'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={liveVoiceCallEnabled ? 'default' : 'secondary'}
+                        className={liveVoiceCallEnabled ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-zinc-800 hover:bg-zinc-700'}
+                        onClick={toggleLiveVoiceCall}
+                        disabled={!activeAgentId || agentLoading}
+                      >
+                        {liveVoiceCallEnabled ? <Square className="w-4 h-4 mr-2" /> : <Phone className="w-4 h-4 mr-2" />}
+                        {liveVoiceCallEnabled ? 'End Live' : 'Start Live'}
                       </Button>
                     </div>
                     <div className="flex gap-2">
@@ -2664,8 +2752,10 @@ export default function Dashboard() {
                     </Button>
                   </div>
                     <p className="text-[11px] text-zinc-500">
-                      Voice mode: press Talk, speak naturally, and the agent replies back in voice using your selected caller voice.
-                      {agentSpeaking ? ' Replying now…' : ''}
+                      {liveVoiceCallEnabled
+                        ? 'Live call mode is active: speak naturally, wait for reply, and the mic re-opens automatically.'
+                        : 'Voice mode: press Talk, speak naturally, and the agent replies back in voice using your selected caller voice.'}
+                      {agentSpeaking ? ' Replying now…' : agentListening ? ' Listening…' : ''}
                     </p>
                   </div>
                 </CardContent>
