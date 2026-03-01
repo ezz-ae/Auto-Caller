@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
 import twilio from 'twilio';
 import { v4 as uuidv4 } from 'uuid';
-import { getCampaign, getSettings, saveCampaign, updateCampaignResultByCallSid } from '@/lib/store';
+import { findCampaignResultByCallSid, getCampaign, getSettings, saveCampaign, updateCampaignResultByCallSid } from '@/lib/store';
 import { getCallerIdentity } from '@/lib/caller-identity-store';
 import { generateConversationDecision, ConversationTurn } from '@/lib/conversation-agent';
 import { generateCallTwiML, isTwilioNativeVoice } from '@/lib/twilio';
 import { resolvePublicAppUrl } from '@/lib/public-app-url';
 import { createSignedTtsParams } from '@/lib/tts-auth';
 import { formDataToParams, isValidTwilioWebhook } from '@/lib/twilio-webhook-auth';
+import { addSuppressionNumber } from '@/lib/compliance-store';
+import { detectOptOutRequest, getQuietHoursDecision, resolveLeadTimeZone } from '@/lib/compliance';
 
 interface ConversationState {
   turn: number;
@@ -70,7 +72,7 @@ async function scheduleFollowUpCampaign(payload: {
   record: boolean;
   transcribe: boolean;
 }): Promise<{ callbackAt: Date; campaignId?: string; phoneNumber?: string }> {
-  const callbackAt = new Date(Date.now() + payload.callbackDelayMs);
+  let callbackAt = new Date(Date.now() + payload.callbackDelayMs);
   const patch: Parameters<typeof updateCampaignResultByCallSid>[1] = {
     leadRequest: payload.callbackReason,
     callComment: payload.callbackReason,
@@ -89,6 +91,12 @@ async function scheduleFollowUpCampaign(payload: {
   const targetNumber = parentResult?.phoneNumber;
   if (!parentCampaign || !targetNumber) {
     return { callbackAt };
+  }
+
+  const leadTimeZone = resolveLeadTimeZone(parentResult?.leadTimezone);
+  const quietHours = getQuietHoursDecision({ timeZone: leadTimeZone, date: callbackAt });
+  if (!quietHours.allowed && quietHours.nextAllowedAt) {
+    callbackAt = quietHours.nextAllowedAt;
   }
 
   const followUpCampaignId = uuidv4();
@@ -114,6 +122,7 @@ async function scheduleFollowUpCampaign(payload: {
         timestamp: new Date(),
         userComment: parentResult.userComment,
         targetComment: parentResult.targetComment,
+        leadTimezone: leadTimeZone,
         callComment: `Auto follow-up scheduled from ${payload.callSid}`,
         parentCallSid: payload.callSid,
       },
@@ -128,7 +137,7 @@ async function scheduleFollowUpCampaign(payload: {
   await updateCampaignResultByCallSid(payload.callSid, {
     followUpCampaignId: followUpCampaignId,
     followUpStatus: 'scheduled',
-    callComment: `${payload.callbackReason}. Auto callback scheduled.`,
+    callComment: `${payload.callbackReason}. Auto callback scheduled (${leadTimeZone}).`,
   });
 
   return {
@@ -609,6 +618,40 @@ async function handleAnswer(request: NextRequest) {
       await updateCampaignResultByCallSid(callSid, {
         leadSummary: speechResult,
         callComment: 'Lead responded',
+      });
+    }
+
+    const optOut = detectOptOutRequest(speechResult);
+    if (optOut.matched && callSid) {
+      const matched = await findCampaignResultByCallSid(callSid);
+      const suppressionUserId = matched?.campaign.userId || callUserId;
+      const suppressionNumber = matched?.result.phoneNumber || '';
+      if (suppressionNumber) {
+        await addSuppressionNumber({
+          userId: suppressionUserId,
+          phoneNumber: suppressionNumber,
+          reason: `Lead requested opt-out (${optOut.phrase || 'do not call'})`,
+          source: 'call_opt_out',
+        });
+      }
+
+      await updateCampaignResultByCallSid(callSid, {
+        leadRequest: `Lead opted out (${optOut.phrase || 'do not call'})`,
+        callComment: 'Lead opted out. Number added to suppression list.',
+        followUpRequested: false,
+        followUpStatus: 'cancelled',
+      });
+
+      const twiml = buildEndTwiml({
+        appUrl,
+        language,
+        voiceId,
+        userId: callUserId,
+        spokenText: "Understood. We will not call this number again. Thank you for your time.",
+      });
+
+      return new NextResponse(twiml, {
+        headers: { 'Content-Type': 'application/xml' },
       });
     }
 

@@ -40,6 +40,7 @@ export interface CallResult {
   error?: string;
   userComment?: string;
   targetComment?: string;
+  leadTimezone?: string;
   callComment?: string;
   leadSummary?: string;
   leadRequest?: string;

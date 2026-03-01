@@ -14,17 +14,18 @@ function normalizePhoneKey(raw: string): string {
 
 function parseLeadNotes(
   input: unknown
-): Record<string, { userComment?: string; targetComment?: string }> {
+): Record<string, { userComment?: string; targetComment?: string; leadTimezone?: string }> {
   if (!input) return {};
 
   if (typeof input === 'object' && !Array.isArray(input)) {
-    const map: Record<string, { userComment?: string; targetComment?: string }> = {};
+    const map: Record<string, { userComment?: string; targetComment?: string; leadTimezone?: string }> = {};
     for (const [key, value] of Object.entries(input as Record<string, any>)) {
       const normalized = normalizePhoneKey(key);
       if (!normalized) continue;
       map[normalized] = {
         userComment: String(value?.userComment || '').trim() || undefined,
         targetComment: String(value?.targetComment || '').trim() || undefined,
+        leadTimezone: String(value?.leadTimezone || '').trim() || undefined,
       };
     }
     return map;
@@ -32,19 +33,21 @@ function parseLeadNotes(
 
   if (typeof input !== 'string') return {};
 
-  const map: Record<string, { userComment?: string; targetComment?: string }> = {};
+  const map: Record<string, { userComment?: string; targetComment?: string; leadTimezone?: string }> = {};
   const lines = input
     .split('\n')
     .map(line => line.trim())
     .filter(Boolean);
 
   for (const line of lines) {
-    const [rawNumber, rawUserComment, rawTargetComment] = line.split('|').map(part => String(part || '').trim());
+    const [rawNumber, rawUserComment, rawTargetComment, rawLeadTimezone] =
+      line.split('|').map(part => String(part || '').trim());
     const normalized = normalizePhoneKey(rawNumber);
     if (!normalized) continue;
     map[normalized] = {
       userComment: rawUserComment || undefined,
       targetComment: rawTargetComment || undefined,
+      leadTimezone: rawLeadTimezone || undefined,
     };
   }
 
@@ -177,6 +180,7 @@ export async function POST(request: NextRequest) {
           timestamp: new Date(),
           userComment: note.userComment,
           targetComment: note.targetComment,
+          leadTimezone: note.leadTimezone,
           callComment: 'Queued for first attempt',
         };
       }),

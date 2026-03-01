@@ -4,9 +4,64 @@ import { getCampaign, getSettings, saveCampaign, updateCampaignResult, updateCre
 import { makeCall } from '@/lib/twilio';
 import { Campaign, CallResult } from '@/lib/types';
 import { resolvePublicAppUrl } from '@/lib/public-app-url';
+import { getQuietHoursDecision, resolveLeadTimeZone } from '@/lib/compliance';
+import { getSuppressionForNumber } from '@/lib/compliance-store';
 
 function normalizePhoneKey(raw: string): string {
   return String(raw || '').replace(/[^\d+]/g, '');
+}
+
+async function ensureQuietHoursFollowUpCampaign(params: {
+  parent: Campaign;
+  phoneNumber: string;
+  leadTimezone?: string;
+  nextAllowedAt?: Date;
+  existingFollowUpCampaignId?: string;
+  callComment: string;
+}): Promise<string | undefined> {
+  if (!params.nextAllowedAt) return undefined;
+
+  const existingFollowUpCampaignId = String(params.existingFollowUpCampaignId || '').trim();
+  if (existingFollowUpCampaignId) {
+    const existing = await getCampaign(existingFollowUpCampaignId, params.parent.userId);
+    if (existing && (existing.status === 'scheduled' || existing.status === 'running' || existing.status === 'pending')) {
+      return existing.id;
+    }
+  }
+
+  const followUpCampaignId = uuidv4();
+  const followUpCampaign: Campaign = {
+    id: followUpCampaignId,
+    userId: params.parent.userId,
+    name: `${params.parent.name} · Quiet-Hours Follow-up`,
+    status: 'scheduled',
+    voiceId: params.parent.voiceId,
+    language: params.parent.language,
+    callerIdentityId: params.parent.callerIdentityId,
+    callerIdentityName: params.parent.callerIdentityName,
+    callerPosition: params.parent.callerPosition,
+    script: params.parent.script,
+    numbers: [params.phoneNumber],
+    currentIndex: 0,
+    results: [
+      {
+        id: uuidv4(),
+        campaignId: followUpCampaignId,
+        phoneNumber: params.phoneNumber,
+        status: 'pending',
+        timestamp: new Date(),
+        leadTimezone: params.leadTimezone,
+        callComment: params.callComment,
+      },
+    ],
+    createdAt: new Date(),
+    scheduledAt: params.nextAllowedAt,
+    recordCalls: params.parent.recordCalls,
+    transcribeCalls: params.parent.transcribeCalls,
+  };
+
+  await saveCampaign(followUpCampaign);
+  return followUpCampaignId;
 }
 
 export async function runCampaign(campaign: Campaign): Promise<void> {
@@ -41,17 +96,61 @@ export async function runCampaign(campaign: Campaign): Promise<void> {
       id: existingResult?.id || uuidv4(),
       campaignId: campaign.id,
       phoneNumber: number,
-      status: 'calling',
+      status: 'pending',
       timestamp: new Date(),
       userComment: existingResult?.userComment,
       targetComment: existingResult?.targetComment,
-      callComment: existingResult?.callComment || 'Dialing lead',
+      leadTimezone: existingResult?.leadTimezone,
+      callComment: existingResult?.callComment || 'Queued for compliance checks',
       followUpRequested: existingResult?.followUpRequested,
       followUpAt: existingResult?.followUpAt,
       followUpStatus: existingResult?.followUpStatus,
       followUpCampaignId: existingResult?.followUpCampaignId,
     };
 
+    const suppression = await getSuppressionForNumber(campaign.userId, number);
+    if (suppression) {
+      result.status = 'failed';
+      result.error = 'Suppressed (Do Not Call / Opt-out)';
+      result.callComment = `Skipped by suppression list: ${suppression.reason || 'Do Not Call'}`;
+      result.leadRequest = suppression.reason || 'Suppressed by compliance';
+      result.followUpRequested = false;
+      result.followUpStatus = 'cancelled';
+      await updateCampaignResult(campaign.id, result);
+      continue;
+    }
+
+    const leadTimezone = resolveLeadTimeZone(result.leadTimezone);
+    result.leadTimezone = leadTimezone;
+    const quietHours = getQuietHoursDecision({ timeZone: leadTimezone });
+    if (!quietHours.allowed) {
+      const nextAllowedAt = quietHours.nextAllowedAt;
+      const callComment =
+        `Deferred by quiet-hours policy (${quietHours.startHour}:00-${quietHours.endHour}:00 ${leadTimezone}).`;
+
+      const followUpCampaignId = await ensureQuietHoursFollowUpCampaign({
+        parent: currentCampaign,
+        phoneNumber: number,
+        leadTimezone,
+        nextAllowedAt,
+        existingFollowUpCampaignId: result.followUpCampaignId,
+        callComment,
+      });
+
+      result.status = 'pending';
+      result.callComment = nextAllowedAt
+        ? `${callComment} Auto-rescheduled for ${nextAllowedAt.toISOString()}.`
+        : callComment;
+      result.followUpRequested = true;
+      result.followUpStatus = 'scheduled';
+      result.followUpAt = nextAllowedAt;
+      result.followUpCampaignId = followUpCampaignId;
+      await updateCampaignResult(campaign.id, result);
+      continue;
+    }
+
+    result.status = 'calling';
+    result.callComment = 'Dialing lead';
     await updateCampaignResult(campaign.id, result);
 
     try {

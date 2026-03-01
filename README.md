@@ -18,8 +18,12 @@ Production-ready outbound AI calling platform with:
 - Number upload flow with direct caller assignment + optional schedule in `Call Center`
 - Landing-page `Try Live AI Call Demo` form with consent gate, cooldown, and IP rate limits
 - Target blueprint-driven calling (goal, audience, offer, qualification, CTA) instead of fixed script reading
-- Lead notes support (`number | user comment | target comment`) attached to per-call results
+- Lead notes support (`number | user comment | target comment | IANA timezone`) attached to per-call results
 - Auto callback scheduling when lead says “call me later” (server-side scheduled follow-up campaign)
+- Compliance enforcement in dispatch:
+  - automatic opt-out suppression from live conversation
+  - Do-Not-Call suppression check before dialing
+  - quiet-hours defer + auto follow-up scheduling (default call window 08:00-21:00 lead local time)
 - Lead intelligence timeline workspace (per-number history, notes, outcomes, and follow-up context)
 - Callback queue workspace (scheduled/completed/cancelled tasks with one-click load back to Call Center)
 - Daily operations reporting (calls, connection metrics, callback performance, AI recommendations)
@@ -172,6 +176,8 @@ Authentication modes:
 - `AUTH_MODE=legacy`: single shared login via `APP_ACCESS_USERNAME` / `APP_ACCESS_PASSWORD`.
 - `ALLOW_LEGACY_AUTH=false` (recommended): blocks shared legacy cookie fallback when using `AUTH_MODE=accounts`.
 - `APP_SESSION_SECRET`: strong random secret for signing account session cookies.
+- `CALL_WINDOW_START_HOUR` / `CALL_WINDOW_END_HOUR` (optional, defaults `8` / `21`)
+- `CALL_COMPLIANCE_DEFAULT_TIMEZONE` (optional, defaults `America/New_York`)
 - Remember device:
   - checked: persistent auth cookie (30 days)
   - unchecked: session cookie (expires when browser session ends)
@@ -242,6 +248,11 @@ Landing page demo call:
 - Abuse controls:
   - IP window limit: `DEMO_CALL_MAX_PER_IP_15M` (default 5)
   - per-phone cooldown: 24 hours (built-in)
+
+Suppression list API (account-protected):
+- `GET /api/compliance/suppressions`
+- `POST /api/compliance/suppressions` body: `{ "phoneNumber": "+15551234567", "reason": "Requested do not call" }`
+- `DELETE /api/compliance/suppressions?phoneNumber=+15551234567`
 
 ## 7. Useful Commands
 
