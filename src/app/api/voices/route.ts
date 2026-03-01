@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
         category: v.category,
         labels: v.labels,
         language: inferLanguage(v.labels),
-        source: 'high-quality',
+        source: 'elevenlabs',
         previewUrl: v.preview_url,
       }))
       .sort((a, b) => qualityScore(b) - qualityScore(a));

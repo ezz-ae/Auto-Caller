@@ -152,7 +152,7 @@ export function VoiceAgentsTab({
                 <SelectContent>
                   {filteredIdentityVoices.map(voice => (
                     <SelectItem key={voice.id} value={voice.id}>
-                      {voice.name} ({voice.labels?.gender || 'N/A'}) • {voice.language || voice.labels?.language || 'multi'} {voice.source === 'elevenlabs' ? '• Natural' : ''}
+                      {voice.name} ({voice.labels?.gender || 'N/A'}) • {voice.language || voice.labels?.language || 'multi'} {voice.source === 'elevenlabs' || voice.source === 'high-quality' ? '• Natural' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

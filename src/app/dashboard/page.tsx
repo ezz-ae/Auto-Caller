@@ -331,6 +331,11 @@ function languageBase(value?: string): string {
   return String(value || '').trim().toLowerCase().split('-')[0] || ''
 }
 
+function isNaturalVoice(voice?: Voice | null): boolean {
+  if (!voice) return false
+  return voice.source === 'elevenlabs' || voice.source === 'high-quality'
+}
+
 function scoreVoiceForIdentity(voice: Voice, targetGender: 'female' | 'male' | 'any', targetLanguage: string): number {
   const voiceGender = normalizeGender(voice.labels?.gender)
   const voiceLanguage = String(voice.language || voice.labels?.language || '').trim().toLowerCase()
@@ -340,7 +345,7 @@ function scoreVoiceForIdentity(voice: Voice, targetGender: 'female' | 'male' | '
 
   let score = 0
 
-  if (voice.source === 'elevenlabs') score += 120
+  if (isNaturalVoice(voice)) score += 120
   if (voice.category === 'premade') score += 25
 
   if (targetGender === 'any') {
@@ -447,6 +452,8 @@ export default function Dashboard() {
   const [recordingSearch, setRecordingSearch] = useState('')
   const audioRef = useRef<HTMLAudioElement>(null)
   const voicePreviewAudioRef = useRef<HTMLAudioElement>(null)
+  const agentVoiceAudioRef = useRef<HTMLAudioElement>(null)
+  const agentRecognitionRef = useRef<any>(null)
   const csvInputRef = useRef<HTMLInputElement>(null)
   
   // UI state
@@ -465,6 +472,9 @@ export default function Dashboard() {
   const [agentMessagesByAgent, setAgentMessagesByAgent] = useState<Record<string, AgentMessage[]>>({})
   const [agentInput, setAgentInput] = useState('')
   const [agentLoading, setAgentLoading] = useState(false)
+  const [voiceChatEnabled, setVoiceChatEnabled] = useState(false)
+  const [agentListening, setAgentListening] = useState(false)
+  const [agentSpeaking, setAgentSpeaking] = useState(false)
   const [newAgentDraftNames, setNewAgentDraftNames] = useState<Record<string, string>>({})
   const [showAdvancedCallerInputs, setShowAdvancedCallerInputs] = useState(false)
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([])
@@ -636,7 +646,7 @@ export default function Dashboard() {
   )
 
   const identityVoicePool = useMemo(() => {
-    const elevenVoices = voices.filter(voice => voice.source === 'elevenlabs')
+    const elevenVoices = voices.filter(voice => isNaturalVoice(voice))
     return elevenVoices.length > 0 ? elevenVoices : voices
   }, [voices])
 
@@ -815,7 +825,7 @@ export default function Dashboard() {
       return
     }
 
-    if (voice.source !== 'elevenlabs') {
+    if (!isNaturalVoice(voice)) {
                         toast.error('Preview is available for high-quality natural voices. Choose a natural voice for testing.')
     }
 
@@ -984,6 +994,21 @@ export default function Dashboard() {
       setActiveAgentId(workspaceAgents[0].id)
     }
   }, [workspaceAgents, activeAgentId])
+
+  useEffect(() => {
+    return () => {
+      if (agentRecognitionRef.current) {
+        try {
+          agentRecognitionRef.current.stop()
+        } catch {
+          // no-op
+        }
+      }
+      if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+        window.speechSynthesis.cancel()
+      }
+    }
+  }, [])
 
   useEffect(() => {
     if (initRef.current) return
@@ -1318,15 +1343,51 @@ export default function Dashboard() {
     }
   }
 
-  const speakAgentMessage = (text: string) => {
+  const stopAgentVoicePlayback = () => {
+    if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+      window.speechSynthesis.cancel()
+    }
+    if (agentVoiceAudioRef.current) {
+      agentVoiceAudioRef.current.pause()
+      agentVoiceAudioRef.current.currentTime = 0
+      agentVoiceAudioRef.current.src = ''
+    }
+    setAgentSpeaking(false)
+  }
+
+  const speakAgentMessage = async (text: string) => {
+    const spoken = text.trim()
+    if (!spoken) return
+
+    stopAgentVoicePlayback()
+
+    const selectedVoiceId = selectedCallerIdentity?.voiceId || selectedVoice
+    const selectedVoiceLanguage = selectedCallerIdentity?.language || selectedLanguage || 'en-US'
+
+    if (selectedVoiceId && agentVoiceAudioRef.current) {
+      try {
+        const url = `/api/calls/tts?script=${encodeURIComponent(spoken)}&voiceId=${encodeURIComponent(selectedVoiceId)}&language=${encodeURIComponent(selectedVoiceLanguage)}`
+        setAgentSpeaking(true)
+        agentVoiceAudioRef.current.src = url
+        await agentVoiceAudioRef.current.play()
+        return
+      } catch {
+        setAgentSpeaking(false)
+      }
+    }
+
     if (typeof window === 'undefined' || !('speechSynthesis' in window)) {
       toast.error('Voice playback is not supported in this browser')
       return
     }
-    window.speechSynthesis.cancel()
-    const utterance = new SpeechSynthesisUtterance(text)
+
+    const utterance = new SpeechSynthesisUtterance(spoken)
     utterance.rate = 1
     utterance.pitch = 1
+    utterance.lang = selectedVoiceLanguage
+    utterance.onstart = () => setAgentSpeaking(true)
+    utterance.onend = () => setAgentSpeaking(false)
+    utterance.onerror = () => setAgentSpeaking(false)
     window.speechSynthesis.speak(utterance)
   }
 
@@ -1410,14 +1471,35 @@ export default function Dashboard() {
     })
   }
 
-  const askAgent = async () => {
+  const getBrowserSpeechRecognition = () => {
+    if (typeof window === 'undefined') return null
+    return ((window as any).SpeechRecognition || (window as any).webkitSpeechRecognition || null) as any
+  }
+
+  const stopAgentListening = () => {
+    const recognition = agentRecognitionRef.current
+    if (recognition) {
+      try {
+        recognition.onresult = null
+        recognition.onerror = null
+        recognition.onend = null
+        recognition.stop()
+      } catch {
+        // no-op
+      }
+    }
+    agentRecognitionRef.current = null
+    setAgentListening(false)
+  }
+
+  const askAgent = async (promptOverride?: string, preferVoiceReply = false) => {
     if (!activeAgentId) {
       toast.error('Create an agent first from Hire an agent or Agents tab')
       setActiveTab('agents')
       return
     }
 
-    const prompt = agentInput.trim()
+    const prompt = String(promptOverride ?? agentInput).trim()
     if (!prompt) return
 
     const messageId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -1491,6 +1573,10 @@ export default function Dashboard() {
         agent.id === activeAgentId ? { ...agent, updatedAt: new Date().toISOString() } : agent
       )))
 
+      if (voiceChatEnabled || preferVoiceReply) {
+        void speakAgentMessage(assistantMessage.content)
+      }
+
       const suggestedTab = agentActionToTab(assistantMessage.action)
       if (suggestedTab && (assistantMessage.confidence || 0) >= 90) {
         setActiveTab(suggestedTab)
@@ -1500,6 +1586,58 @@ export default function Dashboard() {
       toast.error('Agent is unavailable')
     } finally {
       setAgentLoading(false)
+    }
+  }
+
+  const startAgentListening = () => {
+    if (!activeAgentId) {
+      toast.error('Create an agent first from Hire an agent or Agents tab')
+      setActiveTab('agents')
+      return
+    }
+    if (agentLoading) return
+
+    const Recognition = getBrowserSpeechRecognition()
+    if (!Recognition) {
+      toast.error('Voice input is not supported in this browser')
+      return
+    }
+
+    stopAgentListening()
+    const recognition = new Recognition()
+    agentRecognitionRef.current = recognition
+    recognition.lang = selectedCallerIdentity?.language || selectedLanguage || 'en-US'
+    recognition.interimResults = false
+    recognition.continuous = false
+    recognition.maxAlternatives = 1
+    recognition.onresult = (event: any) => {
+      const transcript = String(event?.results?.[0]?.[0]?.transcript || '').trim()
+      stopAgentListening()
+      if (!transcript) {
+        toast.error('No speech detected, try again')
+        return
+      }
+      setAgentInput(transcript)
+      void askAgent(transcript, true)
+    }
+    recognition.onerror = (event: any) => {
+      stopAgentListening()
+      const errorCode = String(event?.error || '')
+      if (errorCode !== 'no-speech' && errorCode !== 'aborted') {
+        toast.error('Voice input failed')
+      }
+    }
+    recognition.onend = () => {
+      setAgentListening(false)
+      agentRecognitionRef.current = null
+    }
+
+    try {
+      setAgentListening(true)
+      recognition.start()
+    } catch {
+      stopAgentListening()
+      toast.error('Could not start microphone capture')
     }
   }
 
@@ -2015,7 +2153,7 @@ export default function Dashboard() {
             <SelectContent>
               {filteredIdentityVoices.map(voice => (
                 <SelectItem key={voice.id} value={voice.id}>
-                  {voice.name} ({voice.labels?.gender || 'N/A'}) • {voice.language || voice.labels?.language || 'multi'} {voice.source === 'elevenlabs' ? '• Natural' : ''}
+                  {voice.name} ({voice.labels?.gender || 'N/A'}) • {voice.language || voice.labels?.language || 'multi'} {isNaturalVoice(voice) ? '• Natural' : ''}
                 </SelectItem>
               ))}
             </SelectContent>
@@ -2246,6 +2384,7 @@ export default function Dashboard() {
       {/* Hidden audio elements */}
       <audio ref={audioRef} onEnded={() => setPlayingRecording(null)} />
       <audio ref={voicePreviewAudioRef} onEnded={() => setPreviewingVoice(null)} />
+      <audio ref={agentVoiceAudioRef} onEnded={() => setAgentSpeaking(false)} onPause={() => setAgentSpeaking(false)} />
 
       {/* Sidebar */}
       <aside className="fixed left-0 top-0 h-screen w-60 border-r border-zinc-800/70 bg-zinc-900/60 backdrop-blur-xl flex flex-col z-30 overflow-hidden">
@@ -2476,23 +2615,58 @@ export default function Dashboard() {
                       ))
                     )}
                   </div>
-                  <div className="flex gap-2">
+                  <div className="space-y-2">
+                    <div className="flex gap-2">
+                      <Button
+                        type="button"
+                        variant={voiceChatEnabled ? 'default' : 'secondary'}
+                        className={voiceChatEnabled ? '' : 'bg-zinc-800 hover:bg-zinc-700'}
+                        onClick={() => {
+                          const next = !voiceChatEnabled
+                          setVoiceChatEnabled(next)
+                          if (!next) {
+                            stopAgentListening()
+                            stopAgentVoicePlayback()
+                          }
+                        }}
+                        disabled={!activeAgentId}
+                      >
+                        <Volume2 className="w-4 h-4 mr-2" />
+                        {voiceChatEnabled ? 'Voice On' : 'Voice Off'}
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        className={agentListening ? 'bg-emerald-600 hover:bg-emerald-500' : 'bg-zinc-800 hover:bg-zinc-700'}
+                        onClick={agentListening ? stopAgentListening : startAgentListening}
+                        disabled={!activeAgentId || agentLoading}
+                      >
+                        {agentListening ? <Square className="w-4 h-4 mr-2" /> : <Mic className="w-4 h-4 mr-2" />}
+                        {agentListening ? 'Listening…' : 'Talk'}
+                      </Button>
+                    </div>
+                    <div className="flex gap-2">
                     <Input
                       value={agentInput}
                       onChange={(e) => setAgentInput(e.target.value)}
                       onKeyDown={(e) => {
                         if (e.key === 'Enter' && !agentLoading) {
                           e.preventDefault()
-                          askAgent()
+                          void askAgent()
                         }
                       }}
                       placeholder={`Message ${activeAgentName}...`}
                       className="bg-zinc-800 border-zinc-700"
                       disabled={!activeAgentId}
                     />
-                    <Button onClick={askAgent} disabled={agentLoading || !agentInput.trim() || !activeAgentId}>
+                    <Button onClick={() => void askAgent()} disabled={agentLoading || !agentInput.trim() || !activeAgentId}>
                       {agentLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
                     </Button>
+                  </div>
+                    <p className="text-[11px] text-zinc-500">
+                      Voice mode: press Talk, speak naturally, and the agent replies back in voice using your selected caller voice.
+                      {agentSpeaking ? ' Replying now…' : ''}
+                    </p>
                   </div>
                 </CardContent>
               </Card>

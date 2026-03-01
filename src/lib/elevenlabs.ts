@@ -79,6 +79,7 @@ export async function generateSpeech(
   options: {
     language?: string;
     userId?: string;
+    channel?: 'phone' | 'preview';
   } = {}
 ): Promise<Buffer> {
   const settings = await getSettings(options.userId || 'default');
@@ -87,20 +88,21 @@ export async function generateSpeech(
     throw new Error('ElevenLabs API key not configured');
   }
   
-  // eleven_turbo_v2_5 = best quality + low latency for live phone calls
-  const modelId = process.env.ELEVENLABS_MODEL_ID || 'eleven_turbo_v2_5';
-  // 0.45 = consistent delivery without sounding stiff (0.26 was too low → choppy)
-  const stability = getFloatEnv('ELEVENLABS_VOICE_STABILITY', 0.45);
-  // 0.75 = natural closeness to voice without the forced/robotic feel of 0.9
-  const similarityBoost = getFloatEnv('ELEVENLABS_VOICE_SIMILARITY_BOOST', 0.75);
-  // 0.45 = conversational warmth; high style values add expressiveness that sounds unnatural on phone
-  const style = getFloatEnv('ELEVENLABS_VOICE_STYLE', 0.45);
-  // 0.95 = slightly slower → warmer, more human cadence
-  const speed = getFloatEnv('ELEVENLABS_VOICE_SPEED', 0.95);
+  // Default to quality-first model; users can override with ELEVENLABS_MODEL_ID.
+  const modelId =
+    process.env.ELEVENLABS_MODEL_ID ||
+    process.env.ELEVENLABS_PHONE_MODEL_ID ||
+    'eleven_multilingual_v2';
+  // Tuned defaults for natural phone cadence (less robotic, less over-controlled).
+  const stability = getFloatEnv('ELEVENLABS_VOICE_STABILITY', 0.38);
+  const similarityBoost = getFloatEnv('ELEVENLABS_VOICE_SIMILARITY_BOOST', 0.82);
+  const style = getFloatEnv('ELEVENLABS_VOICE_STYLE', 0.20);
+  const speed = getFloatEnv('ELEVENLABS_VOICE_SPEED', 0.96);
   const useSpeakerBoost = getBooleanEnv('ELEVENLABS_USE_SPEAKER_BOOST', true);
-  // 1 = slight latency optimization with minimal quality loss (3 was too aggressive)
-  const optimizeLatency = Math.max(0, Math.min(4, Math.round(getFloatEnv('ELEVENLABS_OPTIMIZE_STREAMING_LATENCY', 1))));
-  const outputFormat = process.env.ELEVENLABS_OUTPUT_FORMAT || 'mp3_44100_128';
+  // 0 favors quality over latency and typically sounds less synthetic.
+  const optimizeLatency = Math.max(0, Math.min(4, Math.round(getFloatEnv('ELEVENLABS_OPTIMIZE_STREAMING_LATENCY', 0))));
+  const channel = options.channel || 'phone';
+  const outputFormat = process.env.ELEVENLABS_OUTPUT_FORMAT || (channel === 'preview' ? 'mp3_44100_128' : 'mp3_44100_128');
   const normalizedText = normalizeTtsText(text);
 
   const response = await fetch(`${ELEVENLABS_API_URL}/text-to-speech/${voiceId}?optimize_streaming_latency=${optimizeLatency}&output_format=${encodeURIComponent(outputFormat)}`, {

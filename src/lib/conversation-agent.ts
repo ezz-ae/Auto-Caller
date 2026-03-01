@@ -202,7 +202,7 @@ const THINKING_SOUNDS = ['Hmm. ', 'Umm. ', 'Mm. ', 'Ohh. ', 'Ahh. '];
 
 // Used at the start of a turn when the reply begins mid-thought
 const FILLER_BRIDGES = [
-  'Sooo, ', 'Okaaay, ', 'Riiight, ', 'Yeaah, ', 'I meaan, ', 'Welll, ',
+  'So, ', 'Okay, ', 'Right, ', 'Yeah, ', 'I mean, ', 'Well, ',
 ];
 
 function maybeAddThinkingSound(text: string, mood: LeadMood, seed: number, level: 'low' | 'medium' | 'high'): string {
@@ -232,9 +232,9 @@ function withBreathingPauses(text: string, level: 'low' | 'medium' | 'high', see
 
 function maybeAddLaughCue(text: string, mood: LeadMood, seed: number): string {
   if (mood !== 'positive') return text;
-  if (seed % 5 !== 0) return text;
+  if (seed % 8 !== 0) return text;
   if (text.toLowerCase().includes('haha') || text.toLowerCase().includes('haa')) return text;
-  return `Haha - ${text.charAt(0).toLowerCase()}${text.slice(1)}`;
+  return `Haha, ${text.charAt(0).toLowerCase()}${text.slice(1)}`;
 }
 
 function injectHumanTexture(
@@ -280,7 +280,7 @@ function injectHumanTexture(
     text = maybeAddThinkingSound(text, mood, seed, level);
   }
 
-  // Occasionally swap the opener for a filler bridge (adds "Sooo," "Okaaay," etc.)
+  // Occasionally swap the opener for a softer filler bridge ("So," "Okay," etc.)
   if (level === 'high' && seed % 6 === 2 && !startsWithHumanCue(text)) {
     const bridge = chooseBySeed(FILLER_BRIDGES, seed);
     text = bridge + text.charAt(0).toLowerCase() + text.slice(1);
