@@ -6,28 +6,33 @@ import { Badge } from '@/components/ui/badge'
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/site-shell'
 import { DemoCallHero } from '@/components/marketing/demo-call-hero'
 
-const outcomes = [
+const scenarios = [
   {
-    title: 'More Qualified Conversations',
-    description: 'Call faster with structured AI agents that keep every outreach aligned to your message.',
+    title: 'Qualify Data into leads.',
+    description: 'Turn raw contact lists into qualified opportunities with structured qualification calls.',
     icon: Phone,
   },
   {
-    title: 'Faster Follow-Up Cycles',
-    description: 'Assign callers, upload numbers, and schedule campaigns in minutes instead of days.',
+    title: 'Reconnect old lead.',
+    description: 'Re-open old pipelines and reconnect with contacts that went cold.',
     icon: Clock3,
   },
   {
-    title: 'Clear Revenue Operations',
-    description: 'Track outcomes per campaign and per caller identity to improve conversion and margin.',
+    title: 'Qualify Social Media lead.',
+    description: 'Follow up instantly on social leads before they lose intent.',
     icon: TrendingUp,
+  },
+  {
+    title: 'Run a professional Followup',
+    description: 'Execute consistent callback campaigns with clear lead context and next actions.',
+    icon: Headphones,
   },
 ]
 
 const faqs = [
   {
-    q: 'Do customers need separate vendor accounts?',
-    a: 'No. Acaller runs in managed mode. Customers only use the dashboard.',
+    q: 'Can I launch calls without technical setup?',
+    a: 'Yes. You only need your workflow inside the dashboard: callers, leads, and campaigns.',
   },
   {
     q: 'Can I create multiple callers for one account?',
@@ -35,7 +40,7 @@ const faqs = [
   },
   {
     q: 'Can campaigns be scheduled ahead of time?',
-    a: 'Yes. Scheduled campaigns auto-dispatch with the built-in cron runner on Vercel.',
+    a: 'Yes. You can schedule campaigns and run callbacks automatically from one workspace.',
   },
 ]
 
@@ -45,50 +50,63 @@ export default function MarketingHomePage() {
       <MarketingHeader />
 
       <main className="mx-auto max-w-7xl px-4 py-12 md:py-20 space-y-16">
-        <section className="grid gap-10 lg:grid-cols-2 items-center">
-          <div className="space-y-6">
+        <section className="space-y-8">
+          <div className="space-y-4">
             <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30">
               <Sparkles className="w-3.5 h-3.5 mr-1" />
-              Built for outbound teams that need calls today
+              Call center, simplified
             </Badge>
             <h1 className="text-4xl md:text-6xl font-semibold leading-tight tracking-tight">
-              Convert Lead Lists Into
-              <span className="block text-emerald-400">Booked Conversations</span>
+              Who would you like to call today?
             </h1>
-            <p className="text-zinc-300 text-lg leading-relaxed max-w-xl">
-              Acaller gives you a full calling platform: AI caller identities, script control, scheduled campaigns,
-              and conversion tracking in one place.
+            <p className="text-zinc-300 text-lg leading-relaxed max-w-3xl">
+              Choose your call objective, run a live demo call, then launch your real campaign from the dashboard.
             </p>
-            <div className="flex flex-wrap items-center gap-3">
-              <Button size="lg" asChild className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700">
-                <Link href="/login">
-                  Start Free
-                  <ArrowRight className="ml-2 w-4 h-4" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
-                <Link href="/how-it-works">See the Workflow</Link>
-              </Button>
-            </div>
           </div>
 
-          <DemoCallHero />
-        </section>
-
-        <section className="grid gap-6 md:grid-cols-3">
-          {outcomes.map(item => (
-            <Card key={item.title} className="bg-zinc-900 border-zinc-800">
+          <div className="grid gap-6 lg:grid-cols-2 items-start">
+            <Card className="bg-zinc-900/80 border-zinc-800 shadow-xl shadow-black/30">
               <CardHeader>
-                <div className="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center mb-2">
-                  <item.icon className="w-5 h-5" />
-                </div>
-                <CardTitle className="text-xl">{item.title}</CardTitle>
+                <CardTitle className="text-lg">Call Goal Box</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className="text-zinc-400">{item.description}</p>
+              <CardContent className="space-y-4">
+                <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4 min-h-[96px]">
+                  <p className="text-sm text-zinc-300">
+                    Example: “Call new real-estate leads from this week and qualify budget + timeline before transfer.”
+                  </p>
+                </div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <Button size="lg" asChild className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700">
+                    <Link href="/login">
+                      Start Free
+                      <ArrowRight className="ml-2 w-4 h-4" />
+                    </Link>
+                  </Button>
+                  <Button size="lg" variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
+                    <Link href="/how-it-works">See the Workflow</Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
-          ))}
+
+            <DemoCallHero />
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {scenarios.map(item => (
+              <Card key={item.title} className="bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <div className="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center mb-2">
+                    <item.icon className="w-5 h-5" />
+                  </div>
+                  <CardTitle className="text-xl leading-snug">{item.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-zinc-400">{item.description}</p>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         </section>
 
         <section className="grid gap-6 lg:grid-cols-2">
@@ -120,8 +138,8 @@ export default function MarketingHomePage() {
                   <ShieldCheck className="w-4 h-4 text-emerald-300" />
                 </div>
                 <div>
-                  <p className="font-medium text-zinc-100">Managed infrastructure model</p>
-                  <p className="text-sm text-zinc-400">Customers stay inside your workspace while you control quality, reliability, and margin.</p>
+                  <p className="font-medium text-zinc-100">One clear operating workflow</p>
+                  <p className="text-sm text-zinc-400">Setup callers, launch campaigns, and track follow-up outcomes in one place.</p>
                 </div>
               </div>
             </CardContent>
