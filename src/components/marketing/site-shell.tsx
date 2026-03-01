@@ -33,10 +33,10 @@ export function MarketingHeader() {
 
         <div className="flex items-center gap-2">
           <Button variant="ghost" asChild className="text-zinc-300 hover:text-white">
-            <Link href="/login">Sign In</Link>
+            <Link href="/login">Sign in</Link>
           </Button>
-          <Button asChild className="bg-emerald-500 hover:bg-emerald-600">
-            <Link href="/login">Start Free</Link>
+          <Button asChild className="bg-emerald-500 hover:bg-emerald-600 font-semibold">
+            <Link href="/login">Start free trial</Link>
           </Button>
         </div>
       </div>

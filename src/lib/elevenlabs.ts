@@ -87,13 +87,19 @@ export async function generateSpeech(
     throw new Error('ElevenLabs API key not configured');
   }
   
-  const modelId = process.env.ELEVENLABS_MODEL_ID || 'eleven_multilingual_v2';
-  const stability = getFloatEnv('ELEVENLABS_VOICE_STABILITY', 0.26);
-  const similarityBoost = getFloatEnv('ELEVENLABS_VOICE_SIMILARITY_BOOST', 0.9);
-  const style = getFloatEnv('ELEVENLABS_VOICE_STYLE', 0.68);
-  const speed = getFloatEnv('ELEVENLABS_VOICE_SPEED', 1);
+  // eleven_turbo_v2_5 = best quality + low latency for live phone calls
+  const modelId = process.env.ELEVENLABS_MODEL_ID || 'eleven_turbo_v2_5';
+  // 0.45 = consistent delivery without sounding stiff (0.26 was too low → choppy)
+  const stability = getFloatEnv('ELEVENLABS_VOICE_STABILITY', 0.45);
+  // 0.75 = natural closeness to voice without the forced/robotic feel of 0.9
+  const similarityBoost = getFloatEnv('ELEVENLABS_VOICE_SIMILARITY_BOOST', 0.75);
+  // 0.45 = conversational warmth; high style values add expressiveness that sounds unnatural on phone
+  const style = getFloatEnv('ELEVENLABS_VOICE_STYLE', 0.45);
+  // 0.95 = slightly slower → warmer, more human cadence
+  const speed = getFloatEnv('ELEVENLABS_VOICE_SPEED', 0.95);
   const useSpeakerBoost = getBooleanEnv('ELEVENLABS_USE_SPEAKER_BOOST', true);
-  const optimizeLatency = Math.max(0, Math.min(4, Math.round(getFloatEnv('ELEVENLABS_OPTIMIZE_STREAMING_LATENCY', 3))));
+  // 1 = slight latency optimization with minimal quality loss (3 was too aggressive)
+  const optimizeLatency = Math.max(0, Math.min(4, Math.round(getFloatEnv('ELEVENLABS_OPTIMIZE_STREAMING_LATENCY', 1))));
   const outputFormat = process.env.ELEVENLABS_OUTPUT_FORMAT || 'mp3_44100_128';
   const normalizedText = normalizeTtsText(text);
 

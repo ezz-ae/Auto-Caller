@@ -1,13 +1,13 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import Link from 'next/link'
 import { Check, Crown, Sparkles, Wallet, Zap } from 'lucide-react'
-import { toast } from 'sonner'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/site-shell'
+import { PayPalCheckoutModal, type PurchaseResult } from '@/components/paypal/paypal-checkout-modal'
 
 interface BillingProduct {
   id: string
@@ -35,71 +35,32 @@ function getProductFeatures(product: BillingProduct): string[] {
   const credits = product.credits || 0
   return [
     `${credits.toLocaleString()} outbound call credits`,
-    'Credits applied immediately after successful checkout',
+    'Credits applied immediately after checkout',
     'Compatible with scheduled and live campaigns',
     'Full reporting and caller KPI visibility in dashboard',
   ]
 }
 
 export default function PricingPage() {
-  const [loading, setLoading] = useState<string | null>(null)
-  const [redirectUrl, setRedirectUrl] = useState<string | null>(null)
   const [products, setProducts] = useState<BillingProduct[]>(DEFAULT_PRODUCTS)
+  const [selectedProduct, setSelectedProduct] = useState<BillingProduct | null>(null)
 
   useEffect(() => {
-    if (!redirectUrl) return
-    window.location.href = redirectUrl
-  }, [redirectUrl])
-
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        const res = await fetch('/api/paypal/create-order')
-        if (!res.ok) throw new Error('Failed to load products')
-        const data = await res.json()
-        if (Array.isArray(data.products) && data.products.length > 0) {
-          setProducts(data.products)
-        }
-      } catch {
-        console.error('Failed to load pricing products; using defaults')
-      }
-    }
-
-    loadProducts()
-  }, [])
-
-  const sortedProducts = useMemo(() => {
-    return [...products]
-      .filter(product => product.kind === 'credits')
-      .sort((a, b) => (a.credits || 0) - (b.credits || 0))
-  }, [products])
-
-  const handlePurchase = useCallback(async (productId: string) => {
-    setLoading(productId)
-
-    try {
-      const res = await fetch('/api/paypal/create-order', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId }),
+    fetch('/api/paypal/create-order')
+      .then(r => r.json())
+      .then(d => {
+        if (Array.isArray(d.products) && d.products.length > 0) setProducts(d.products)
       })
-
-      const data = await res.json()
-      if (data.approvalUrl) {
-        setRedirectUrl(data.approvalUrl)
-        return
-      }
-
-      toast.error(data.error || 'Failed to create order')
-    } catch {
-      toast.error('Payment failed. Please try again.')
-    } finally {
-      setLoading(null)
-    }
+      .catch(() => {})
   }, [])
+
+  const sortedProducts = useMemo(
+    () => [...products].filter(p => p.kind === 'credits').sort((a, b) => (a.credits || 0) - (b.credits || 0)),
+    [products],
+  )
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#172e26_0%,#0c1010_45%,#09090b_100%)] text-white">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,#172b22_0%,#0c1110_40%,#09090b_100%)] text-white">
       <MarketingHeader />
 
       <main className="mx-auto max-w-7xl px-4 py-12 md:py-16 space-y-12">
@@ -114,7 +75,7 @@ export default function PricingPage() {
           </p>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-4">
+        <section className="grid gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           {sortedProducts.map(product => {
             const isPopular = (product.credits || 0) >= 90 && (product.credits || 0) <= 140
             const title = `${(product.credits || 0).toLocaleString()} Credits`
@@ -149,15 +110,14 @@ export default function PricingPage() {
                     ))}
                   </ul>
                   <Button
-                    onClick={() => handlePurchase(product.id)}
-                    disabled={loading !== null}
+                    onClick={() => setSelectedProduct(product)}
                     className={`w-full h-12 text-base ${
                       isPopular
                         ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700'
                         : 'bg-zinc-700 hover:bg-zinc-600'
                     }`}
                   >
-                    {loading === product.id ? 'Processing...' : `Buy Now - $${product.price.toFixed(2)}`}
+                    Buy Now — ${product.price.toFixed(2)}
                   </Button>
                 </CardContent>
               </Card>
@@ -206,6 +166,17 @@ export default function PricingPage() {
       </main>
 
       <MarketingFooter />
+
+      {selectedProduct && (
+        <PayPalCheckoutModal
+          open={!!selectedProduct}
+          onClose={() => setSelectedProduct(null)}
+          productId={selectedProduct.id}
+          productName={selectedProduct.name}
+          price={selectedProduct.price}
+          credits={selectedProduct.credits}
+        />
+      )}
     </div>
   )
 }

@@ -54,7 +54,7 @@ const items = [
 
 export default function FeaturesPage() {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#172d26_0%,#0b0f10_50%,#09090b_100%)] text-white">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,#172b22_0%,#0c1110_40%,#09090b_100%)] text-white">
       <MarketingHeader />
 
       <main className="mx-auto max-w-7xl px-4 py-12 md:py-16 space-y-10">
@@ -93,8 +93,8 @@ export default function FeaturesPage() {
             <Button variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
               <Link href="/docs">Open Docs</Link>
             </Button>
-            <Button asChild className="bg-emerald-500 hover:bg-emerald-600">
-              <Link href="/login">Start Free</Link>
+            <Button asChild className="bg-emerald-500 hover:bg-emerald-600 font-semibold">
+              <Link href="/login">Start free trial</Link>
             </Button>
           </div>
         </section>

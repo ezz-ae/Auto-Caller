@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getVoices } from '@/lib/elevenlabs';
+import { getVoices as getVoiceEngineVoices } from '@/lib/elevenlabs';
 import { NextRequest } from 'next/server';
 import { requireUserIdFromRequest } from '@/lib/request-user';
 import { isUnauthorizedError } from '@/lib/route-errors';
@@ -52,31 +52,26 @@ function qualityScore(input: { id: string; category: string; labels: Record<stri
 export async function GET(request: NextRequest) {
   try {
     const userId = requireUserIdFromRequest(request);
-    const voices = await getVoices(userId);
-    const twilioVoices = [
-      { id: 'alice', name: 'Twilio Alice', category: 'twilio', labels: { gender: 'female', language: 'multi' }, language: 'multi', source: 'twilio', previewUrl: '' },
-      { id: 'Polly.Joanna', name: 'Polly Joanna', category: 'twilio', labels: { gender: 'female', language: 'en-US' }, language: 'en-US', source: 'twilio', previewUrl: '' },
-      { id: 'Polly.Salli', name: 'Polly Salli', category: 'twilio', labels: { gender: 'female', language: 'en-US' }, language: 'en-US', source: 'twilio', previewUrl: '' },
-      { id: 'Polly.Matthew', name: 'Polly Matthew', category: 'twilio', labels: { gender: 'male', language: 'en-US' }, language: 'en-US', source: 'twilio', previewUrl: '' },
-      { id: 'Polly.Joey', name: 'Polly Joey', category: 'twilio', labels: { gender: 'male', language: 'en-US' }, language: 'en-US', source: 'twilio', previewUrl: '' },
-      { id: 'Polly.Amy', name: 'Polly Amy', category: 'twilio', labels: { gender: 'female', language: 'en-GB' }, language: 'en-GB', source: 'twilio', previewUrl: '' },
-      { id: 'Polly.Brian', name: 'Polly Brian', category: 'twilio', labels: { gender: 'male', language: 'en-GB' }, language: 'en-GB', source: 'twilio', previewUrl: '' },
+    const voices = await getVoiceEngineVoices(userId);
+    const telephonyVoices = [
+      { id: 'default-female', name: 'Standard Female', category: 'telephony', labels: { gender: 'female', language: 'multi' }, language: 'multi', source: 'telephony', previewUrl: '' },
+      { id: 'default-male', name: 'Standard Male', category: 'telephony', labels: { gender: 'male', language: 'en-US' }, language: 'en-US', source: 'telephony', previewUrl: '' },
     ]
     
-    const elevenVoices = voices
+    const highQualityVoices = voices
       .map(v => ({
         id: v.voice_id,
         name: v.name,
         category: v.category,
         labels: v.labels,
         language: inferLanguage(v.labels),
-        source: 'elevenlabs',
+        source: 'high-quality',
         previewUrl: v.preview_url,
       }))
       .sort((a, b) => qualityScore(b) - qualityScore(a));
     
     return NextResponse.json({ 
-      voices: [...twilioVoices, ...elevenVoices],
+      voices: [...telephonyVoices, ...highQualityVoices],
     });
   } catch (error: any) {
     if (isUnauthorizedError(error)) {

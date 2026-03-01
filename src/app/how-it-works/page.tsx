@@ -7,48 +7,47 @@ import { MarketingFooter, MarketingHeader } from '@/components/marketing/site-sh
 const flow = [
   {
     step: '01',
-    title: 'Create caller identities',
-    description: 'Define each AI caller with name, role, voice, language, and disclosure behavior, then activate its dedicated number.',
+    title: 'Design your AI agents',
+    description: 'Give each voice agent a name, personality, and specialized voice. We provide natural, human-like speech for every agent.',
     icon: UserRoundCog,
   },
   {
     step: '02',
-    title: 'Prepare campaign inputs',
-    description: 'Upload phone numbers, assign caller identity, and set script/call constraints.',
+    title: 'Prepare your outreach',
+    description: 'Upload your contact lists and assign an agent. Simply describe your goal, and our AI helps you draft the perfect approach.',
     icon: ListChecks,
   },
   {
     step: '03',
-    title: 'Schedule or start immediately',
-    description: 'Run now or schedule launch time. Scheduled campaigns auto-dispatch in production.',
+    title: 'Launch or schedule',
+    description: 'Start reaching out immediately or schedule for the perfect time. Our system handles the rest automatically.',
     icon: CalendarClock,
   },
   {
     step: '04',
-    title: 'Forward engaged leads',
-    description: 'When prospects engage, calls route to your configured team forwarding number.',
+    title: 'Engage with qualified leads',
+    description: 'When a lead is ready to talk, the call is instantly forwarded to your team for a live conversation.',
     icon: PhoneForwarded,
   },
   {
     step: '05',
-    title: 'Review recordings and optimize',
-    description: 'Analyze transcripts and campaign outcomes to improve scripts and conversion.',
+    title: 'Review and scale',
+    description: 'Listen to recordings, read smart transcripts, and use our AI insights to optimize your results over time.',
     icon: Mic,
   },
 ]
 
 export default function HowItWorksPage() {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#152a24_0%,#0a0d0f_50%,#09090b_100%)] text-white">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,#172b22_0%,#0c1110_40%,#09090b_100%)] text-white">
       <MarketingHeader />
 
-      <main className="mx-auto max-w-6xl px-4 py-12 md:py-16 space-y-10">
-        <section className="space-y-4">
-          <p className="text-emerald-400 text-sm font-semibold">How It Works</p>
-          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">From Lead File To Revenue Calls</h1>
-          <p className="text-zinc-400 max-w-3xl text-lg">
-            The platform is built around one operational path: caller identity, campaign launch, lead connection,
-            and optimization feedback loops.
+      <main className="mx-auto max-w-6xl px-4 py-20 md:py-28 space-y-16">
+        <section className="space-y-4 text-center">
+          <p className="text-emerald-400 text-sm font-semibold tracking-widest uppercase">Process</p>
+          <h1 className="text-5xl md:text-7xl font-bold tracking-tight">How it works.</h1>
+          <p className="text-zinc-400 max-w-2xl mx-auto text-xl leading-relaxed">
+            Our intelligent voice platform simplifies outreach into a few simple steps, focusing on what matters most: connecting you with qualified leads.
           </p>
         </section>
 
@@ -86,9 +85,9 @@ export default function HowItWorksPage() {
             <Button variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
               <Link href="/docs">Open Docs</Link>
             </Button>
-            <Button asChild className="bg-emerald-500 hover:bg-emerald-600">
+            <Button asChild className="bg-emerald-500 hover:bg-emerald-600 font-semibold">
               <Link href="/login">
-                Start Free
+                Start free trial
                 <ArrowRight className="ml-2 w-4 h-4" />
               </Link>
             </Button>

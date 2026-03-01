@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent } from '@/components/ui/card'
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/site-shell'
 
 const faqs = [
@@ -23,7 +22,7 @@ const faqs = [
   {
     question: 'How does scheduled calling work?',
     answer:
-      'Scheduled campaigns are saved with status "scheduled" and auto-dispatched by a Vercel cron endpoint every minute.',
+      'Scheduled campaigns are saved with status "scheduled" and auto-dispatched by a system cron endpoint every minute.',
   },
   {
     question: 'How are credits priced?',
@@ -46,54 +45,59 @@ const faqs = [
       'The platform uses a managed AI layer for script copilot, conversation guidance, and transcript analysis.',
   },
   {
-    question: 'Can I deploy to Vercel + Neon and go live today?',
+    question: 'Can I deploy to production and go live today?',
     answer:
-      'Yes. Set production env vars, run db push once, configure call webhooks, and deploy. The project is built for this setup.',
+      'Yes. Set production env vars, run db push once, configure call webhooks, and deploy. The project is built for rapid deployment.',
   },
 ]
 
 export default function FaqPage() {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#142922_0%,#0b0f10_45%,#09090b_100%)] text-white">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,#172b22_0%,#0c1110_40%,#09090b_100%)] text-white">
       <MarketingHeader />
 
-      <main className="mx-auto max-w-4xl px-4 py-12 md:py-16 space-y-8">
-        <section className="space-y-3">
-          <p className="text-emerald-400 text-sm font-semibold">FAQ</p>
-          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">Frequently Asked Questions</h1>
-          <p className="text-zinc-400 text-lg">
-            Common launch, billing, operations, and deployment questions from platform owners.
+      <main className="mx-auto max-w-3xl px-4 py-20 md:py-28 space-y-12">
+        <section className="text-center space-y-4">
+          <p className="text-emerald-400 text-xs font-bold uppercase tracking-widest">FAQ</p>
+          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">Frequently asked questions</h1>
+          <p className="text-zinc-400 text-lg max-w-xl mx-auto">
+            Common questions about launch, billing, integrations, and operations.
           </p>
         </section>
 
-        <Card className="bg-zinc-900 border-zinc-800">
-          <CardContent className="pt-4">
-            <Accordion type="single" collapsible className="w-full">
-              {faqs.map((item, index) => (
-                <AccordionItem key={item.question} value={`item-${index + 1}`} className="border-zinc-800">
-                  <AccordionTrigger className="text-left text-zinc-100 hover:text-emerald-300">
-                    {item.question}
-                  </AccordionTrigger>
-                  <AccordionContent className="text-zinc-400">
-                    {item.answer}
-                  </AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </CardContent>
-        </Card>
+        <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/50 overflow-hidden">
+          <Accordion type="single" collapsible className="w-full">
+            {faqs.map((item, index) => (
+              <AccordionItem
+                key={item.question}
+                value={`item-${index + 1}`}
+                className="border-b border-zinc-800/60 last:border-0 px-6"
+              >
+                <AccordionTrigger className="text-left text-zinc-100 hover:text-emerald-300 py-5 text-base font-medium">
+                  {item.question}
+                </AccordionTrigger>
+                <AccordionContent className="text-zinc-400 leading-relaxed pb-5">
+                  {item.answer}
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        </div>
 
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-5 flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-zinc-300">Need implementation steps?</p>
-          <div className="flex gap-2">
+        <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <p className="font-semibold text-zinc-100">Still have questions?</p>
+            <p className="text-sm text-zinc-400 mt-1">The docs have step-by-step setup guidance for every config.</p>
+          </div>
+          <div className="flex gap-2 shrink-0">
             <Button variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
-              <Link href="/docs">Open Docs</Link>
+              <Link href="/docs">Read the docs</Link>
             </Button>
-            <Button asChild className="bg-emerald-500 hover:bg-emerald-600">
-              <Link href="/login">Start Free</Link>
+            <Button asChild className="bg-emerald-500 hover:bg-emerald-600 font-semibold">
+              <Link href="/login">Start free trial</Link>
             </Button>
           </div>
-        </section>
+        </div>
       </main>
 
       <MarketingFooter />

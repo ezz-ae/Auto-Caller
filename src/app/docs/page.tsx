@@ -18,9 +18,9 @@ const setupSteps = [
     title: 'Connect telephony and voice',
     icon: PhoneCall,
     points: [
-      'Set MANAGED_TWILIO_ACCOUNT_SID, MANAGED_TWILIO_AUTH_TOKEN, and MANAGED_TWILIO_PHONE_NUMBER.',
-      'Set MANAGED_ELEVENLABS_API_KEY for natural voice quality.',
-      'Add Twilio webhooks: /api/calls/answer, /api/calls/status, /api/calls/recording-complete.',
+      'Set TELEPHONY_ACCOUNT_SID, TELEPHONY_AUTH_TOKEN, and TELEPHONY_PHONE_NUMBER.',
+      'Set VOICE_ENGINE_API_KEY for natural voice quality.',
+      'Add telephony webhooks: /api/calls/answer, /api/calls/status, /api/calls/recording-complete.',
     ],
   },
   {
@@ -47,15 +47,15 @@ const setupSteps = [
     icon: Database,
     points: [
       'Run npm run db:push once against production DATABASE_URL.',
-      'Deploy to Vercel with npm run build.',
-      'Vercel cron in vercel.json auto-runs /api/cron/dispatch-scheduled every minute.',
+      'Deploy to your production environment with npm run build.',
+      'System cron in vercel.json auto-runs /api/cron/dispatch-scheduled every minute.',
     ],
   },
 ]
 
 export default function DocsPage() {
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#142a24_0%,#0a0f10_50%,#09090b_100%)] text-white">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,#172b22_0%,#0c1110_40%,#09090b_100%)] text-white">
       <MarketingHeader />
 
       <main className="mx-auto max-w-6xl px-4 py-12 md:py-16 space-y-10">
@@ -93,7 +93,7 @@ export default function DocsPage() {
           <p className="text-lg font-semibold">Operational security baseline</p>
           <p className="text-sm text-zinc-300 flex gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
-            Keep all provider secrets only in Vercel environment variables.
+            Keep all provider secrets only in secure environment variables.
           </p>
           <p className="text-sm text-zinc-300 flex gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
@@ -101,12 +101,12 @@ export default function DocsPage() {
           </p>
           <p className="text-sm text-zinc-300 flex gap-2">
             <ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
-            Rotate Twilio, PayPal, and AI keys immediately if leaked.
+            Rotate provider and AI keys immediately if leaked.
           </p>
           <div className="pt-2 flex flex-wrap gap-2">
-            <Button asChild className="bg-emerald-500 hover:bg-emerald-600">
+            <Button asChild className="bg-emerald-500 hover:bg-emerald-600 font-semibold">
               <Link href="/login">
-                Open Dashboard
+                Start free trial
                 <Rocket className="w-4 h-4 ml-2" />
               </Link>
             </Button>

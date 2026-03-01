@@ -273,6 +273,19 @@ function buildActionUrl(params: {
   return url.toString();
 }
 
+type OpeningFn = (name: string, business: string, topic: string) => string;
+
+const OPENING_TEMPLATES: OpeningFn[] = [
+  (name, business, topic) =>
+    'Hey, ' + name + ' calling from ' + business + '. Got a sec? ' + (topic ? 'Quick thing about ' + topic + '.' : 'Just a very quick call.'),
+  (name, business, topic) =>
+    'Hi there, ' + name + ' here from ' + business + '. ' + (topic ? 'Reaching out about ' + topic + ' -' : 'Wanted to reach out -') + ' is now an okay time?',
+  (name, business, topic) =>
+    'Hi, is this a good time? ' + name + ' from ' + business + '. ' + (topic ? 'Wanted to chat about ' + topic + ' real quick.' : 'Just a very quick call.'),
+  (name, business, topic) =>
+    'Hi, ' + name + ' calling from ' + business + '. ' + (topic ? 'This is about ' + topic + '.' : 'I have a quick question for you.') + ' Do you have a moment?',
+];
+
 function buildOpeningLine(params: {
   callerName: string;
   callerPosition: string;
@@ -288,18 +301,15 @@ function buildOpeningLine(params: {
 
   const offer = extractField('Offer');
   const goal = extractField('Goal');
-  const audience = extractField('Audience');
+  const topic = clipText(offer || goal, 80);
 
-  const intro = params.mentionAi
-    ? `Hi, this is ${params.callerName}, an AI assistant with ${params.businessName}.`
-    : `Hi, this is ${params.callerName}, ${params.callerPosition} at ${params.businessName}.`;
-
-  const topic = clipText(offer || goal || audience, 120);
-  if (!topic) {
-    return `${intro} I wanted to quickly check if now is a good time for a short conversation.`;
+  if (params.mentionAi) {
+    return `Hi, this is ${params.callerName}, an AI assistant with ${params.businessName}. ${topic ? `I'm calling about ${topic}.` : 'Quick call -'} Is this a good time?`;
   }
 
-  return `${intro} I’m reaching out about ${topic}. Is this a good time for a quick discussion?`;
+  // Pick a varied template seeded on callerName length to stay consistent per identity
+  const seed = params.callerName.length % OPENING_TEMPLATES.length;
+  return OPENING_TEMPLATES[seed](params.callerName, params.businessName, topic);
 }
 
 function buildConversationTwiml(params: {
@@ -373,7 +383,7 @@ function buildForwardTwiml(params: {
     userId: params.userId,
   });
 
-  appendSpeech(response, 'Connecting you now to our team.', {
+  appendSpeech(response, 'Give me one second, I\'ll connect you now.', {
     appUrl: params.appUrl,
     voiceId: params.voiceId,
     language: params.language,
@@ -538,7 +548,7 @@ async function handleAnswer(request: NextRequest) {
           language,
           voiceId,
           userId: callUserId,
-          spokenText: 'No worries, I will let you go. Thanks for your time and have a great day.',
+          spokenText: "No worries at all. I'll try you another time. Take care!",
         });
 
         return new NextResponse(twiml, {
@@ -546,7 +556,7 @@ async function handleAnswer(request: NextRequest) {
         });
       }
 
-      const reprompt = 'I can keep this very short. Would you like a quick summary, or should I call later?';
+      const reprompt = "Sorry, I didn't catch that - still there?";
       conversationState.history.push({ role: 'agent', text: reprompt });
 
       const twiml = buildConversationTwiml({

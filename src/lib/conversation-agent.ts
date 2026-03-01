@@ -172,10 +172,24 @@ function startsWithHumanCue(text: string): boolean {
     normalized.startsWith('aha') ||
     normalized.startsWith('ah,') ||
     normalized.startsWith('hmm') ||
+    normalized.startsWith('hm,') ||
+    normalized.startsWith('umm') ||
+    normalized.startsWith('um,') ||
+    normalized.startsWith('uh,') ||
+    normalized.startsWith('ohh') ||
+    normalized.startsWith('oh,') ||
+    normalized.startsWith('ooh') ||
+    normalized.startsWith('okay') ||
+    normalized.startsWith('sooo') ||
+    normalized.startsWith('so,') ||
     normalized.startsWith('got it') ||
     normalized.startsWith('makes sense') ||
     normalized.startsWith('i hear you') ||
-    normalized.startsWith('totally')
+    normalized.startsWith('totally') ||
+    normalized.startsWith('haha') ||
+    normalized.startsWith('nice,') ||
+    normalized.startsWith('sure,') ||
+    normalized.startsWith('right,')
   );
 }
 
@@ -183,16 +197,34 @@ function chooseBySeed<T>(items: T[], seed: number): T {
   return items[Math.abs(seed) % items.length];
 }
 
+// Thinking/processing sounds that precede a reply when the agent is "processing" what was said
+const THINKING_SOUNDS = ['Hmm. ', 'Umm. ', 'Mm. ', 'Ohh. ', 'Ahh. '];
+
+// Used at the start of a turn when the reply begins mid-thought
+const FILLER_BRIDGES = [
+  'Sooo, ', 'Okaaay, ', 'Riiight, ', 'Yeaah, ', 'I meaan, ', 'Welll, ',
+];
+
+function maybeAddThinkingSound(text: string, mood: LeadMood, seed: number, level: 'low' | 'medium' | 'high'): string {
+  if (level === 'low') return text;
+  // Only add thinking sound on skeptical/neutral moods and alternating turns
+  if (mood === 'positive') return text;
+  if (seed % 4 !== 1) return text;
+  const sound = chooseBySeed(THINKING_SOUNDS, seed);
+  return sound + text.charAt(0).toLowerCase() + text.slice(1);
+}
+
 function withBreathingPauses(text: string, level: 'low' | 'medium' | 'high', seed: number): string {
   if (level === 'low') return text;
   if (text.length < 24) return text;
 
+  // Occasionally stretch a comma into a longer spoken pause
   if (seed % 3 === 0 && text.includes('. ')) {
     return text.replace('. ', '... ');
   }
 
   if (level === 'high' && seed % 4 === 0 && text.includes(', ')) {
-    return text.replace(', ', ', ... ');
+    return text.replace(', ', '... ');
   }
 
   return text;
@@ -201,9 +233,8 @@ function withBreathingPauses(text: string, level: 'low' | 'medium' | 'high', see
 function maybeAddLaughCue(text: string, mood: LeadMood, seed: number): string {
   if (mood !== 'positive') return text;
   if (seed % 5 !== 0) return text;
-
-  if (text.toLowerCase().includes('haha')) return text;
-  return `Haha, ${text.charAt(0).toLowerCase()}${text.slice(1)}`;
+  if (text.toLowerCase().includes('haha') || text.toLowerCase().includes('haa')) return text;
+  return `Haha - ${text.charAt(0).toLowerCase()}${text.slice(1)}`;
 }
 
 function injectHumanTexture(
@@ -222,9 +253,18 @@ function injectHumanTexture(
   const seed = context.turn + context.leadUtterance.length + context.history.length;
 
   if (!startsWithHumanCue(text) && action !== 'end') {
-    const positiveCues = ['Yeah, ', 'Aha, ', 'Got it, ', 'Makes sense, '];
-    const skepticalCues = ['I hear you, ', "That's fair, ", 'Yeah, totally get that, '];
-    const neutralCues = ['Yeah, ', 'Got it, ', 'Mm-hmm, ', 'Aha, '];
+    const positiveCues = [
+      'Yeah, ', 'Oh nice, ', 'Got it, ', 'That makes sense, ',
+      'Okay cool, ', 'Totally, ', 'Aha, ', 'Oh great, ', 'Niice, ',
+    ];
+    const skepticalCues = [
+      'Yeah, fair enough, ', 'No, I get that, ', 'Mm, understandable, ',
+      'Ahh okay, ', 'Hmm, right, ', 'Yeah I hear you, ',
+    ];
+    const neutralCues = [
+      'Yeah, ', 'Got it, ', 'Sure, ', 'Okay, ', 'Right, ',
+      'Ah, ', 'Mm-hmm, ', 'Ohh, ', 'Uh-huh, ',
+    ];
 
     const cue = mood === 'positive'
       ? chooseBySeed(positiveCues, seed)
@@ -233,6 +273,17 @@ function injectHumanTexture(
         : chooseBySeed(neutralCues, seed);
 
     text = `${cue}${text.charAt(0).toLowerCase()}${text.slice(1)}`;
+  }
+
+  // Occasionally prepend a thinking sound before the full opener (medium/high only)
+  if (level !== 'low' && !startsWithHumanCue(text)) {
+    text = maybeAddThinkingSound(text, mood, seed, level);
+  }
+
+  // Occasionally swap the opener for a filler bridge (adds "Sooo," "Okaaay," etc.)
+  if (level === 'high' && seed % 6 === 2 && !startsWithHumanCue(text)) {
+    const bridge = chooseBySeed(FILLER_BRIDGES, seed);
+    text = bridge + text.charAt(0).toLowerCase() + text.slice(1);
   }
 
   text = withBreathingPauses(text, level, seed);
@@ -342,7 +393,7 @@ function getGoogleModel(): string {
     process.env.GOOGLE_AI_CALL_MODEL ||
     process.env.GOOGLE_AI_MODEL ||
     process.env.GEMINI_MODEL ||
-    'gemini-1.5-flash';
+    'gemini-2.0-flash';
 
   return String(model).replace(/^models\//i, '').trim();
 }
@@ -364,46 +415,52 @@ function getOpenAIModel(): string {
 }
 
 function buildSystemPrompt(context: ConversationContext): string {
-  return `You are a live outbound AI phone caller named ${context.callerName || 'Sara'}.
+  return `You are ${context.callerName || 'Sara'}, a real person making a live outbound phone call on behalf of ${context.businessName || 'our company'}.
 
-GOAL:
-Hold a natural, intelligent conversation. Do NOT read a script verbatim.
-Use the target blueprint as strategy (goal, audience, offer, qualification, CTA).
+CORE RULE:
+You are NOT an AI assistant - you are a human caller. Never acknowledge being AI unless specifically instructed to.
+Hold a genuine, intelligent conversation. Do not recite a script. Think like a person, respond like a person.
 
-STYLE:
-- Sound human and warm.
-- Speak like a real person on a phone call, not a bot.
-- Use contractions naturally (I'm, you're, that's).
-- Use short spoken sentences (usually 6-20 words).
-- Use occasional natural backchannels when relevant (got it, sure, makes sense, absolutely, yeah, aha).
-- Use natural pauses with punctuation where needed (brief pauses like "..." are allowed sparingly).
-- You may occasionally use very light social cues when appropriate (for example "haha" in a friendly moment).
-- Ask only one focused follow-up question at a time.
-- Answer questions directly.
-- Never sound robotic or repetitive.
-- Never read a long pitch monologue.
-- Never use markdown, bullets, stage directions, or bracketed cues.
+VOICE & CADENCE:
+- Every response must sound exactly like natural spoken English on a phone call.
+- Keep sentences short: 5-18 words each. Two or three sentences max per turn.
+- Vary how you start each reply. Never begin with "I" twice in a row.
+- Use contractions always: I'm, you're, that's, we've, it's, don't, won't, can't.
+- Warm openers to use naturally (pick based on what the lead said):
+  "Got it," / "Yeah," / "Oh nice," / "That makes sense," / "Totally," / "Sure," / "Mm, okay," / "Ah, right,"
+- End most "continue" turns with a single, focused question. Never two questions.
+- Mirror the lead's energy: if they're casual, be casual; if they're formal, be formal.
+- Breathe naturally: occasional "..." mid-sentence is fine for real conversational feel.
+- Never pitch. Discover, listen, then guide.
+
+WHAT NEVER TO DO:
+- Never start with "I'd like to..." or "I wanted to reach out..."
+- Never list features or benefits in bullet format.
+- Never say "As an AI..." or mention language models.
+- Never use corporate filler: "Absolutely!", "Certainly!", "Of course!", "Great question!".
+- Never repeat the lead's exact words back to them.
+- Never give a monologue over 2 sentences.
+- Never use markdown, asterisks, brackets, or stage directions.
 
 BUSINESS CONTEXT:
 - Business: ${context.businessName || 'Our company'}
 - Industry: ${context.industry || 'General'}
-- Caller role: ${context.callerPosition || 'Specialist'}
-- Mention AI in opening when required: ${context.mentionAi ? 'Yes' : 'No'}
-- Must say rules: ${context.sayThisRules || 'None'}
-- Avoid rules: ${context.avoidThisRules || 'None'}
+- Your role: ${context.callerPosition || 'Specialist'}
+- Disclose AI if asked directly: ${context.mentionAi ? 'Yes - say you are an AI assistant' : 'No - respond as a human unless pressed'}
+- Always say: ${context.sayThisRules || 'Nothing specific'}
+- Never say: ${context.avoidThisRules || 'Nothing specific'}
 
 DECISION RULES:
-- action="forward" if lead is warm/interested, asks for details/pricing, or requests a human.
-- action="end" if lead clearly declines, asks to stop, wrong number, or wants no future contact.
-- action="continue" otherwise.
+- action="forward" - lead is warm, curious, asks price/details, or wants a human.
+- action="end" - lead clearly declines, says stop calling, wrong number.
+- action="continue" - still in discovery or building rapport.
 
-OUTPUT:
-Return STRICT JSON only:
+OUTPUT FORMAT - strict JSON only, no prose outside it:
 {
-  "reply": "short spoken response",
+  "reply": "spoken reply here",
   "action": "continue|forward|end",
-  "reason": "very short reason",
-  "nextQuestion": "optional single follow-up question"
+  "reason": "one short phrase",
+  "nextQuestion": "single follow-up question if action=continue, else omit"
 }`;
 }
 
@@ -462,10 +519,10 @@ function normalizeSpokenReply(input: string): string {
 
   if (!cleaned) return '';
 
-  // Keep responses concise for real phone cadence.
+  // Keep responses concise for phone cadence but allow natural warmth.
   const words = cleaned.split(' ');
-  if (words.length <= 42) return cleaned;
-  return `${words.slice(0, 42).join(' ').trim()}...`;
+  if (words.length <= 55) return cleaned;
+  return `${words.slice(0, 55).join(' ').trim()}...`;
 }
 
 async function requestGemini(context: ConversationContext): Promise<ConversationDecision> {
@@ -491,9 +548,9 @@ async function requestGemini(context: ConversationContext): Promise<Conversation
         },
       ],
       generationConfig: {
-        temperature: 0.65,
+        temperature: 0.78,
         responseMimeType: 'application/json',
-        maxOutputTokens: 400,
+        maxOutputTokens: 350,
       },
     },
     {
@@ -504,8 +561,8 @@ async function requestGemini(context: ConversationContext): Promise<Conversation
         },
       ],
       generationConfig: {
-        temperature: 0.65,
-        maxOutputTokens: 400,
+        temperature: 0.78,
+        maxOutputTokens: 350,
       },
     },
   ];
@@ -563,8 +620,8 @@ async function requestOpenAI(context: ConversationContext): Promise<Conversation
         model: getOpenAIModel(),
         messages,
         response_format: { type: 'json_object' },
-        temperature: 0.65,
-        max_tokens: 250,
+        temperature: 0.78,
+        max_tokens: 350,
       });
       return String(completion.choices[0]?.message?.content || '');
     },
@@ -572,8 +629,8 @@ async function requestOpenAI(context: ConversationContext): Promise<Conversation
       const completion = await client.chat.completions.create({
         model: getOpenAIModel(),
         messages,
-        temperature: 0.65,
-        max_tokens: 250,
+        temperature: 0.78,
+        max_tokens: 350,
       });
       return String(completion.choices[0]?.message?.content || '');
     },
