@@ -1,0 +1,38 @@
+version: "3.9"
+
+services:
+  auto-caller:
+    image: node:20-bookworm
+    working_dir: /app
+    command: sh -c "npm install && npm run dev"
+    volumes:
+      - ./:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      CSM_TTS_URL: http://csm-tts:7010
+    depends_on:
+      - csm-tts
+
+  csm-tts:
+    build:
+      context: ./services/csm-tts
+      dockerfile: Dockerfile
+    ports:
+      - "${CSM_TTS_PORT:-7010}:7010"
+    environment:
+      CSM_TTS_PORT: 7010
+      CSM_MODEL_ID: ${CSM_MODEL_ID:-sesame/csm-1b}
+      HF_TOKEN: ${HF_TOKEN:-}
+      NO_TORCH_COMPILE: ${NO_TORCH_COMPILE:-1}
+      CSM_SAMPLE_RATE: ${CSM_SAMPLE_RATE:-24000}
+      CSM_SPEAKER_COUNT: ${CSM_SPEAKER_COUNT:-4}
+    # If your Docker host has NVIDIA runtime configured, enable GPU access:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - capabilities: [gpu]

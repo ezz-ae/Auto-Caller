@@ -3,6 +3,7 @@
 import { getSettings } from './store';
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
+const DEFAULT_VOICE_ID = process.env.ELEVENLABS_DEFAULT_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
 
 interface ElevenLabsVoice {
   voice_id: string;
@@ -75,7 +76,7 @@ export async function getVoices(userId = 'default'): Promise<ElevenLabsVoice[]> 
 // Generate speech audio
 export async function generateSpeech(
   text: string,
-  voiceId: string = '21m00Tcm4TlvDq8ikWAM',
+  voiceId: string = DEFAULT_VOICE_ID,
   options: {
     language?: string;
     userId?: string;
@@ -93,11 +94,11 @@ export async function generateSpeech(
     process.env.ELEVENLABS_MODEL_ID ||
     process.env.ELEVENLABS_PHONE_MODEL_ID ||
     'eleven_multilingual_v2';
-  // Tuned defaults for natural phone cadence (less robotic, less over-controlled).
-  const stability = getFloatEnv('ELEVENLABS_VOICE_STABILITY', 0.38);
-  const similarityBoost = getFloatEnv('ELEVENLABS_VOICE_SIMILARITY_BOOST', 0.82);
-  const style = getFloatEnv('ELEVENLABS_VOICE_STYLE', 0.20);
-  const speed = getFloatEnv('ELEVENLABS_VOICE_SPEED', 0.96);
+  // Tuned defaults for more human cadence: slightly slower with softer control.
+  const stability = getFloatEnv('ELEVENLABS_VOICE_STABILITY', 0.34);
+  const similarityBoost = getFloatEnv('ELEVENLABS_VOICE_SIMILARITY_BOOST', 0.88);
+  const style = getFloatEnv('ELEVENLABS_VOICE_STYLE', 0.16);
+  const speed = getFloatEnv('ELEVENLABS_VOICE_SPEED', 0.90);
   const useSpeakerBoost = getBooleanEnv('ELEVENLABS_USE_SPEAKER_BOOST', true);
   // 0 favors quality over latency and typically sounds less synthetic.
   const optimizeLatency = Math.max(0, Math.min(4, Math.round(getFloatEnv('ELEVENLABS_OPTIMIZE_STREAMING_LATENCY', 0))));
@@ -137,7 +138,7 @@ export async function generateSpeech(
 // Generate speech URL for Twilio (returns a hosted URL)
 export async function generateSpeechForCall(
   text: string,
-  voiceId: string = '21m00Tcm4TlvDq8ikWAM'
+  voiceId: string = DEFAULT_VOICE_ID
 ): Promise<string> {
   // For Twilio calls, we'll use Twilio's built-in TTS or generate audio
   // This returns a URL that Twilio can use

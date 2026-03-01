@@ -129,7 +129,11 @@ export async function POST(request: NextRequest) {
     }
 
     const selectedLanguage = String(language || selectedIdentity?.language || 'en-US');
-    const selectedVoiceId = String(voiceId || selectedIdentity?.voiceId || '21m00Tcm4TlvDq8ikWAM');
+    const providerDefaultVoice =
+      settings.ttsProvider === 'csm'
+        ? `csm_speaker_${Math.max(0, Math.floor(Number(settings.csmSpeaker || 0)))}`
+        : '21m00Tcm4TlvDq8ikWAM';
+    const selectedVoiceId = String(voiceId || selectedIdentity?.voiceId || providerDefaultVoice);
     const baseScript = String(
       target ||
       script ||

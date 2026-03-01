@@ -15,6 +15,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       settings: {
         elevenLabsApiKey: managedMode ? '' : (settings.elevenLabsApiKey ? '••••••••' : ''),
+        ttsProvider: settings.ttsProvider || 'elevenlabs',
+        csmEnabled: !!settings.csmEnabled,
+        csmSpeaker: Number.isFinite(settings.csmSpeaker) ? settings.csmSpeaker : 0,
+        csmVoiceLabel: settings.csmVoiceLabel || '',
         twilioAccountSid: managedMode ? '' : (settings.twilioAccountSid ? '••••••••' : ''),
         twilioAuthToken: managedMode ? '' : (settings.twilioAuthToken ? '••••••••' : ''),
         twilioPhoneNumber: settings.twilioPhoneNumber || '',
@@ -57,6 +61,21 @@ export async function POST(request: NextRequest) {
     // Handle API keys (only save if not masked)
     if (!managedMode && body.elevenLabsApiKey && !body.elevenLabsApiKey.includes('•')) {
       toSave.elevenLabsApiKey = body.elevenLabsApiKey;
+    }
+    if (body.ttsProvider === 'elevenlabs' || body.ttsProvider === 'csm') {
+      toSave.ttsProvider = body.ttsProvider;
+    }
+    if (typeof body.csmEnabled === 'boolean') {
+      toSave.csmEnabled = body.csmEnabled;
+    }
+    if (body.csmSpeaker !== undefined) {
+      const csmSpeaker = Number(body.csmSpeaker);
+      if (Number.isFinite(csmSpeaker) && csmSpeaker >= 0) {
+        toSave.csmSpeaker = Math.floor(csmSpeaker);
+      }
+    }
+    if (typeof body.csmVoiceLabel === 'string') {
+      toSave.csmVoiceLabel = body.csmVoiceLabel.trim();
     }
     if (!managedMode && body.twilioAccountSid && !body.twilioAccountSid.includes('•')) {
       toSave.twilioAccountSid = body.twilioAccountSid;

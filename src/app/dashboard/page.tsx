@@ -74,6 +74,10 @@ import type { AgentAction, IntegrationActivityEvent } from '@/app/dashboard/type
 
 interface Settings {
   voiceEngineApiKey: string
+  ttsProvider?: 'elevenlabs' | 'csm'
+  csmEnabled?: boolean
+  csmSpeaker?: number
+  csmVoiceLabel?: string
   telephonyAccountSid: string
   telephonyAuthToken: string
   telephonyPhoneNumber: string
@@ -305,9 +309,12 @@ const DEFAULT_BILLING_PRODUCTS: Record<string, BillingProduct> = {
   number_activation: { id: 'number_activation', name: 'Dedicated Phone Number', price: 39, kind: 'number' },
 }
 
+const DEFAULT_FEMALE_VOICE_FALLBACK = '21m00Tcm4TlvDq8ikWAM' // Rachel
+const DEFAULT_MALE_VOICE_FALLBACK = 'ErXwobaYiN019PkySvjV' // Antoni
+
 const PREFERRED_ELEVENLABS_VOICES: Record<'female' | 'male', string[]> = {
-  female: ['21m00Tcm4TlvDq8ikWAM', 'AZnzlk1XvdvUeBnXmlld', 'EXAVITQu4vr4xnSDxMaL', 'MF3mGyEYCl7XYWbV9V6O'],
-  male: ['ErXwobaYiN019PkySvjV', 'TxGEqnHWrfWFT1GWmBXj', 'pNInz6obpgDQGcFmaJgB', 'VR6AewLTigWG4xSOukaG'],
+  female: [DEFAULT_FEMALE_VOICE_FALLBACK, 'AZnzlk1XvdvUeBnXmlld', 'EXAVITQu4vr4xnSDxMaL', 'MF3mGyEYCl7XYWbV9V6O'],
+  male: [DEFAULT_MALE_VOICE_FALLBACK, 'TxGEqnHWrfWFT1GWmBXj', 'pNInz6obpgDQGcFmaJgB', 'VR6AewLTigWG4xSOukaG'],
 }
 
 const AGENT_CATALOG: AgentProfile[] = [
@@ -362,11 +369,11 @@ const AGENT_CATALOG: AgentProfile[] = [
 ]
 
 const AGENT_ADMIN_PRESETS: Record<string, { voiceId: string; language: string; gender: 'male' | 'female' | 'any'; position: string }> = {
-  sara: { voiceId: '21m00Tcm4TlvDq8ikWAM', language: 'en-US', gender: 'female', position: 'Sales Advisor' },
-  ali: { voiceId: 'ErXwobaYiN019PkySvjV', language: 'ar-SA', gender: 'male', position: 'Follow-up Specialist' },
-  maya: { voiceId: 'AZnzlk1XvdvUeBnXmlld', language: 'en-US', gender: 'female', position: 'Qualification Specialist' },
+  sara: { voiceId: DEFAULT_FEMALE_VOICE_FALLBACK, language: 'en-US', gender: 'female', position: 'Sales Advisor' },
+  ali: { voiceId: DEFAULT_MALE_VOICE_FALLBACK, language: 'ar-SA', gender: 'male', position: 'Follow-up Specialist' },
+  maya: { voiceId: DEFAULT_FEMALE_VOICE_FALLBACK, language: 'en-US', gender: 'female', position: 'Qualification Specialist' },
   omar: { voiceId: 'TxGEqnHWrfWFT1GWmBXj', language: 'ar-SA', gender: 'male', position: 'Appointment Specialist' },
-  lina: { voiceId: 'EXAVITQu4vr4xnSDxMaL', language: 'en-US', gender: 'female', position: 'Retention Specialist' },
+  lina: { voiceId: DEFAULT_FEMALE_VOICE_FALLBACK, language: 'en-US', gender: 'female', position: 'Retention Specialist' },
   noah: { voiceId: 'pNInz6obpgDQGcFmaJgB', language: 'en-GB', gender: 'male', position: 'Enterprise Specialist' },
 }
 
@@ -384,6 +391,12 @@ function languageBase(value?: string): string {
 function isNaturalVoice(voice?: Voice | null): boolean {
   if (!voice) return false
   return voice.source === 'elevenlabs' || voice.source === 'high-quality'
+}
+
+function isRiverVoice(voice?: Voice | null): boolean {
+  if (!voice) return false
+  const name = String(voice.name || '').trim().toLowerCase()
+  return name === 'river' || name.startsWith('river ')
 }
 
 function scoreVoiceForIdentity(voice: Voice, targetGender: 'female' | 'male' | 'any', targetLanguage: string): number {
@@ -427,14 +440,76 @@ function scoreVoiceForIdentity(voice: Voice, targetGender: 'female' | 'male' | '
   if (description.includes('natural') || description.includes('realistic') || description.includes('warm')) {
     score += 20
   }
+  if (isRiverVoice(voice)) {
+    score += 60
+    if (targetGender === 'female') score += 160
+    if (targetLanguageBase === 'en') score += 50
+  }
 
   return score
+}
+
+function resolveDefaultFemaleVoiceId(voices: Voice[]): string {
+  const naturalVoices = voices.filter(voice => isNaturalVoice(voice))
+  const pool = naturalVoices.length > 0 ? naturalVoices : voices
+  const riverVoice = pool.find(voice => {
+    const voiceGender = normalizeGender(voice.labels?.gender)
+    const voiceLanguageBase = languageBase(String(voice.language || voice.labels?.language || ''))
+    return isRiverVoice(voice) && (voiceGender === 'female' || voiceGender === 'any') && (!voiceLanguageBase || voiceLanguageBase === 'en')
+  })
+  if (riverVoice) return riverVoice.id
+
+  const fallbackCandidate = pool
+    .filter(voice => {
+      const voiceGender = normalizeGender(voice.labels?.gender)
+      return voiceGender === 'female' || voiceGender === 'any'
+    })
+    .sort((a, b) => scoreVoiceForIdentity(b, 'female', 'en-US') - scoreVoiceForIdentity(a, 'female', 'en-US'))[0]
+
+  return fallbackCandidate?.id || DEFAULT_FEMALE_VOICE_FALLBACK
+}
+
+function resolveDefaultVoiceForPreset(
+  preset: { voiceId: string; language: string; gender: 'male' | 'female' | 'any' },
+  voices: Voice[]
+): string {
+  const naturalVoices = voices.filter(voice => isNaturalVoice(voice))
+  const pool = naturalVoices.length > 0 ? naturalVoices : voices
+
+  if (preset.gender === 'female') {
+    return resolveDefaultFemaleVoiceId(pool)
+  }
+
+  if (pool.some(voice => voice.id === preset.voiceId)) {
+    return preset.voiceId
+  }
+
+  const ranked = pool
+    .filter(voice => {
+      const voiceGender = normalizeGender(voice.labels?.gender)
+      return preset.gender === 'any' || voiceGender === 'any' || voiceGender === preset.gender
+    })
+    .sort((a, b) => scoreVoiceForIdentity(b, preset.gender, preset.language) - scoreVoiceForIdentity(a, preset.gender, preset.language))
+
+  return ranked[0]?.id || (preset.gender === 'male' ? DEFAULT_MALE_VOICE_FALLBACK : DEFAULT_FEMALE_VOICE_FALLBACK)
+}
+
+function parseCsmSpeakerFromVoiceId(voiceId?: string): number | null {
+  const match = String(voiceId || '').trim().match(/^csm_speaker_(\d+)$/i)
+  if (!match) return null
+  const parsed = Number(match[1])
+  if (!Number.isFinite(parsed) || parsed < 0) return null
+  return Math.floor(parsed)
 }
 
 export default function Dashboard() {
   // Settings state
   const [settings, setSettings] = useState<Settings>({
     voiceEngineApiKey: '',
+    ttsProvider: 'elevenlabs',
+    csmEnabled: false,
+    csmSpeaker: 0,
+    csmVoiceLabel: '',
     telephonyAccountSid: '',
     telephonyAuthToken: '',
     telephonyPhoneNumber: '',
@@ -466,7 +541,7 @@ export default function Dashboard() {
     'Qualification: need, budget, timeline, decision maker',
     'CTA: connect now with specialist',
   ].join('\n'))
-  const [selectedVoice, setSelectedVoice] = useState('21m00Tcm4TlvDq8ikWAM')
+  const [selectedVoice, setSelectedVoice] = useState(DEFAULT_FEMALE_VOICE_FALLBACK)
   const [selectedLanguage, setSelectedLanguage] = useState('en-US')
   const [voices, setVoices] = useState<Voice[]>([])
   const [callerIdentities, setCallerIdentities] = useState<CallerIdentity[]>([])
@@ -476,7 +551,7 @@ export default function Dashboard() {
     position: '',
     gender: 'any',
     language: 'en-US',
-    voiceId: '21m00Tcm4TlvDq8ikWAM',
+    voiceId: DEFAULT_FEMALE_VOICE_FALLBACK,
     industry: '',
     mentionAi: false,
     campaignGoal: '',
@@ -512,6 +587,7 @@ export default function Dashboard() {
   const [leadSearch, setLeadSearch] = useState('')
   const [callbackFilter, setCallbackFilter] = useState<string>('all')
   const [loading, setLoading] = useState(false)
+  const [ttsConfigSaving, setTtsConfigSaving] = useState(false)
   const [numberPurchaseModal, setNumberPurchaseModal] = useState<{ callerIdentityId: string; identityName: string } | null>(null)
   const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>([])
   const [copilotInput, setCopilotInput] = useState('')
@@ -554,6 +630,7 @@ export default function Dashboard() {
   const [syncingGoogleDrive, setSyncingGoogleDrive] = useState(false)
   const [loadingLeadInbox, setLoadingLeadInbox] = useState(false)
   const initRef = useRef(false)
+  const defaultVoiceAppliedRef = useRef(false)
   const liveResumeTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fetchCampaigns = useCallback(async () => {
@@ -783,7 +860,9 @@ export default function Dashboard() {
       position: identity.position || '',
       gender: identity.gender || 'any',
       language: identity.language || 'en-US',
-      voiceId: identity.voiceId || '21m00Tcm4TlvDq8ikWAM',
+      voiceId: identity.voiceId || (settings.ttsProvider === 'csm'
+        ? `csm_speaker_${Math.max(0, Math.floor(Number(settings.csmSpeaker || 0)))}`
+        : DEFAULT_FEMALE_VOICE_FALLBACK),
       industry: identity.industry || '',
       mentionAi: !!identity.mentionAi,
       campaignGoal: '',
@@ -884,8 +963,9 @@ export default function Dashboard() {
       return
     }
 
-    if (!isNaturalVoice(voice)) {
-                        toast.error('Preview is available for high-quality natural voices. Choose a natural voice for testing.')
+    if (settings.ttsProvider !== 'csm' && !isNaturalVoice(voice)) {
+      toast.error('Preview is available for high-quality natural voices. Choose a natural voice for testing.')
+      return
     }
 
     if (voicePreviewAudioRef.current) {
@@ -895,7 +975,8 @@ export default function Dashboard() {
 
     setPreviewingVoice(chosenVoiceId)
     try {
-      const url = `/api/calls/tts?script=${encodeURIComponent(text)}&voiceId=${encodeURIComponent(chosenVoiceId)}&language=${encodeURIComponent(chosenLanguage)}`
+      const formatParam = settings.ttsProvider === 'csm' ? '&format=wav' : ''
+      const url = `/api/calls/tts?script=${encodeURIComponent(text)}&voiceId=${encodeURIComponent(chosenVoiceId)}&language=${encodeURIComponent(chosenLanguage)}${formatParam}`
       if (voicePreviewAudioRef.current) {
         voicePreviewAudioRef.current.src = url
         await voicePreviewAudioRef.current.play()
@@ -1079,6 +1160,7 @@ export default function Dashboard() {
     initRef.current = true
     
     const init = async () => {
+      let initialTtsProvider: 'elevenlabs' | 'csm' = 'elevenlabs'
       // Fetch settings
       try {
         const res = await fetch('/api/settings')
@@ -1089,16 +1171,26 @@ export default function Dashboard() {
         if (!data?.settings) {
           throw new Error('Settings payload missing')
         }
-        setSettings(data.settings)
+        const incomingSettings = data.settings || {}
+        const parsedCsmSpeaker = Number(incomingSettings.csmSpeaker)
+        initialTtsProvider = incomingSettings.ttsProvider === 'csm' ? 'csm' : 'elevenlabs'
+        setSettings(prev => ({
+          ...prev,
+          ...incomingSettings,
+          ttsProvider: initialTtsProvider,
+          csmEnabled: Boolean(incomingSettings.csmEnabled),
+          csmSpeaker: Number.isFinite(parsedCsmSpeaker) ? Math.max(0, Math.floor(parsedCsmSpeaker)) : 0,
+          csmVoiceLabel: String(incomingSettings.csmVoiceLabel || ''),
+        }))
         setCredits(typeof data.credits === 'number' ? data.credits : 0)
         setIsConfigured(!!data.isConfigured)
-        setManagedMode(!!data.settings?.managedMode)
-        setAssignedPhoneNumber(data.settings?.assignedPhoneNumber || '')
+        setManagedMode(!!incomingSettings?.managedMode)
+        setAssignedPhoneNumber(incomingSettings?.assignedPhoneNumber || '')
         setIdentityForm(prev => ({
           ...prev,
-          industry: data.settings?.industry || '',
-          sayThisRules: data.settings?.sayThisRules || '',
-          avoidThisRules: data.settings?.avoidThisRules || '',
+          industry: incomingSettings?.industry || '',
+          sayThisRules: incomingSettings?.sayThisRules || '',
+          avoidThisRules: incomingSettings?.avoidThisRules || '',
         }))
       } catch {
         toast.error('Failed to load settings, using defaults')
@@ -1113,12 +1205,19 @@ export default function Dashboard() {
         const data = await res.json()
         setVoices(data.voices || [])
       } catch {
-        setVoices([
-          { id: '21m00Tcm4TlvDq8ikWAM', name: 'Rachel', category: 'premade', labels: { gender: 'female', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },
-          { id: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi', category: 'premade', labels: { gender: 'female', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },
-          { id: 'ErXwobaYiN019PkySvjV', name: 'Antoni', category: 'premade', labels: { gender: 'male', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },
-          { id: 'TxGEqnHWrfWFT1GWmBXj', name: 'Josh', category: 'premade', labels: { gender: 'male', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },
-        ])
+        if (initialTtsProvider === 'csm') {
+          setVoices([
+            { id: 'csm_speaker_0', name: 'CSM Speaker 0', category: 'csm', labels: { gender: 'any', language: 'multi' }, source: 'csm', language: 'multi' },
+            { id: 'csm_speaker_1', name: 'CSM Speaker 1', category: 'csm', labels: { gender: 'any', language: 'multi' }, source: 'csm', language: 'multi' },
+          ])
+        } else {
+          setVoices([
+            { id: DEFAULT_FEMALE_VOICE_FALLBACK, name: 'Rachel', category: 'premade', labels: { gender: 'female', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },
+            { id: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi', category: 'premade', labels: { gender: 'female', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },
+            { id: DEFAULT_MALE_VOICE_FALLBACK, name: 'Antoni', category: 'premade', labels: { gender: 'male', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },
+            { id: 'TxGEqnHWrfWFT1GWmBXj', name: 'Josh', category: 'premade', labels: { gender: 'male', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },
+          ])
+        }
       }
       
       await Promise.all([
@@ -1158,6 +1257,52 @@ export default function Dashboard() {
     return () => clearInterval(interval)
   }, [activeTab, fetchRecordings])
 
+  useEffect(() => {
+    if (defaultVoiceAppliedRef.current) return
+    if (!voices.length) return
+    defaultVoiceAppliedRef.current = true
+
+    const preferredVoiceId =
+      settings.ttsProvider === 'csm'
+        ? `csm_speaker_${Math.max(0, Math.floor(Number(settings.csmSpeaker || 0)))}`
+        : resolveDefaultFemaleVoiceId(voices)
+
+    setSelectedVoice(prev => (!prev || prev === DEFAULT_FEMALE_VOICE_FALLBACK ? preferredVoiceId : prev))
+    setIdentityForm(prev => {
+      if (!prev.voiceId || prev.voiceId === DEFAULT_FEMALE_VOICE_FALLBACK) {
+        return { ...prev, voiceId: preferredVoiceId }
+      }
+      return prev
+    })
+  }, [voices, settings.csmSpeaker, settings.ttsProvider])
+
+  useEffect(() => {
+    if (settings.ttsProvider === 'csm') {
+      const targetSpeaker = Math.max(0, Math.floor(Number(settings.csmSpeaker || 0)))
+      const targetVoiceId = `csm_speaker_${targetSpeaker}`
+      setSelectedVoice(prev => {
+        const currentSpeaker = parseCsmSpeakerFromVoiceId(prev)
+        return currentSpeaker === targetSpeaker ? prev : targetVoiceId
+      })
+      setIdentityForm(prev => {
+        const currentSpeaker = parseCsmSpeakerFromVoiceId(prev.voiceId)
+        return currentSpeaker === targetSpeaker
+          ? prev
+          : { ...prev, voiceId: targetVoiceId, gender: 'any' }
+      })
+      return
+    }
+
+    setSelectedVoice(prev => {
+      if (parseCsmSpeakerFromVoiceId(prev) === null) return prev
+      return resolveDefaultFemaleVoiceId(voices)
+    })
+    setIdentityForm(prev => {
+      if (parseCsmSpeakerFromVoiceId(prev.voiceId) === null) return prev
+      return { ...prev, voiceId: resolveDefaultFemaleVoiceId(voices) }
+    })
+  }, [settings.ttsProvider, settings.csmSpeaker, voices])
+
   // Save settings
   const saveSettings = async () => {
     setLoading(true)
@@ -1186,6 +1331,40 @@ export default function Dashboard() {
       toast.error('Failed to save settings')
     }
     setLoading(false)
+  }
+
+  const saveTtsProviderSettings = async () => {
+    setTtsConfigSaving(true)
+    try {
+      const payload = {
+        ttsProvider: settings.ttsProvider === 'csm' ? 'csm' : 'elevenlabs',
+        csmEnabled: Boolean(settings.csmEnabled),
+        csmSpeaker: Math.max(0, Math.floor(Number(settings.csmSpeaker || 0))),
+        csmVoiceLabel: String(settings.csmVoiceLabel || '').trim(),
+      }
+      const res = await fetch('/api/settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !data?.success) {
+        toast.error(data?.error || 'Failed to save TTS provider settings')
+        return
+      }
+
+      const voicesRes = await fetch('/api/voices')
+      if (!voicesRes.ok) {
+        throw new Error('Saved provider but failed to load refreshed voices')
+      }
+      const voicesData = await voicesRes.json()
+      setVoices(Array.isArray(voicesData?.voices) ? voicesData.voices : [])
+      toast.success('TTS provider settings saved')
+    } catch (error: any) {
+      toast.error(error?.message || 'Failed to save TTS provider settings')
+    } finally {
+      setTtsConfigSaving(false)
+    }
   }
 
   const saveLeadSourcesConfig = async () => {
@@ -1543,6 +1722,10 @@ export default function Dashboard() {
     const nextAgentId = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const safeName = profile.name
     const preset = AGENT_ADMIN_PRESETS[profile.id] || AGENT_ADMIN_PRESETS.sara
+    const resolvedPresetVoiceId =
+      settings.ttsProvider === 'csm'
+        ? `csm_speaker_${Math.max(0, Math.floor(Number(settings.csmSpeaker || 0)))}`
+        : resolveDefaultVoiceForPreset(preset, voices)
 
     const nextAgent: WorkspaceAgent = {
       id: nextAgentId,
@@ -1557,7 +1740,7 @@ export default function Dashboard() {
     setAgentSessionStarted(true)
     setActiveTab('agents')
     setAgentInput('')
-    setSelectedVoice(preset.voiceId)
+    setSelectedVoice(resolvedPresetVoiceId)
     setSelectedLanguage(preset.language)
     setIdentityForm(prev => ({
       ...prev,
@@ -1565,7 +1748,7 @@ export default function Dashboard() {
       position: prev.position || preset.position,
       gender: preset.gender,
       language: preset.language,
-      voiceId: preset.voiceId,
+      voiceId: resolvedPresetVoiceId,
     }))
 
     setAgentMessagesByAgent(prev => {
@@ -1708,6 +1891,10 @@ export default function Dashboard() {
       try {
         const activeProfileId = activeAgentProfile?.id || 'sara'
         const preset = AGENT_ADMIN_PRESETS[activeProfileId] || AGENT_ADMIN_PRESETS.sara
+        const resolvedPresetVoiceId =
+          settings.ttsProvider === 'csm'
+            ? `csm_speaker_${Math.max(0, Math.floor(Number(settings.csmSpeaker || 0)))}`
+            : resolveDefaultVoiceForPreset(preset, voices)
         const res = await fetch('/api/caller-identities', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -1716,7 +1903,7 @@ export default function Dashboard() {
             position: draft.callerIdentity.position || preset.position,
             gender: preset.gender,
             language: preset.language,
-            voiceId: preset.voiceId,
+            voiceId: resolvedPresetVoiceId,
             industry: draft.callerIdentity.industry || settings.industry || '',
             mentionAi: !!draft.callerIdentity.mentionAi,
             campaignGoal: draft.callerIdentity.campaignGoal || '',
@@ -1730,7 +1917,7 @@ export default function Dashboard() {
           await fetchCallerIdentities()
           setSelectedCallerIdentityId(data.identity.id)
           setSelectedLanguage(data.identity.language || preset.language)
-          setSelectedVoice(data.identity.voiceId || preset.voiceId)
+          setSelectedVoice(data.identity.voiceId || resolvedPresetVoiceId)
           toast.success('Draft applied and caller identity created.')
           return
         }
@@ -3578,6 +3765,9 @@ export default function Dashboard() {
                 numberActivationPrice={numberActivationPrice}
                 LANGUAGE_OPTIONS={LANGUAGE_OPTIONS}
                 settings={settings}
+                setSettings={setSettings}
+                ttsConfigSaving={ttsConfigSaving}
+                saveTtsProviderSettings={saveTtsProviderSettings}
                 selectedCallerIdentityId={selectedCallerIdentityId}
               />
 	          </TabsContent>

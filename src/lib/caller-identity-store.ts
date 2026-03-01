@@ -41,6 +41,7 @@ export interface CallerIdentityKpiDelta {
 const DATA_DIR = process.env.DATA_DIR || (process.env.VERCEL ? '/tmp/auto-caller-data' : path.join(process.cwd(), 'data'));
 
 const STORE_DRIVER = (process.env.STORE_DRIVER || '').toLowerCase();
+const DEFAULT_FEMALE_VOICE_ID = process.env.ELEVENLABS_DEFAULT_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
 const usePostgresStore =
   STORE_DRIVER === 'postgres' ||
   (STORE_DRIVER !== 'filesystem' && (process.env.DATABASE_URL || '').startsWith('postgres'));
@@ -78,7 +79,7 @@ function normalizeIdentity(
     position: input.position.trim(),
     gender: (input.gender || existing?.gender || 'any').trim().toLowerCase(),
     language: input.language.trim() || 'en-US',
-    voiceId: input.voiceId.trim() || '21m00Tcm4TlvDq8ikWAM',
+    voiceId: input.voiceId.trim() || DEFAULT_FEMALE_VOICE_ID,
     dedicatedNumber: (input.dedicatedNumber || existing?.dedicatedNumber || '').trim() || undefined,
     industry: (input.industry || '').trim(),
     mentionAi: Boolean(input.mentionAi),

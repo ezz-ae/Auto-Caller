@@ -27,7 +27,9 @@ Production-ready outbound AI calling platform with:
 - Lead intelligence timeline workspace (per-number history, notes, outcomes, and follow-up context)
 - Callback queue workspace (scheduled/completed/cancelled tasks with one-click load back to Call Center)
 - Daily operations reporting (calls, connection metrics, callback performance, AI recommendations)
-- Natural call voice delivery via ElevenLabs TTS for identity voices (with gender/language filtering in identity setup)
+- Natural call voice delivery via pluggable TTS providers:
+  - ElevenLabs (SaaS)
+  - Sesame CSM-1B via self-hosted GPU microservice
 - Optional dashboard access protection with login (`/login`)
 - Multi-tenant account auth (`/api/auth/register`, `/api/auth/login`) with per-user data isolation
 - Managed billing flows (PayPal number activation + credit top-up)
@@ -55,8 +57,9 @@ Production-ready outbound AI calling platform with:
 - Prisma ORM
 - Neon Postgres (production)
 - Twilio (calling)
-- Google AI + ElevenLabs (AI/voice)
+- Google AI + ElevenLabs/Sesame CSM (AI/voice)
 - PayPal (checkout)
+- FastAPI (CSM microservice)
 
 ## Domain Recommendation
 
@@ -80,6 +83,7 @@ Edit `.env.local` and set at least:
 - `STORE_DRIVER`
 - `DATABASE_URL` (if `STORE_DRIVER=postgres`)
 - Twilio / Google AI / ElevenLabs / PayPal vars for your mode
+- `CSM_TTS_URL` (if using Sesame CSM provider)
 - `AUTH_MODE=accounts` (recommended)
 - `APP_SESSION_SECRET` (required in production for account sessions)
 - `ALLOW_LEGACY_AUTH=false` (recommended)
@@ -220,6 +224,43 @@ Natural voices (ElevenLabs):
   - `ELEVENLABS_VOICE_SPEED`
   - `ELEVENLABS_USE_SPEAKER_BOOST`
   - `ELEVENLABS_OPTIMIZE_STREAMING_LATENCY`
+
+Sesame CSM (self-hosted, GPU required):
+- Set workspace TTS provider to `Sesame CSM` in `Callers -> Voice Agents`.
+- Next.js calls the CSM microservice via `CSM_TTS_URL`.
+- Recommended env:
+  - `CSM_TTS_URL=http://localhost:7010` (or `http://csm-tts:7010` in Docker network)
+  - `CSM_MODEL_ID=sesame/csm-1b`
+  - `HF_TOKEN=...` (required: must have accepted model access on Hugging Face)
+  - `NO_TORCH_COMPILE=1` (recommended for stability)
+
+CSM service run (Docker Compose):
+```bash
+docker compose up -d csm-tts
+curl http://localhost:7010/health
+```
+
+CSM `/tts` curl example:
+```bash
+curl -X POST http://localhost:7010/tts \
+  -H "Content-Type: application/json" \
+  --data '{
+    "text":"Hello from CSM",
+    "speaker":0,
+    "context":[{"speaker":1,"text":"Can you introduce yourself?"}],
+    "max_audio_ms":10000,
+    "format":"wav"
+  }' \
+  --output out.wav
+```
+
+CSM output format guidance:
+- Use `wav` for dashboard/web preview playback.
+- Use `ulaw_8khz` for telephony-optimized payloads.
+
+CSM vs ElevenLabs:
+- CSM: self-hosted and highly controllable prosody, but needs GPU infrastructure.
+- ElevenLabs: easiest setup and hosted reliability, but external SaaS dependency.
 
 AI provider:
 - Google AI is primary for live call conversation, copilot, and transcript analysis.

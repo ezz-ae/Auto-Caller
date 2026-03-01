@@ -33,6 +33,9 @@ interface VoiceAgentsTabProps {
   numberActivationPrice: number
   LANGUAGE_OPTIONS: any[]
   settings: any
+  setSettings: (settings: any) => void
+  ttsConfigSaving: boolean
+  saveTtsProviderSettings: () => void
   selectedCallerIdentityId: string | null
 }
 
@@ -60,8 +63,25 @@ export function VoiceAgentsTab({
   numberActivationPrice,
   LANGUAGE_OPTIONS,
   settings,
+  setSettings,
+  ttsConfigSaving,
+  saveTtsProviderSettings,
   selectedCallerIdentityId
 }: VoiceAgentsTabProps) {
+  const csmSpeakers = Array.from(new Set(
+    filteredIdentityVoices
+      .map(voice => {
+        const match = String(voice?.id || '').match(/^csm_speaker_(\d+)$/i)
+        if (!match) return null
+        const parsed = Number(match[1])
+        return Number.isFinite(parsed) ? parsed : null
+      })
+      .filter((value): value is number => value !== null)
+  )).sort((a, b) => a - b)
+
+  const speakerOptions = csmSpeakers.length > 0 ? csmSpeakers : [0, 1, 2, 3]
+  const selectedCsmSpeaker = Number.isFinite(Number(settings.csmSpeaker)) ? Number(settings.csmSpeaker) : 0
+
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-200">
       <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
@@ -94,6 +114,88 @@ export function VoiceAgentsTab({
                 Describe your agent briefly. Our AI will automatically refine its strategy, rules, and behavior as it learns from your campaigns.
               </p>
             </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-3 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-5">
+            <div className="space-y-2 md:col-span-1">
+              <Label className="text-zinc-400 uppercase tracking-tighter text-[10px] font-bold">TTS Provider</Label>
+              <Select
+                value={settings.ttsProvider === 'csm' ? 'csm' : 'elevenlabs'}
+                onValueChange={(value) => {
+                  const nextProvider = value === 'csm' ? 'csm' : 'elevenlabs'
+                  const nextSpeaker = Number.isFinite(Number(settings.csmSpeaker)) ? Number(settings.csmSpeaker) : 0
+                  const nextVoiceId = nextProvider === 'csm' ? `csm_speaker_${Math.max(0, Math.floor(nextSpeaker))}` : identityForm.voiceId
+                  setSettings({ ...settings, ttsProvider: nextProvider, csmEnabled: nextProvider === 'csm' ? true : settings.csmEnabled })
+                  if (nextProvider === 'csm') {
+                    setIdentityForm(prev => ({ ...prev, gender: 'any', voiceId: nextVoiceId }))
+                  }
+                }}
+              >
+                <SelectTrigger className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl">
+                  <SelectValue placeholder="Select provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
+                  <SelectItem value="csm">Sesame CSM</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            {settings.ttsProvider === 'csm' && (
+              <>
+                <div className="space-y-2 md:col-span-1">
+                  <Label className="text-zinc-400 uppercase tracking-tighter text-[10px] font-bold">CSM Speaker</Label>
+                  <Select
+                    value={String(selectedCsmSpeaker)}
+                    onValueChange={(value) => {
+                      const speaker = Number(value)
+                      const nextSpeaker = Number.isFinite(speaker) ? Math.max(0, Math.floor(speaker)) : 0
+                      setSettings({ ...settings, csmEnabled: true, csmSpeaker: nextSpeaker, csmVoiceLabel: `Speaker ${nextSpeaker}` })
+                      setIdentityForm(prev => ({ ...prev, gender: 'any', voiceId: `csm_speaker_${nextSpeaker}` }))
+                    }}
+                  >
+                    <SelectTrigger className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl">
+                      <SelectValue placeholder="Select speaker" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {speakerOptions.map(speaker => (
+                        <SelectItem key={speaker} value={String(speaker)}>
+                          CSM Speaker {speaker}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2 md:col-span-1">
+                  <Label className="text-zinc-400 uppercase tracking-tighter text-[10px] font-bold">Provider Config</Label>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-full bg-zinc-800 hover:bg-zinc-700 h-12 rounded-xl border border-zinc-700"
+                    onClick={saveTtsProviderSettings}
+                    disabled={ttsConfigSaving}
+                  >
+                    {ttsConfigSaving ? 'Saving...' : 'Save CSM Provider'}
+                  </Button>
+                </div>
+              </>
+            )}
+
+            {settings.ttsProvider !== 'csm' && (
+              <div className="space-y-2 md:col-span-2">
+                <Label className="text-zinc-400 uppercase tracking-tighter text-[10px] font-bold">Provider Config</Label>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className="w-full bg-zinc-800 hover:bg-zinc-700 h-12 rounded-xl border border-zinc-700"
+                  onClick={saveTtsProviderSettings}
+                  disabled={ttsConfigSaving}
+                >
+                  {ttsConfigSaving ? 'Saving...' : 'Save ElevenLabs Provider'}
+                </Button>
+              </div>
+            )}
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
@@ -143,21 +245,47 @@ export function VoiceAgentsTab({
                 </SelectContent>
               </Select>
             </div>
-            <div className="space-y-2 md:col-span-2">
-              <Label className="text-zinc-400 uppercase tracking-tighter text-[10px] font-bold">Select Natural Voice</Label>
-              <Select value={identityForm.voiceId} onValueChange={(value) => setIdentityForm(prev => ({ ...prev, voiceId: value }))}>
-                <SelectTrigger className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl">
-                  <SelectValue placeholder="Select voice" />
-                </SelectTrigger>
-                <SelectContent>
-                  {filteredIdentityVoices.map(voice => (
-                    <SelectItem key={voice.id} value={voice.id}>
-                      {voice.name} ({voice.labels?.gender || 'N/A'}) • {voice.language || voice.labels?.language || 'multi'} {voice.source === 'elevenlabs' || voice.source === 'high-quality' ? '• Natural' : ''}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {settings.ttsProvider === 'csm' ? (
+              <div className="space-y-2 md:col-span-2">
+                <Label className="text-zinc-400 uppercase tracking-tighter text-[10px] font-bold">CSM Speaker Voice</Label>
+                <Select
+                  value={identityForm.voiceId || `csm_speaker_${selectedCsmSpeaker}`}
+                  onValueChange={(value) => {
+                    const match = String(value).match(/^csm_speaker_(\d+)$/i)
+                    const speaker = match ? Number(match[1]) : selectedCsmSpeaker
+                    setIdentityForm(prev => ({ ...prev, voiceId: value, gender: 'any' }))
+                    setSettings({ ...settings, csmSpeaker: Number.isFinite(speaker) ? speaker : selectedCsmSpeaker, csmEnabled: true })
+                  }}
+                >
+                  <SelectTrigger className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl">
+                    <SelectValue placeholder="Select CSM speaker" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {speakerOptions.map(speaker => (
+                      <SelectItem key={speaker} value={`csm_speaker_${speaker}`}>
+                        CSM Speaker {speaker} • multi
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : (
+              <div className="space-y-2 md:col-span-2">
+                <Label className="text-zinc-400 uppercase tracking-tighter text-[10px] font-bold">Select Natural Voice</Label>
+                <Select value={identityForm.voiceId} onValueChange={(value) => setIdentityForm(prev => ({ ...prev, voiceId: value }))}>
+                  <SelectTrigger className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl">
+                    <SelectValue placeholder="Select voice" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredIdentityVoices.map(voice => (
+                      <SelectItem key={voice.id} value={voice.id}>
+                        {voice.name} ({voice.labels?.gender || 'N/A'}) • {voice.language || voice.labels?.language || 'multi'} {voice.source === 'elevenlabs' || voice.source === 'high-quality' ? '• Natural' : ''}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center justify-between p-6 rounded-2xl bg-zinc-950/40 border border-zinc-800 group hover:border-zinc-700 transition-colors">

@@ -17,6 +17,10 @@ const usePostgresStore =
 
 interface StoredSettings {
   elevenLabsApiKey: string;
+  ttsProvider: 'elevenlabs' | 'csm';
+  csmEnabled: boolean;
+  csmSpeaker: number;
+  csmVoiceLabel: string;
   twilioAccountSid: string;
   twilioAuthToken: string;
   twilioPhoneNumber: string;
@@ -66,6 +70,10 @@ function defaultSettings(): StoredSettings {
 
   return {
     elevenLabsApiKey: '',
+    ttsProvider: 'elevenlabs',
+    csmEnabled: false,
+    csmSpeaker: 0,
+    csmVoiceLabel: '',
     twilioAccountSid: '',
     twilioAuthToken: '',
     twilioPhoneNumber: '',
@@ -216,6 +224,10 @@ function deserializeRecording(row: {
 
 function deserializeSettings(row: {
   elevenLabsApiKey: string;
+  ttsProvider: string;
+  csmEnabled: boolean;
+  csmSpeaker: number;
+  csmVoiceLabel: string;
   twilioAccountSid: string;
   twilioAuthToken: string;
   twilioPhoneNumber: string;
@@ -232,8 +244,13 @@ function deserializeSettings(row: {
   sayThisRules: string;
   avoidThisRules: string;
 }): StoredSettings {
+  const provider = String(row.ttsProvider || '').trim().toLowerCase();
   return {
     elevenLabsApiKey: row.elevenLabsApiKey,
+    ttsProvider: provider === 'csm' ? 'csm' : 'elevenlabs',
+    csmEnabled: Boolean(row.csmEnabled),
+    csmSpeaker: Number.isFinite(row.csmSpeaker) ? row.csmSpeaker : 0,
+    csmVoiceLabel: row.csmVoiceLabel || '',
     twilioAccountSid: row.twilioAccountSid,
     twilioAuthToken: row.twilioAuthToken,
     twilioPhoneNumber: row.twilioPhoneNumber,
@@ -625,6 +642,10 @@ async function dbSaveSettings(settings: Partial<StoredSettings>, userId = 'defau
     },
     update: {
       elevenLabsApiKey: updated.elevenLabsApiKey,
+      ttsProvider: updated.ttsProvider,
+      csmEnabled: updated.csmEnabled,
+      csmSpeaker: updated.csmSpeaker,
+      csmVoiceLabel: updated.csmVoiceLabel,
       twilioAccountSid: updated.twilioAccountSid,
       twilioAuthToken: updated.twilioAuthToken,
       twilioPhoneNumber: updated.twilioPhoneNumber,

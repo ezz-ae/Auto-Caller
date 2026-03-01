@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getVoices as getVoiceEngineVoices } from '@/lib/elevenlabs';
+import { listCSMSpeakers, csmSpeakerVoiceId } from '@/lib/csm';
+import { getSettings } from '@/lib/store';
 import { NextRequest } from 'next/server';
 import { requireUserIdFromRequest } from '@/lib/request-user';
 import { isUnauthorizedError } from '@/lib/route-errors';
@@ -42,6 +44,9 @@ function qualityScore(input: { id: string; category: string; labels: Record<stri
   }
 
   const name = input.name.toLowerCase();
+  if (name === 'river' || name.startsWith('river ')) {
+    score += 220;
+  }
   if (name.includes('rachel') || name.includes('bella') || name.includes('domi') || name.includes('antoni')) {
     score += 20;
   }
@@ -52,6 +57,23 @@ function qualityScore(input: { id: string; category: string; labels: Record<stri
 export async function GET(request: NextRequest) {
   try {
     const userId = requireUserIdFromRequest(request);
+    const settings = await getSettings(userId);
+
+    if (settings.ttsProvider === 'csm') {
+      const speakers = await listCSMSpeakers(userId);
+      const voices = speakers.map(speaker => ({
+        id: csmSpeakerVoiceId(speaker),
+        voice_id: csmSpeakerVoiceId(speaker),
+        name: `CSM Speaker ${speaker}`,
+        category: 'csm',
+        labels: { gender: 'any', language: 'multi' },
+        language: 'multi',
+        source: 'csm',
+        previewUrl: '',
+      }));
+      return NextResponse.json({ voices, provider: 'csm' });
+    }
+
     const voices = await getVoiceEngineVoices(userId);
     const telephonyVoices = [
       { id: 'default-female', name: 'Standard Female', category: 'telephony', labels: { gender: 'female', language: 'multi' }, language: 'multi', source: 'telephony', previewUrl: '' },
@@ -72,13 +94,16 @@ export async function GET(request: NextRequest) {
     
     return NextResponse.json({ 
       voices: [...telephonyVoices, ...highQualityVoices],
+      provider: 'elevenlabs',
     });
   } catch (error: any) {
     if (isUnauthorizedError(error)) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
+    const message = error?.message || 'Failed to get voices';
+    const status = String(message).includes('CSM service is unavailable') ? 502 : 500;
     return NextResponse.json({ 
-      error: error.message || 'Failed to get voices' 
-    }, { status: 500 });
+      error: message,
+    }, { status });
   }
 }

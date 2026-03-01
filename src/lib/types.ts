@@ -103,6 +103,10 @@ export interface Voice {
 
 export interface UserSettings {
   elevenLabsApiKey?: string;
+  ttsProvider?: 'elevenlabs' | 'csm';
+  csmEnabled?: boolean;
+  csmSpeaker?: number;
+  csmVoiceLabel?: string;
   twilioAccountSid?: string;
   twilioAuthToken?: string;
   twilioPhoneNumber?: string;
