@@ -52,8 +52,10 @@ import {
   buildCallbackQueue,
   buildDailyReport,
   buildLeadProfiles,
+  buildWorkspaceIntelligence,
   type CallbackTask,
   type LeadProfile,
+  type WorkspaceIntelligence,
 } from '@/lib/call-center-intelligence'
 
 interface Settings {
@@ -143,6 +145,7 @@ interface CopilotMessage {
   script?: string
   objections?: string[]
   discoveryQuestions?: string[]
+  conversationMoves?: string[]
 }
 
 interface AgentMessage {
@@ -151,6 +154,9 @@ interface AgentMessage {
   content: string
   action?: 'none' | 'open_billing' | 'open_call' | 'open_callers' | 'open_settings'
   checklist?: string[]
+  actionReason?: string
+  confidence?: number
+  conversationMode?: string
 }
 
 interface AgentProfile {
@@ -1108,6 +1114,7 @@ export default function Dashboard() {
         script: generatedTarget,
         objections: data.objections || [],
         discoveryQuestions: data.discoveryQuestions || [],
+        conversationMoves: data.conversationMoves || [],
       }
       setCopilotMessages(prev => [...prev, assistantMessage])
     } catch {
@@ -1136,6 +1143,28 @@ export default function Dashboard() {
     if (action === 'open_callers') return 'Callers'
     if (action === 'open_settings') return 'Settings'
     return ''
+  }
+
+  const agentActionToTab = (action?: AgentMessage['action']) => {
+    if (!action || action === 'none') return null
+    if (action === 'open_billing') return 'billing'
+    if (action === 'open_call') return 'call'
+    if (action === 'open_callers') return 'callers'
+    if (action === 'open_settings') return 'settings'
+    return null
+  }
+
+  const getIntelligenceStatusTone = (status: WorkspaceIntelligence['status']) => {
+    if (status === 'critical') return 'text-red-300 bg-red-500/15 border-red-500/30'
+    if (status === 'needs_attention') return 'text-amber-300 bg-amber-500/15 border-amber-500/30'
+    if (status === 'ready') return 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
+    return 'text-blue-300 bg-blue-500/15 border-blue-500/30'
+  }
+
+  const getPriorityTone = (priority: 'high' | 'medium' | 'low') => {
+    if (priority === 'high') return 'text-red-300 bg-red-500/15 border-red-500/30'
+    if (priority === 'medium') return 'text-amber-300 bg-amber-500/15 border-amber-500/30'
+    return 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
   }
 
   const createAgentWelcomeMessage = (profile: AgentProfile, agentDisplayName: string): AgentMessage => ({
@@ -1250,6 +1279,9 @@ export default function Dashboard() {
         content: String(data.reply || 'I reviewed your setup and prepared the next step.'),
         action: (data.action || 'none') as AgentMessage['action'],
         checklist: Array.isArray(data.checklist) ? data.checklist : [],
+        actionReason: String(data.actionReason || ''),
+        confidence: Number(data.confidence || 0),
+        conversationMode: String(data.conversationMode || ''),
       }
       setAgentMessagesByAgent(prev => ({
         ...prev,
@@ -1258,6 +1290,12 @@ export default function Dashboard() {
       setWorkspaceAgents(prev => prev.map(agent => (
         agent.id === activeAgentId ? { ...agent, updatedAt: new Date().toISOString() } : agent
       )))
+
+      const suggestedTab = agentActionToTab(assistantMessage.action)
+      if (suggestedTab && (assistantMessage.confidence || 0) >= 90) {
+        setActiveTab(suggestedTab)
+        toast.success(`Opened ${getActionLabel(assistantMessage.action)} based on ${activeAgentName}'s recommendation`)
+      }
     } catch {
       toast.error('Agent is unavailable')
     } finally {
@@ -1564,6 +1602,35 @@ export default function Dashboard() {
   const callbacksScheduled = callbackQueue.filter(item => item.status === 'scheduled').length
   const transcribedCount = recordings.filter(r => r.transcript).length
   const callerNumbersActive = callerIdentities.filter(identity => !!identity.dedicatedNumber).length
+  const workspaceIntelligence = useMemo(
+    () =>
+      buildWorkspaceIntelligence({
+        campaigns,
+        credits,
+        preparedNumbers: extractNumbers(numbers).length,
+        callerIdentities: callerIdentities.length,
+        callerNumbersActive,
+        managedMode,
+        hasForwardingNumber: !!settings.forwardToNumber?.trim(),
+        hasTargetBlueprint: script.trim().length >= 20,
+        scheduledCallbacks: callbacksScheduled,
+        callbacksDueNow,
+        hasAgentSession: agentSessionStarted,
+      }),
+    [
+      campaigns,
+      credits,
+      numbers,
+      callerIdentities.length,
+      callerNumbersActive,
+      managedMode,
+      settings.forwardToNumber,
+      script,
+      callbacksScheduled,
+      callbacksDueNow,
+      agentSessionStarted,
+    ]
+  )
   const creditProducts = Object.values(billingProducts)
     .filter(product => product.kind === 'credits')
     .sort((a, b) => (a.credits || 0) - (b.credits || 0))
@@ -2140,6 +2207,17 @@ export default function Dashboard() {
                               Suggested workspace: <span className="text-emerald-300">{getActionLabel(msg.action)}</span>
                             </p>
                           )}
+                          {!!msg.actionReason && (
+                            <p className="mt-1 text-xs text-zinc-500">
+                              Why: {msg.actionReason}
+                            </p>
+                          )}
+                          {typeof msg.confidence === 'number' && msg.confidence > 0 && (
+                            <p className="mt-1 text-xs text-zinc-500">
+                              Confidence: {Math.max(0, Math.min(100, Math.round(msg.confidence)))}%
+                              {msg.conversationMode ? ` • ${msg.conversationMode}` : ''}
+                            </p>
+                          )}
                         </div>
                       ))
                     )}
@@ -2492,15 +2570,57 @@ export default function Dashboard() {
 
               <Card className="bg-zinc-900 border-zinc-800">
                 <CardHeader>
-                  <CardTitle className="text-lg">AI Recommendations</CardTitle>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-emerald-400" />
+                    Intelligence Cockpit
+                  </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  {dailyReport.recommendations.length === 0 ? (
-                    <p className="text-sm text-zinc-400">No recommendations yet.</p>
-                  ) : (
-                    dailyReport.recommendations.slice(0, 4).map((item, index) => (
-                      <p key={`${item}-${index}`} className="text-sm text-zinc-300">• {item}</p>
-                    ))
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                    <div>
+                      <p className="text-xs text-zinc-500">Workspace Health</p>
+                      <p className="text-lg font-semibold text-zinc-100">{workspaceIntelligence.healthScore}%</p>
+                    </div>
+                    <Badge className={getIntelligenceStatusTone(workspaceIntelligence.status)}>
+                      {workspaceIntelligence.status.replace(/_/g, ' ')}
+                    </Badge>
+                  </div>
+
+                  <p className="text-sm text-zinc-300">{workspaceIntelligence.summary}</p>
+
+                  <div className="space-y-2">
+                    <p className="text-xs uppercase tracking-wide text-zinc-500">Top Actions</p>
+                    {workspaceIntelligence.nextActions.map(action => (
+                      <button
+                        key={action.id}
+                        type="button"
+                        onClick={() => setActiveTab(action.tab)}
+                        className="w-full rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 text-left hover:border-zinc-700 transition"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <p className="text-sm text-zinc-100">{action.title}</p>
+                          <Badge className={getPriorityTone(action.priority)}>{action.priority}</Badge>
+                        </div>
+                        <p className="mt-1 text-xs text-zinc-400">{action.detail}</p>
+                      </button>
+                    ))}
+                  </div>
+
+                  {workspaceIntelligence.risks.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-xs uppercase tracking-wide text-zinc-500">Risks</p>
+                      {workspaceIntelligence.risks.slice(0, 2).map((risk, index) => (
+                        <p key={`${risk}-${index}`} className="text-xs text-red-200">• {risk}</p>
+                      ))}
+                    </div>
+                  )}
+                  {workspaceIntelligence.wins.length > 0 && (
+                    <div className="space-y-1">
+                      <p className="text-xs uppercase tracking-wide text-zinc-500">Wins</p>
+                      {workspaceIntelligence.wins.slice(0, 2).map((win, index) => (
+                        <p key={`${win}-${index}`} className="text-xs text-emerald-200">• {win}</p>
+                      ))}
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -2586,10 +2706,18 @@ export default function Dashboard() {
 	          {/* Call Center Tab */}
           <TabsContent value="call" className="space-y-6 animate-in fade-in-50 duration-200">
             <Card className="bg-zinc-900 border-zinc-800">
-              <CardContent className="pt-6">
+              <CardContent className="pt-6 space-y-3">
                 <p className="text-sm text-zinc-300">
                   Steps: 1) add numbers, 2) assign a caller identity, 3) choose schedule, 4) start campaign.
                 </p>
+                <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                  <p className="text-xs uppercase tracking-wide text-zinc-500 mb-2">Smart Coaching</p>
+                  <ul className="space-y-1 text-sm text-zinc-300">
+                    {workspaceIntelligence.coachingTips.slice(0, 3).map((tip, index) => (
+                      <li key={`${tip}-${index}`}>• {tip}</li>
+                    ))}
+                  </ul>
+                </div>
               </CardContent>
             </Card>
             <div className="grid gap-6 lg:grid-cols-3">
@@ -2830,6 +2958,13 @@ export default function Dashboard() {
                               <ul className="mt-2 text-xs text-emerald-200 space-y-1">
                                 {msg.discoveryQuestions.map((item, qIdx) => (
                                   <li key={qIdx}>Q: {item}</li>
+                                ))}
+                              </ul>
+                            )}
+                            {msg.conversationMoves && msg.conversationMoves.length > 0 && (
+                              <ul className="mt-2 text-xs text-blue-200 space-y-1">
+                                {msg.conversationMoves.map((item, moveIdx) => (
+                                  <li key={moveIdx}>Move: {item}</li>
                                 ))}
                               </ul>
                             )}

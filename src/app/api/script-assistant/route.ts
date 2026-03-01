@@ -5,6 +5,22 @@ interface ChatMessage {
   content: string;
 }
 
+function buildFallbackConversationMoves(profile: {
+  objective?: string;
+  audience?: string;
+  offer?: string;
+}): string[] {
+  const objective = String(profile.objective || 'book a follow-up call').trim();
+  const audience = String(profile.audience || 'lead').trim();
+  const offer = String(profile.offer || 'your offer').trim();
+
+  return [
+    `If the ${audience} says "I'm busy", acknowledge and ask for a better callback window in the same day.`,
+    `If the lead asks "what is this about?", answer in one line: ${offer}, then ask one qualifying question.`,
+    `When intent is warm, confirm value quickly and move to CTA: ${objective}.`,
+  ];
+}
+
 function normalizeGeminiModel(rawModel: string): string {
   const trimmed = String(rawModel || '').trim();
   if (!trimmed) return 'gemini-1.5-flash';
@@ -158,6 +174,7 @@ Always return valid JSON with:
 - targetProfile: object with keys goal, audience, offer, qualification (array), cta, constraints
 - objections: array of 3 objection handling lines
 - discoveryQuestions: array of 4 smart discovery questions
+- conversationMoves: array of 3 adaptive conversation moves (if lead says X -> do Y)
 - profileSummary: one short line about the caller identity you used`;
 
     const userPrompt = `Context:
@@ -196,6 +213,13 @@ ${prompt}`;
       script: parsed.targetBrief || parsed.script || '',
       objections: Array.isArray(parsed.objections) ? parsed.objections : [],
       discoveryQuestions: Array.isArray(parsed.discoveryQuestions) ? parsed.discoveryQuestions : [],
+      conversationMoves: Array.isArray(parsed.conversationMoves) && parsed.conversationMoves.length > 0
+        ? parsed.conversationMoves.map((item: unknown) => String(item)).filter(Boolean).slice(0, 5)
+        : buildFallbackConversationMoves({
+            objective: context.objective,
+            audience: context.audience,
+            offer: context.targetProfile,
+          }),
       profileSummary: parsed.profileSummary || '',
     });
   } catch (error) {

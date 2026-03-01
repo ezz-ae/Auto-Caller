@@ -1,21 +1,34 @@
 'use client';
 
-import { useState } from 'react';
+import { useSyncExternalStore } from 'react';
 import { Button } from '@/components/ui/button';
 
 const CONSENT_KEY = 'acaller.cookieConsent.v1';
+const CONSENT_EVENT = 'acaller-cookie-consent';
 
 function setConsent(value: 'accepted' | 'declined') {
   const maxAge = 60 * 60 * 24 * 365;
   document.cookie = `ac_cookie_consent=${value}; Path=/; Max-Age=${maxAge}; SameSite=Lax`;
   window.localStorage.setItem(CONSENT_KEY, value);
+  window.dispatchEvent(new Event(CONSENT_EVENT));
+}
+
+function subscribe(callback: () => void) {
+  const handle = () => callback();
+  window.addEventListener('storage', handle);
+  window.addEventListener(CONSENT_EVENT, handle);
+  return () => {
+    window.removeEventListener('storage', handle);
+    window.removeEventListener(CONSENT_EVENT, handle);
+  };
 }
 
 export function CookieConsent() {
-  const [visible, setVisible] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return !window.localStorage.getItem(CONSENT_KEY);
-  });
+  const visible = useSyncExternalStore(
+    subscribe,
+    () => !window.localStorage.getItem(CONSENT_KEY),
+    () => false
+  );
 
   if (!visible) return null;
 
@@ -30,10 +43,7 @@ export function CookieConsent() {
           type="button"
           size="sm"
           className="bg-emerald-500 hover:bg-emerald-600"
-          onClick={() => {
-            setConsent('accepted');
-            setVisible(false);
-          }}
+          onClick={() => setConsent('accepted')}
         >
           Accept
         </Button>
@@ -42,10 +52,7 @@ export function CookieConsent() {
           size="sm"
           variant="secondary"
           className="bg-zinc-800 hover:bg-zinc-700"
-          onClick={() => {
-            setConsent('declined');
-            setVisible(false);
-          }}
+          onClick={() => setConsent('declined')}
         >
           Decline optional
         </Button>

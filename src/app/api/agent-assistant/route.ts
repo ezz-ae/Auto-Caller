@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 
 type AgentAction = 'none' | 'open_billing' | 'open_call' | 'open_callers' | 'open_settings';
+type ConversationMode = 'onboarding' | 'execution' | 'optimization';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -67,6 +68,22 @@ function inferSuggestedCredits(shortfall: number): number {
   if (shortfall <= 90) return 90;
   if (shortfall <= 140) return 140;
   return 200;
+}
+
+function sanitizeConfidence(value: unknown, fallback = 78): number {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return fallback;
+  return Math.max(35, Math.min(98, Math.round(parsed)));
+}
+
+function inferConversationMode(context: AgentContext): ConversationMode {
+  if (Number(context.callerIdentitiesCount || 0) === 0 || Number(context.campaignCount || 0) === 0) {
+    return 'onboarding';
+  }
+  if ((context.currentCampaignStatus || '').toLowerCase() === 'running' || !!context.isCalling) {
+    return 'execution';
+  }
+  return 'optimization';
 }
 
 async function generateJsonWithGemini(payload: {
@@ -147,6 +164,7 @@ function buildDeterministicReply(prompt: string, context: AgentContext) {
   const numbersCount = Number(context.numbersCount || 0);
   const callerIdentitiesCount = Number(context.callerIdentitiesCount || 0);
   const agent = context.selectedAgentName || 'Sara';
+  const mode = inferConversationMode(context);
 
   if (callerIdentitiesCount === 0) {
     return {
@@ -157,6 +175,9 @@ function buildDeterministicReply(prompt: string, context: AgentContext) {
         'Set voice + language',
         'Add target blueprint and call rules',
       ],
+      actionReason: 'No caller identity exists yet, so campaign launch cannot proceed.',
+      confidence: 95,
+      conversationMode: mode,
     };
   }
 
@@ -171,6 +192,9 @@ function buildDeterministicReply(prompt: string, context: AgentContext) {
         `Current credits: ${credits}`,
         `Suggested purchase: ${pack} credits`,
       ],
+      actionReason: 'Queued contacts exceed current credits, which would block campaign dispatch.',
+      confidence: 96,
+      conversationMode: mode,
     };
   }
 
@@ -182,6 +206,9 @@ function buildDeterministicReply(prompt: string, context: AgentContext) {
       'Assign caller identity to campaign',
       'Launch or schedule call batch',
     ],
+    actionReason: 'Core setup appears valid. Next best step is execution from Call Center.',
+    confidence: 84,
+    conversationMode: mode,
   };
 }
 
@@ -239,8 +266,11 @@ You help users configure:
 Always output strict JSON:
 {
   "reply": "natural response",
-      "action": "none|open_billing|open_call|open_callers|open_settings",
-      "checklist": ["short step", "short step"]
+  "action": "none|open_billing|open_call|open_callers|open_settings",
+  "checklist": ["short step", "short step"],
+  "actionReason": "short reason for the action",
+  "confidence": 0-100,
+  "conversationMode": "onboarding|execution|optimization"
 }`;
 
     const userPrompt = `Context:
@@ -290,6 +320,11 @@ Rules:
         reply: String(parsed.reply || buildDeterministicReply(prompt, context).reply),
         action: sanitizeAction(String(parsed.action || 'none')),
         checklist: Array.isArray(parsed.checklist) ? parsed.checklist.map((x: any) => String(x)).filter(Boolean).slice(0, 6) : [],
+        actionReason: String(parsed.actionReason || ''),
+        confidence: sanitizeConfidence(parsed.confidence, 82),
+        conversationMode: ['onboarding', 'execution', 'optimization'].includes(String(parsed.conversationMode || '').toLowerCase())
+          ? String(parsed.conversationMode || '').toLowerCase()
+          : inferConversationMode(context),
       });
     } catch (providerError) {
       console.error('Agent assistant provider fallback:', providerError);

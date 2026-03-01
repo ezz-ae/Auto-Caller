@@ -79,6 +79,24 @@ export interface DailyReport {
   recommendations: string[];
 }
 
+export interface WorkspaceAction {
+  id: string;
+  title: string;
+  detail: string;
+  tab: 'overview' | 'agents' | 'call' | 'callers' | 'recordings' | 'leads' | 'callbacks' | 'history' | 'billing' | 'settings';
+  priority: 'high' | 'medium' | 'low';
+}
+
+export interface WorkspaceIntelligence {
+  healthScore: number;
+  status: 'critical' | 'needs_attention' | 'ready' | 'high_performing';
+  summary: string;
+  risks: string[];
+  wins: string[];
+  coachingTips: string[];
+  nextActions: WorkspaceAction[];
+}
+
 function normalizePhoneKey(raw: string): string {
   return String(raw || '').replace(/[^\d+]/g, '');
 }
@@ -287,5 +305,179 @@ export function buildDailyReport(campaigns: CampaignLike[], targetDate?: Date): 
     leadsTouched,
     highlights,
     recommendations,
+  };
+}
+
+export function buildWorkspaceIntelligence(input: {
+  campaigns: CampaignLike[];
+  credits: number;
+  preparedNumbers: number;
+  callerIdentities: number;
+  callerNumbersActive: number;
+  managedMode: boolean;
+  hasForwardingNumber: boolean;
+  hasTargetBlueprint: boolean;
+  scheduledCallbacks: number;
+  callbacksDueNow: number;
+  hasAgentSession: boolean;
+}): WorkspaceIntelligence {
+  const daily = buildDailyReport(input.campaigns, new Date());
+  const totalCalls = input.campaigns.reduce((sum, campaign) => sum + (campaign.results?.length || 0), 0);
+  const connectedCalls = input.campaigns.reduce(
+    (sum, campaign) =>
+      sum +
+      (campaign.results || []).filter(result => {
+        const status = String(result.status).toLowerCase();
+        return status === 'connected' || status === 'forwarded';
+      }).length,
+    0
+  );
+  const connectionRate = totalCalls > 0 ? connectedCalls / totalCalls : 0;
+
+  const readinessChecks = [
+    input.hasForwardingNumber,
+    input.callerIdentities > 0,
+    input.hasTargetBlueprint,
+    input.preparedNumbers > 0,
+    input.credits > 0,
+    input.managedMode ? input.callerNumbersActive > 0 : true,
+    input.hasAgentSession,
+  ];
+  const readinessScore = Math.round((readinessChecks.filter(Boolean).length / readinessChecks.length) * 100);
+
+  const operationsScore = (() => {
+    if (totalCalls === 0) return input.preparedNumbers > 0 ? 45 : 35;
+    const quality = Math.round(connectionRate * 100);
+    const callbackBonus = Math.min(15, input.scheduledCallbacks * 2);
+    const penalty = Math.min(20, daily.failedCalls * 2);
+    return Math.max(25, Math.min(95, quality + callbackBonus - penalty + 20));
+  })();
+
+  const healthScore = Math.round(readinessScore * 0.55 + operationsScore * 0.45);
+  const status: WorkspaceIntelligence['status'] =
+    healthScore < 45 ? 'critical' : healthScore < 70 ? 'needs_attention' : healthScore < 88 ? 'ready' : 'high_performing';
+
+  const risks: string[] = [];
+  if (!input.hasForwardingNumber) risks.push('Forwarding number is missing. Warm leads cannot be transferred.');
+  if (input.callerIdentities === 0) risks.push('No caller identity exists yet, so campaigns cannot launch.');
+  if (input.preparedNumbers > 0 && input.credits < input.preparedNumbers) {
+    risks.push(`Credit shortfall detected (${input.preparedNumbers - input.credits} more credits needed for queued numbers).`);
+  }
+  if (input.managedMode && input.callerNumbersActive === 0) {
+    risks.push('No dedicated caller number is active in managed mode.');
+  }
+  if (input.callbacksDueNow > 0) {
+    risks.push(`${input.callbacksDueNow} callbacks are due now and should be dispatched first.`);
+  }
+  if (totalCalls > 0 && connectionRate < 0.2) {
+    risks.push('Connection rate is low. Improve lead quality and calling window.');
+  }
+
+  const wins: string[] = [];
+  if (input.callerIdentities > 0) wins.push(`${input.callerIdentities} caller identities are configured.`);
+  if (input.hasTargetBlueprint) wins.push('Target blueprint is present and ready for adaptive conversations.');
+  if (daily.followUpsScheduled > 0) wins.push(`${daily.followUpsScheduled} follow-ups were scheduled today.`);
+  if (totalCalls > 0 && connectionRate >= 0.35) wins.push(`Healthy connection rate (${Math.round(connectionRate * 100)}%).`);
+  if (input.credits >= 60) wins.push('Credit runway is healthy for medium-sized batches.');
+  if (wins.length === 0) wins.push('Workspace is initialized and ready for guided setup.');
+
+  const coachingTips: string[] = [];
+  if (!input.hasTargetBlueprint) coachingTips.push('Define a tighter offer + qualification + CTA before launching.');
+  if (input.preparedNumbers > 0 && input.callerIdentities > 0) coachingTips.push('Run a 10-20 lead pilot batch before full list rollout.');
+  if (totalCalls > 0 && daily.noAnswerCalls > daily.connectedCalls) coachingTips.push('Retry no-answer leads in a different time window.');
+  if (input.callbacksDueNow > 0) coachingTips.push('Prioritize due callbacks first; these have the highest conversion intent.');
+  if (coachingTips.length === 0) coachingTips.push('Current flow is healthy. Scale gradually and monitor callback completion.');
+
+  const nextActions: WorkspaceAction[] = [];
+  if (!input.hasForwardingNumber) {
+    nextActions.push({
+      id: 'set-forward',
+      title: 'Set forwarding number',
+      detail: 'Required to hand warm leads to your team.',
+      tab: 'settings',
+      priority: 'high',
+    });
+  }
+  if (input.callerIdentities === 0) {
+    nextActions.push({
+      id: 'create-caller',
+      title: 'Create first caller identity',
+      detail: 'Set name, role, language, and voice before campaign launch.',
+      tab: 'callers',
+      priority: 'high',
+    });
+  }
+  if (input.managedMode && input.callerNumbersActive === 0) {
+    nextActions.push({
+      id: 'buy-number',
+      title: 'Activate caller number',
+      detail: 'Each managed caller identity needs a dedicated number.',
+      tab: 'billing',
+      priority: 'high',
+    });
+  }
+  if (input.preparedNumbers > 0 && input.credits < input.preparedNumbers) {
+    nextActions.push({
+      id: 'add-credits',
+      title: 'Top up credits',
+      detail: `Queue size is ${input.preparedNumbers}; current credits are ${input.credits}.`,
+      tab: 'billing',
+      priority: 'high',
+    });
+  }
+  if (input.preparedNumbers === 0) {
+    nextActions.push({
+      id: 'upload-leads',
+      title: 'Upload lead numbers',
+      detail: 'Import CSV or paste numbers to build a campaign queue.',
+      tab: 'call',
+      priority: 'medium',
+    });
+  }
+  if (input.callbacksDueNow > 0) {
+    nextActions.push({
+      id: 'run-callbacks',
+      title: 'Dispatch due callbacks',
+      detail: `${input.callbacksDueNow} leads asked to be called back now.`,
+      tab: 'callbacks',
+      priority: 'high',
+    });
+  }
+  if (!input.hasAgentSession) {
+    nextActions.push({
+      id: 'start-agent',
+      title: 'Start workspace agent',
+      detail: 'Use an agent to collect strategy and generate campaign structure conversationally.',
+      tab: 'agents',
+      priority: 'medium',
+    });
+  }
+  if (nextActions.length === 0) {
+    nextActions.push({
+      id: 'launch-batch',
+      title: 'Launch next batch',
+      detail: 'Run a controlled batch and monitor connection + callback rates.',
+      tab: 'call',
+      priority: 'low',
+    });
+  }
+
+  const summary =
+    status === 'critical'
+      ? 'Workspace needs immediate setup attention before launch.'
+      : status === 'needs_attention'
+        ? 'Core setup exists, but key gaps are reducing conversion efficiency.'
+        : status === 'ready'
+          ? 'Workspace is ready for structured campaign execution.'
+          : 'Workspace is performing strongly. Focus on scaling and callback discipline.';
+
+  return {
+    healthScore,
+    status,
+    summary,
+    risks,
+    wins,
+    coachingTips,
+    nextActions: nextActions.slice(0, 5),
   };
 }
