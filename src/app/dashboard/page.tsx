@@ -92,6 +92,7 @@ interface Settings {
   companyDetails?: string
   sayThisRules?: string
   avoidThisRules?: string
+  includeAutomatedDisclosure?: boolean
 }
 
 interface Voice {
@@ -128,6 +129,10 @@ interface CallResult {
   id: string
   phoneNumber: string
   status: string
+  callAttemptState?: string
+  attemptCount?: number
+  billingEventId?: string
+  billedAt?: string
   timestamp: string
   error?: string
   userComment?: string
@@ -251,6 +256,22 @@ interface BillingProduct {
   price: number
   kind: 'credits' | 'number'
   credits?: number
+}
+
+interface BillingEventEntry {
+  id: string
+  kind: string
+  amount: number
+  status: string
+  metadata?: Record<string, any>
+  createdAt: string
+}
+
+interface TtsHealthStatus {
+  provider: 'elevenlabs' | 'csm'
+  status: 'ready' | 'disabled' | 'unreachable' | 'gpu_missing' | 'loading'
+  detail?: string
+  modelId?: string
 }
 
 interface LeadSourceSettingsState {
@@ -524,6 +545,7 @@ export default function Dashboard() {
     companyDetails: '',
     sayThisRules: '',
     avoidThisRules: '',
+    includeAutomatedDisclosure: true,
   })
   const [credits, setCredits] = useState(0)
   const [isConfigured, setIsConfigured] = useState(false)
@@ -615,6 +637,10 @@ export default function Dashboard() {
   const [teamForm, setTeamForm] = useState({ name: '', email: '', role: 'Agent' })
   const [teamLoading, setTeamLoading] = useState(false)
   const [billingProducts, setBillingProducts] = useState<Record<string, BillingProduct>>(DEFAULT_BILLING_PRODUCTS)
+  const [billingEvents, setBillingEvents] = useState<BillingEventEntry[]>([])
+  const [testingCall, setTestingCall] = useState(false)
+  const [ttsHealth, setTtsHealth] = useState<TtsHealthStatus | null>(null)
+  const [loadingTtsHealth, setLoadingTtsHealth] = useState(false)
   const [leadSourceSettings, setLeadSourceSettings] = useState<LeadSourceSettingsState>({
     zapierEnabled: true,
     zapierInboundSecret: '',
@@ -701,6 +727,37 @@ export default function Dashboard() {
       }
     } catch {
       console.error('Failed to load billing products')
+    }
+  }, [])
+
+  const fetchBillingEvents = useCallback(async () => {
+    try {
+      const res = await fetch('/api/billing/events?limit=12')
+      if (!res.ok) {
+        throw new Error('Failed to load billing events')
+      }
+      const data = await res.json()
+      setBillingEvents(Array.isArray(data?.events) ? data.events : [])
+    } catch {
+      console.error('Failed to load billing events')
+    }
+  }, [])
+
+  const fetchTtsHealth = useCallback(async () => {
+    setLoadingTtsHealth(true)
+    try {
+      const res = await fetch('/api/tts-health')
+      if (!res.ok) {
+        throw new Error('Failed to load TTS health')
+      }
+      const data = await res.json()
+      if (data?.provider) {
+        setTtsHealth(data as TtsHealthStatus)
+      }
+    } catch {
+      setTtsHealth(null)
+    } finally {
+      setLoadingTtsHealth(false)
     }
   }, [])
 
@@ -1181,6 +1238,7 @@ export default function Dashboard() {
           csmEnabled: Boolean(incomingSettings.csmEnabled),
           csmSpeaker: Number.isFinite(parsedCsmSpeaker) ? Math.max(0, Math.floor(parsedCsmSpeaker)) : 0,
           csmVoiceLabel: String(incomingSettings.csmVoiceLabel || ''),
+          includeAutomatedDisclosure: incomingSettings.includeAutomatedDisclosure ?? true,
         }))
         setCredits(typeof data.credits === 'number' ? data.credits : 0)
         setIsConfigured(!!data.isConfigured)
@@ -1189,6 +1247,7 @@ export default function Dashboard() {
         setIdentityForm(prev => ({
           ...prev,
           industry: incomingSettings?.industry || '',
+          mentionAi: incomingSettings?.includeAutomatedDisclosure ?? prev.mentionAi,
           sayThisRules: incomingSettings?.sayThisRules || '',
           avoidThisRules: incomingSettings?.avoidThisRules || '',
         }))
@@ -1225,13 +1284,15 @@ export default function Dashboard() {
         fetchRecordings(),
         fetchTeamMembers(),
         fetchBillingProducts(),
+        fetchBillingEvents(),
         fetchCallerIdentities(),
         fetchLeadSources(),
+        fetchTtsHealth(),
       ])
     }
     
     init()
-  }, [fetchCampaigns, fetchRecordings, fetchTeamMembers, fetchBillingProducts, fetchCallerIdentities, fetchLeadSources])
+  }, [fetchCampaigns, fetchRecordings, fetchTeamMembers, fetchBillingProducts, fetchBillingEvents, fetchCallerIdentities, fetchLeadSources, fetchTtsHealth])
 
   useEffect(() => {
     const hasLiveCampaign = isCalling || currentCampaign?.status === 'scheduled'
@@ -1303,6 +1364,11 @@ export default function Dashboard() {
     })
   }, [settings.ttsProvider, settings.csmSpeaker, voices])
 
+  useEffect(() => {
+    if (!initRef.current) return
+    fetchTtsHealth()
+  }, [settings.ttsProvider, settings.csmSpeaker, settings.csmEnabled, fetchTtsHealth])
+
   // Save settings
   const saveSettings = async () => {
     setLoading(true)
@@ -1359,6 +1425,7 @@ export default function Dashboard() {
       }
       const voicesData = await voicesRes.json()
       setVoices(Array.isArray(voicesData?.voices) ? voicesData.voices : [])
+      await fetchTtsHealth()
       toast.success('TTS provider settings saved')
     } catch (error: any) {
       toast.error(error?.message || 'Failed to save TTS provider settings')
@@ -2301,6 +2368,37 @@ export default function Dashboard() {
     setLoading(false)
   }
 
+  const startTestCallToMyNumber = async () => {
+    const targetNumber = String(settings.forwardToNumber || '').trim()
+    if (!targetNumber) {
+      toast.error('Add your forwarding number in Settings first')
+      setActiveTab('settings')
+      return
+    }
+
+    setTestingCall(true)
+    try {
+      const res = await fetch('/api/demo-call/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phoneNumber: targetNumber,
+          name: settings.businessName || 'Workspace',
+          consent: true,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        throw new Error(String(data?.error || 'Unable to start test call right now.'))
+      }
+      toast.success(String(data?.message || 'Test call started. Keep your phone nearby.'))
+    } catch (error: any) {
+      toast.error(error?.message || 'Unable to start test call right now.')
+    } finally {
+      setTestingCall(false)
+    }
+  }
+
   // Stop calling
   const stopCalling = async () => {
     if (!currentCampaign) return
@@ -2461,14 +2559,16 @@ export default function Dashboard() {
 
   // Get stats
   const getStats = () => {
-    if (!currentCampaign) return { total: 0, connected: 0, failed: 0, pending: 0 }
+    if (!currentCampaign) return { total: 0, connected: 0, failed: 0, pending: 0, noAnswer: 0, voicemail: 0 }
     
     const results = currentCampaign.results || []
     return {
       total: currentCampaign.numbers?.length || 0,
       connected: results.filter(r => r.status === 'connected').length,
       failed: results.filter(r => r.status === 'failed').length,
-      pending: (currentCampaign.numbers?.length || 0) - results.length,
+      pending: results.filter(r => r.status === 'pending').length,
+      noAnswer: results.filter(r => r.status === 'no-answer').length,
+      voicemail: results.filter(r => r.status === 'voicemail').length,
     }
   }
 
@@ -2490,6 +2590,9 @@ export default function Dashboard() {
     }
     if (tab === 'sources') {
       fetchLeadSources()
+    }
+    if (tab === 'billing') {
+      fetchBillingEvents()
     }
     if (tab === 'history' || tab === 'overview' || tab === 'leads' || tab === 'callbacks') {
       fetchCampaigns()
@@ -2553,6 +2656,15 @@ export default function Dashboard() {
   const creditProducts = Object.values(billingProducts)
     .filter(product => product.kind === 'credits')
     .sort((a, b) => (a.credits || 0) - (b.credits || 0))
+  const estimatedCostPer100 = useMemo(() => {
+    const scored = creditProducts
+      .filter(product => Number(product.credits || 0) > 0 && Number(product.price || 0) > 0)
+      .map(product => (Number(product.price) / Number(product.credits)) * 100)
+      .sort((a, b) => a - b)
+    if (scored.length === 0) return null
+    return Number(scored[0].toFixed(2))
+  }, [creditProducts])
+  const lowCreditThreshold = 30
   const numberActivationPrice =
     billingProducts.number_activation?.price || DEFAULT_BILLING_PRODUCTS.number_activation.price
   const successRate = totalCalls > 0
@@ -2619,17 +2731,27 @@ export default function Dashboard() {
   const readinessScore = Math.round((readinessItems.filter(item => item.ready).length / readinessItems.length) * 100)
   const startSteps = [
     {
-      label: 'Create a caller identity',
+      label: 'Create agent',
       done: callerIdentities.length > 0,
       tab: 'callers',
     },
     {
-      label: managedMode ? 'Buy number + credits' : 'Set calling and billing',
-      done: managedMode ? (credits > 0 && callerNumbersActive > 0) : isConfigured,
-      tab: managedMode ? 'billing' : 'settings',
+      label: 'Pick voice provider',
+      done: settings.ttsProvider === 'elevenlabs' || (settings.ttsProvider === 'csm' && Boolean(settings.csmEnabled)),
+      tab: 'callers',
     },
     {
-      label: 'Launch first campaign',
+      label: managedMode ? 'Buy credits + line' : 'Buy credits',
+      done: managedMode ? (credits > 0 && callerNumbersActive > 0) : credits > 0,
+      tab: 'billing',
+    },
+    {
+      label: 'Upload CSV leads',
+      done: preparedNumbers > 0,
+      tab: 'call',
+    },
+    {
+      label: 'Start campaign',
       done: campaigns.length > 0,
       tab: 'call',
     },
@@ -3381,6 +3503,9 @@ export default function Dashboard() {
               workspaceIntelligence={workspaceIntelligence}
               getIntelligenceStatusTone={getIntelligenceStatusTone}
               getPriorityTone={getPriorityTone}
+              onStartTestCall={startTestCallToMyNumber}
+              testCallLoading={testingCall}
+              hasForwardingNumber={!!settings.forwardToNumber?.trim()}
             />
           </TabsContent>
 
@@ -3720,6 +3845,9 @@ export default function Dashboard() {
               recordings={recordings}
               credits={credits}
               toast={toast}
+              sampleCsvHref="/sample-leads.csv"
+              onStartTestCall={startTestCallToMyNumber}
+              testingCall={testingCall}
             />
           </TabsContent>
 
@@ -3769,6 +3897,8 @@ export default function Dashboard() {
                 ttsConfigSaving={ttsConfigSaving}
                 saveTtsProviderSettings={saveTtsProviderSettings}
                 selectedCallerIdentityId={selectedCallerIdentityId}
+                ttsHealth={ttsHealth}
+                loadingTtsHealth={loadingTtsHealth}
               />
 	          </TabsContent>
 
@@ -3832,9 +3962,13 @@ export default function Dashboard() {
               callerNumbersActive={callerNumbersActive}
               credits={credits}
               creditProducts={creditProducts}
+              billingEvents={billingEvents}
+              estimatedCostPer100={estimatedCostPer100}
+              lowCreditThreshold={lowCreditThreshold}
               onPurchaseSuccess={result => {
                 if (typeof result.credits === 'number') setCredits(result.credits)
                 if (result.assignedPhoneNumber) fetchCallerIdentities()
+                void fetchBillingEvents()
               }}
             />
           </TabsContent>

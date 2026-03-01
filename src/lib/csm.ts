@@ -17,6 +17,14 @@ export interface GenerateSpeechCSMOptions {
   format?: CsmAudioFormat;
 }
 
+export interface CsmHealthStatus {
+  ok: boolean;
+  ready: boolean;
+  gpuAvailable: boolean;
+  modelId?: string;
+  detail?: string;
+}
+
 function normalizeBaseUrl(value: string): string {
   return value.replace(/\/+$/, '');
 }
@@ -142,6 +150,45 @@ export async function generateSpeechCSM(
     return Buffer.from(payload);
   } catch (error: any) {
     throw new Error(`Failed to synthesize with CSM: ${error?.message || 'unknown error'}`);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+export async function getCSMHealth(): Promise<CsmHealthStatus> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 8000);
+  try {
+    const response = await fetch(`${resolveCsmBaseUrl()}/health`, {
+      method: 'GET',
+      signal: controller.signal,
+      headers: { Accept: 'application/json' },
+      cache: 'no-store',
+    });
+    if (!response.ok) {
+      const details = await response.text().catch(() => '');
+      return {
+        ok: false,
+        ready: false,
+        gpuAvailable: false,
+        detail: details || `Health request failed (${response.status})`,
+      };
+    }
+    const data = await response.json().catch(() => ({}));
+    return {
+      ok: true,
+      ready: Boolean(data?.ready),
+      gpuAvailable: Boolean(data?.gpu_available),
+      modelId: String(data?.model_id || ''),
+      detail: String(data?.load_error || ''),
+    };
+  } catch (error: any) {
+    return {
+      ok: false,
+      ready: false,
+      gpuAvailable: false,
+      detail: error?.name === 'AbortError' ? 'CSM health check timed out' : String(error?.message || 'CSM health check failed'),
+    };
   } finally {
     clearTimeout(timeout);
   }

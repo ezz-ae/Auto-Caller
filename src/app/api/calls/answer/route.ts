@@ -318,7 +318,7 @@ function buildOpeningLine(params: {
   callerName: string;
   callerPosition: string;
   businessName: string;
-  mentionAi: boolean;
+  includeAutomatedDisclosure: boolean;
   brief: string;
 }) {
   const extractField = (field: string) => {
@@ -331,8 +331,8 @@ function buildOpeningLine(params: {
   const goal = extractField('Goal');
   const topic = clipText(offer || goal, 80);
 
-  if (params.mentionAi) {
-    return `Hi, this is ${params.callerName}, an AI assistant with ${params.businessName}. ${topic ? `I'm calling about ${topic}.` : 'Quick call -'} Is this a good time?`;
+  if (params.includeAutomatedDisclosure) {
+    return `Hi, this is ${params.callerName} with ${params.businessName}. This is an automated call. ${topic ? `I'm calling about ${topic}.` : 'Quick call -'} Is this a good time? You can say stop any time to opt out.`;
   }
 
   // Pick a varied template seeded on callerName length to stay consistent per identity
@@ -555,6 +555,9 @@ async function handleAnswer(request: NextRequest) {
     const callerName = callerIdentity?.name || pick('callerName') || 'Sara';
     const callerPosition = callerIdentity?.position || pick('callerPosition') || 'Sales Specialist';
     const businessName = settings.businessName || 'our team';
+    const disclosureEnabled =
+      Boolean(settings.includeAutomatedDisclosure ?? true) ||
+      Boolean(callerIdentity?.mentionAi ?? false);
 
     if (!speechResult) {
       if (conversationState.turn === 0) {
@@ -565,7 +568,7 @@ async function handleAnswer(request: NextRequest) {
           callerName,
           callerPosition,
           businessName,
-          mentionAi: callerIdentity?.mentionAi ?? false,
+          includeAutomatedDisclosure: disclosureEnabled,
           brief: conversationState.brief,
         });
 
@@ -719,7 +722,7 @@ async function handleAnswer(request: NextRequest) {
       businessName,
       industry: callerIdentity?.industry || settings.industry || '',
       companyDetails: settings.companyDetails || '',
-      mentionAi: callerIdentity?.mentionAi ?? false,
+      mentionAi: disclosureEnabled,
       sayThisRules: callerIdentity?.sayThisRules || settings.sayThisRules || '',
       avoidThisRules: callerIdentity?.avoidThisRules || settings.avoidThisRules || '',
       history: conversationState.history,

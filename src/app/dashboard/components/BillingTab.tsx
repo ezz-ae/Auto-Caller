@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Wallet, Info, Sparkles, Phone, CheckCircle } from "lucide-react"
+import { Wallet, Info, Sparkles, Phone, CheckCircle, AlertTriangle } from "lucide-react"
 import { PayPalCheckoutModal, type PurchaseResult } from '@/components/paypal/paypal-checkout-modal'
 
 interface BillingTabProps {
@@ -12,6 +12,9 @@ interface BillingTabProps {
   callerNumbersActive: number
   credits: number
   creditProducts: any[]
+  billingEvents: Array<{ id: string; kind: string; amount: number; status: string; createdAt: string }>
+  estimatedCostPer100: number | null
+  lowCreditThreshold: number
   onPurchaseSuccess?: (result: PurchaseResult) => void
 }
 
@@ -22,6 +25,9 @@ export function BillingTab({
   callerNumbersActive,
   credits,
   creditProducts,
+  billingEvents,
+  estimatedCostPer100,
+  lowCreditThreshold,
   onPurchaseSuccess,
 }: BillingTabProps) {
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null)
@@ -76,6 +82,14 @@ export function BillingTab({
             </div>
           </CardHeader>
           <CardContent className="p-8 space-y-12">
+            {credits <= lowCreditThreshold && (
+              <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 flex items-start gap-3">
+                <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
+                <p className="text-sm text-amber-200">
+                  Low credits: you currently have {credits}. Buy a pack to avoid campaign interruptions.
+                </p>
+              </div>
+            )}
             <div className="grid gap-6 md:grid-cols-2">
               <div className="rounded-[32px] border border-zinc-800 bg-zinc-950/40 p-8 space-y-6 group hover:border-blue-500/20 transition-all duration-500">
                 <div className="flex items-center justify-between">
@@ -108,6 +122,11 @@ export function BillingTab({
                  <div className="space-y-1 py-2">
                     <p className="text-5xl font-black text-white tracking-tighter">{credits.toLocaleString()}</p>
                     <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold pt-2">Available outreach attempts</p>
+                 </div>
+                 <div className="pt-2 border-t border-zinc-800/70">
+                    <p className="text-[11px] text-zinc-500">
+                      Estimated cost per 100 calls: {estimatedCostPer100 !== null ? `$${estimatedCostPer100.toFixed(2)}` : 'N/A'}
+                    </p>
                  </div>
               </div>
             </div>
@@ -148,6 +167,37 @@ export function BillingTab({
               <div className="flex items-center gap-3 p-4 rounded-xl bg-zinc-900 border border-zinc-800">
                  <Info className="w-4 h-4 text-zinc-500" />
                  <p className="text-[10px] text-zinc-500 font-medium italic">Payments are processed instantly. Credits are applied to your balance upon successful checkout.</p>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="flex items-center justify-between px-2">
+                <h3 className="text-sm font-bold text-zinc-200 uppercase tracking-widest">Last Charges</h3>
+                <span className="text-[10px] text-zinc-500 uppercase tracking-wider">{billingEvents.length} events</span>
+              </div>
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/30 divide-y divide-zinc-800/70">
+                {billingEvents.length === 0 ? (
+                  <div className="p-4 text-xs text-zinc-500">No billing events yet.</div>
+                ) : (
+                  billingEvents.slice(0, 8).map(event => (
+                    <div key={event.id} className="p-4 flex items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm text-zinc-200 font-medium">
+                          {event.kind.replace(/_/g, ' ')}
+                        </p>
+                        <p className="text-xs text-zinc-500 mt-1">
+                          {new Date(event.createdAt).toLocaleString()}
+                        </p>
+                      </div>
+                      <div className="text-right">
+                        <p className={`text-sm font-semibold ${event.amount < 0 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                          {event.amount > 0 ? '+' : ''}{event.amount}
+                        </p>
+                        <p className="text-[10px] uppercase tracking-wider text-zinc-500">{event.status}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </CardContent>

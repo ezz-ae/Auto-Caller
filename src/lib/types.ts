@@ -35,6 +35,10 @@ export interface CallResult {
   campaignId: string;
   phoneNumber: string;
   status: 'pending' | 'calling' | 'connected' | 'forwarded' | 'no-answer' | 'failed' | 'voicemail';
+  callAttemptState?: 'queued' | 'dialing' | 'retrying' | 'initiated' | 'failed' | 'suppressed' | 'deferred_quiet_hours';
+  attemptCount?: number;
+  billingEventId?: string;
+  billedAt?: Date;
   duration?: number;
   callSid?: string;
   error?: string;
@@ -121,6 +125,7 @@ export interface UserSettings {
   companyDetails?: string;
   sayThisRules?: string;
   avoidThisRules?: string;
+  includeAutomatedDisclosure?: boolean;
 }
 
 export interface CallerIdentity {

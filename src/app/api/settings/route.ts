@@ -33,6 +33,7 @@ export async function GET(request: NextRequest) {
         companyDetails: settings.companyDetails || '',
         sayThisRules: settings.sayThisRules || '',
         avoidThisRules: settings.avoidThisRules || '',
+        includeAutomatedDisclosure: settings.includeAutomatedDisclosure ?? true,
       },
       credits,
       isConfigured: managedMode
@@ -111,6 +112,9 @@ export async function POST(request: NextRequest) {
     }
     if (typeof body.avoidThisRules === 'string') {
       toSave.avoidThisRules = body.avoidThisRules;
+    }
+    if (typeof body.includeAutomatedDisclosure === 'boolean') {
+      toSave.includeAutomatedDisclosure = body.includeAutomatedDisclosure;
     }
     
     // Handle boolean settings

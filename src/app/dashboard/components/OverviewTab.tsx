@@ -38,6 +38,9 @@ interface OverviewTabProps {
   workspaceIntelligence: any
   getIntelligenceStatusTone: (status: WorkspaceIntelligence['status']) => string
   getPriorityTone: (priority: 'high' | 'medium' | 'low') => string
+  onStartTestCall: () => void
+  testCallLoading: boolean
+  hasForwardingNumber: boolean
 }
 
 export function OverviewTab({
@@ -60,7 +63,10 @@ export function OverviewTab({
   dailyReport,
   workspaceIntelligence,
   getIntelligenceStatusTone,
-  getPriorityTone
+  getPriorityTone,
+  onStartTestCall,
+  testCallLoading,
+  hasForwardingNumber
 }: OverviewTabProps) {
   const hasPerformanceData = totalCalls > 0 || connectedCalls > 0
   const hasDailyData =
@@ -173,6 +179,15 @@ export function OverviewTab({
             >
               <CalendarClock className="w-4 h-4 mr-3 text-emerald-400" />
               Review Schedule
+            </Button>
+            <Button
+              variant="secondary"
+              className="w-full justify-start bg-zinc-800/50 hover:bg-zinc-800 h-12 rounded-xl border border-zinc-700/50"
+              onClick={onStartTestCall}
+              disabled={testCallLoading || !hasForwardingNumber}
+            >
+              <Phone className="w-4 h-4 mr-3 text-emerald-400" />
+              {testCallLoading ? 'Starting Test Call...' : 'Test Call To My Number'}
             </Button>
             <Button 
               className="w-full justify-start h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/20" 

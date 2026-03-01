@@ -121,6 +121,18 @@ export function SettingsTab({
                 />
               </div>
             </div>
+            <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950/30 px-4 py-3">
+              <div>
+                <p className="text-sm font-semibold text-zinc-200">Include automated-call disclosure</p>
+                <p className="text-xs text-zinc-500 mt-1">
+                  Default ON. New agents will disclose that calls are automated and include opt-out wording.
+                </p>
+              </div>
+              <Switch
+                checked={settings.includeAutomatedDisclosure ?? true}
+                onCheckedChange={(checked) => setSettings({ ...settings, includeAutomatedDisclosure: checked })}
+              />
+            </div>
           </div>
 
           <div className="space-y-8 pt-8 border-t border-zinc-800/50">

@@ -54,6 +54,9 @@ const eslintConfig = [...nextCoreWebVitals, ...nextTypescript, {
     "skills/**",
     "Auto Caller.worktrees/**",
     "download/**",
+    "Agentic/**",
+    "lelwa/**",
+    "services/csm-tts/**",
   ]
 }];
 

@@ -37,6 +37,8 @@ interface VoiceAgentsTabProps {
   ttsConfigSaving: boolean
   saveTtsProviderSettings: () => void
   selectedCallerIdentityId: string | null
+  ttsHealth: { provider: 'elevenlabs' | 'csm'; status: 'ready' | 'disabled' | 'unreachable' | 'gpu_missing' | 'loading'; detail?: string; modelId?: string } | null
+  loadingTtsHealth: boolean
 }
 
 export function VoiceAgentsTab({
@@ -66,7 +68,9 @@ export function VoiceAgentsTab({
   setSettings,
   ttsConfigSaving,
   saveTtsProviderSettings,
-  selectedCallerIdentityId
+  selectedCallerIdentityId,
+  ttsHealth,
+  loadingTtsHealth
 }: VoiceAgentsTabProps) {
   const csmSpeakers = Array.from(new Set(
     filteredIdentityVoices
@@ -196,6 +200,26 @@ export function VoiceAgentsTab({
                 </Button>
               </div>
             )}
+
+            <div className="md:col-span-3 rounded-xl border border-zinc-800 bg-zinc-950/40 px-3 py-2 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs text-zinc-400">
+                  Provider health: {loadingTtsHealth ? 'Checking…' : (ttsHealth?.status || 'unknown')}
+                </p>
+                {!loadingTtsHealth && ttsHealth?.detail && (
+                  <p className="text-[11px] text-zinc-500 mt-1">{ttsHealth.detail}</p>
+                )}
+              </div>
+              <Badge
+                className={
+                  ttsHealth?.status === 'ready'
+                    ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                    : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
+                }
+              >
+                {ttsHealth?.provider === 'csm' ? 'Sesame CSM' : 'ElevenLabs'}
+              </Badge>
+            </div>
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">

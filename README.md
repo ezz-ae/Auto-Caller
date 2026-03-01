@@ -80,6 +80,7 @@ cp .env.example .env.local
 
 Edit `.env.local` and set at least:
 - `NEXT_PUBLIC_APP_URL`
+- `NEXT_PUBLIC_BOOK_DEMO_URL` (WhatsApp/Calendly for manual sales)
 - `STORE_DRIVER`
 - `DATABASE_URL` (if `STORE_DRIVER=postgres`)
 - Twilio / Google AI / ElevenLabs / PayPal vars for your mode
@@ -105,6 +106,7 @@ npm run db:push
 This creates tables:
 - `app_settings`
 - `credit_balances`
+- `billing_events`
 - `campaigns`
 - `recordings`
 - `transcripts`
@@ -181,7 +183,12 @@ Authentication modes:
 - `ALLOW_LEGACY_AUTH=false` (recommended): blocks shared legacy cookie fallback when using `AUTH_MODE=accounts`.
 - `APP_SESSION_SECRET`: strong random secret for signing account session cookies.
 - `CALL_WINDOW_START_HOUR` / `CALL_WINDOW_END_HOUR` (optional, defaults `8` / `21`)
-- `CALL_COMPLIANCE_DEFAULT_TIMEZONE` (optional, defaults `America/New_York`)
+- `CALL_COMPLIANCE_DEFAULT_TIMEZONE` (optional, defaults `Asia/Dubai`)
+- Reliability controls:
+  - `CALL_MAX_CONCURRENT_GLOBAL` (default `3`)
+  - `CALL_MAX_CONCURRENT_PER_USER` (default `1`)
+  - `CALL_ATTEMPT_MAX_RETRIES` (default `1`)
+  - `CALL_ATTEMPT_RETRY_BASE_MS` (default `2000`)
 - Remember device:
   - checked: persistent auth cookie (30 days)
   - unchecked: session cookie (expires when browser session ends)
@@ -257,6 +264,24 @@ curl -X POST http://localhost:7010/tts \
 CSM output format guidance:
 - Use `wav` for dashboard/web preview playback.
 - Use `ulaw_8khz` for telephony-optimized payloads.
+
+## Launch Readiness Smoke
+
+Run this before shipping:
+
+```bash
+npm run lint
+npx tsc --noEmit --incremental false
+npm run build
+```
+
+Then verify user flow:
+1. `/` landing copy + CTA + demo button
+2. signup/login
+3. `Callers`: create agent
+4. `Billing`: buy credits
+5. `Call Center`: download sample CSV, upload leads, launch campaign
+6. `Recordings`/`Leads`/`Callbacks`: verify outcomes and follow-up pipeline
 
 CSM vs ElevenLabs:
 - CSM: self-hosted and highly controllable prosody, but needs GPU infrastructure.

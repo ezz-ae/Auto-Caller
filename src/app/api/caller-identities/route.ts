@@ -73,7 +73,9 @@ export async function POST(request: NextRequest) {
     const language = String(body?.language || 'en-US').trim();
     const voiceId = String(body?.voiceId || resolveDefaultVoiceId(settings)).trim();
     const industry = String(body?.industry || settings.industry || '').trim();
-    const mentionAi = Boolean(body?.mentionAi);
+    const mentionAi = typeof body?.mentionAi === 'boolean'
+      ? body.mentionAi
+      : Boolean(settings.includeAutomatedDisclosure ?? true);
     const sayThisRules = String(body?.sayThisRules || settings.sayThisRules || '').trim();
     const avoidThisRules = String(body?.avoidThisRules || settings.avoidThisRules || '').trim();
     const campaignGoal = String(body?.campaignGoal || '').trim();

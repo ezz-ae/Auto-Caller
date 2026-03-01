@@ -36,6 +36,7 @@ interface StoredSettings {
   companyDetails: string;
   sayThisRules: string;
   avoidThisRules: string;
+  includeAutomatedDisclosure: boolean;
 }
 
 function normalizeUserId(userId?: string): string {
@@ -89,6 +90,7 @@ function defaultSettings(): StoredSettings {
     companyDetails: '',
     sayThisRules: '',
     avoidThisRules: '',
+    includeAutomatedDisclosure: true,
   };
 }
 
@@ -243,6 +245,7 @@ function deserializeSettings(row: {
   companyDetails: string;
   sayThisRules: string;
   avoidThisRules: string;
+  includeAutomatedDisclosure: boolean;
 }): StoredSettings {
   const provider = String(row.ttsProvider || '').trim().toLowerCase();
   return {
@@ -266,6 +269,7 @@ function deserializeSettings(row: {
     companyDetails: row.companyDetails,
     sayThisRules: row.sayThisRules,
     avoidThisRules: row.avoidThisRules,
+    includeAutomatedDisclosure: row.includeAutomatedDisclosure ?? true,
   };
 }
 
@@ -661,6 +665,7 @@ async function dbSaveSettings(settings: Partial<StoredSettings>, userId = 'defau
       companyDetails: updated.companyDetails,
       sayThisRules: updated.sayThisRules,
       avoidThisRules: updated.avoidThisRules,
+      includeAutomatedDisclosure: updated.includeAutomatedDisclosure,
     },
   });
 }

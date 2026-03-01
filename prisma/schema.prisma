@@ -29,6 +29,7 @@ model AppSettings {
   companyDetails     String   @default("")
   sayThisRules       String   @default("")
   avoidThisRules     String   @default("")
+  includeAutomatedDisclosure Boolean @default(true)
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
@@ -68,6 +69,19 @@ model CreditBalance {
   updatedAt DateTime @updatedAt
 
   @@map("credit_balances")
+}
+
+model BillingEvent {
+  id        String   @id
+  userId    String   @default("default")
+  kind      String
+  amount    Int
+  status    String   @default("applied")
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  @@map("billing_events")
+  @@index([userId, createdAt])
 }
 
 model CampaignRecord {

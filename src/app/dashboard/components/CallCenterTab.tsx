@@ -66,6 +66,9 @@ interface CallCenterTabProps {
   recordings: any[]
   credits: number
   toast: any
+  sampleCsvHref: string
+  onStartTestCall: () => void
+  testingCall: boolean
 }
 
 export function CallCenterTab({
@@ -110,7 +113,10 @@ export function CallCenterTab({
   campaigns,
   recordings,
   credits,
-  toast
+  toast,
+  sampleCsvHref,
+  onStartTestCall,
+  testingCall
 }: CallCenterTabProps) {
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-200">
@@ -173,6 +179,17 @@ export function CallCenterTab({
                      {extractNumbers(numbers).length} Numbers Found
                    </Badge>
                    <Button
+                      asChild
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="bg-zinc-800 hover:bg-zinc-700 h-9 rounded-lg border border-zinc-700/50"
+                    >
+                      <a href={sampleCsvHref} download>
+                        Download Sample CSV
+                      </a>
+                    </Button>
+                   <Button
                       type="button"
                       variant="secondary"
                       size="sm"
@@ -182,6 +199,16 @@ export function CallCenterTab({
                     >
                       <Upload className="w-3.5 h-3.5 mr-2" />
                       Import CSV
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="bg-zinc-800 hover:bg-zinc-700 h-9 rounded-lg border border-zinc-700/50"
+                      onClick={onStartTestCall}
+                      disabled={testingCall}
+                    >
+                      {testingCall ? 'Calling...' : 'Test Call To My Number'}
                     </Button>
                 </div>
               </div>
@@ -381,9 +408,9 @@ export function CallCenterTab({
                     <div className="space-y-3">
                       <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-zinc-500">
                         <span>Campaign Progress</span>
-                        <span className="text-zinc-200">{stats.connected + stats.failed} / {stats.total}</span>
+                        <span className="text-zinc-200">{stats.connected + stats.failed + (stats.noAnswer || 0) + (stats.voicemail || 0)} / {stats.total}</span>
                       </div>
-                      <Progress value={stats.total > 0 ? ((stats.connected + stats.failed) / stats.total) * 100 : 0} className="h-2 bg-zinc-800" />
+                      <Progress value={stats.total > 0 ? ((stats.connected + stats.failed + (stats.noAnswer || 0) + (stats.voicemail || 0)) / stats.total) * 100 : 0} className="h-2 bg-zinc-800" />
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
@@ -394,6 +421,14 @@ export function CallCenterTab({
                       <div className="p-5 rounded-2xl bg-red-500/5 border border-red-500/10 text-center">
                         <div className="text-3xl font-bold text-red-400">{stats.failed}</div>
                         <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Failed</div>
+                      </div>
+                      <div className="p-5 rounded-2xl bg-zinc-800/30 border border-zinc-700/40 text-center">
+                        <div className="text-3xl font-bold text-zinc-200">{stats.noAnswer || 0}</div>
+                        <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">No Answer</div>
+                      </div>
+                      <div className="p-5 rounded-2xl bg-amber-500/5 border border-amber-500/20 text-center">
+                        <div className="text-3xl font-bold text-amber-300">{stats.voicemail || 0}</div>
+                        <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Voicemail</div>
                       </div>
                     </div>
                   </div>

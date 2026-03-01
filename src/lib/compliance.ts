@@ -44,7 +44,7 @@ export function resolveLeadTimeZone(value?: string): string {
   const fallback = String(process.env.CALL_COMPLIANCE_DEFAULT_TIMEZONE || '').trim();
   if (fallback && isValidTimeZone(fallback)) return fallback;
 
-  return 'America/New_York';
+  return 'Asia/Dubai';
 }
 
 function getLocalHour(date: Date, timeZone: string): number {

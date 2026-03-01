@@ -3,6 +3,7 @@ import { updateCredits } from '@/lib/store'
 import { assignManagedNumber } from '@/lib/store'
 import { assignDedicatedNumberToCallerIdentity } from '@/lib/caller-identity-store'
 import { requireUserIdFromRequest } from '@/lib/request-user'
+import { recordBillingEventOnce } from '@/lib/billing-events'
 
 // PayPal API base URL
 const PAYPAL_API = process.env.PAYPAL_MODE === 'live' 
@@ -83,6 +84,28 @@ export async function POST(request: NextRequest) {
             : ''
 
         if (kind === 'number') {
+          const numberEventId = `paypal_capture:${orderId}:number:${callerIdentityId || 'workspace'}`
+          const numberEvent = await recordBillingEventOnce({
+            id: numberEventId,
+            userId,
+            kind: 'number_purchase',
+            amount: 0,
+            status: 'applied',
+            metadata: {
+              orderId,
+              productId,
+              callerIdentityId: callerIdentityId || null,
+            },
+          })
+          if (!numberEvent.created) {
+            return NextResponse.json({
+              success: true,
+              message: 'Payment already processed.',
+              productId,
+              credits: await updateCredits(0, userId),
+            })
+          }
+
           if (callerIdentityId) {
             const identity = await assignDedicatedNumberToCallerIdentity(callerIdentityId, userId)
             if (!identity?.dedicatedNumber) {
@@ -111,11 +134,26 @@ export async function POST(request: NextRequest) {
         }
 
         // Default behavior: add credits
-        const newCredits = await updateCredits(credits, userId)
+        const creditEventId = `paypal_capture:${orderId}:credits:${productId || credits}`
+        const creditEvent = await recordBillingEventOnce({
+          id: creditEventId,
+          userId,
+          kind: 'credit_purchase',
+          amount: credits,
+          status: 'applied',
+          metadata: {
+            orderId,
+            productId,
+            credits,
+          },
+        })
+        const newCredits = creditEvent.created
+          ? await updateCredits(credits, userId)
+          : await updateCredits(0, userId)
         
         return NextResponse.json({
           success: true,
-          message: `Payment successful! ${credits} credits added.`,
+          message: creditEvent.created ? `Payment successful! ${credits} credits added.` : 'Payment already processed.',
           credits: newCredits,
           productId,
         })
