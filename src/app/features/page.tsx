@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Bot, ClipboardList, Gauge, Mic, PhoneCall, ShieldCheck, Sparkles, Users, Wallet } from 'lucide-react'
+import { Bot, ClipboardList, Gauge, Mic, PhoneCall, ShieldCheck, Sparkles, Users, Wallet, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/site-shell'
@@ -39,6 +39,11 @@ const items = [
     title: 'Managed Billing Flow',
     description: 'Sell numbers and call credits through PayPal with your pricing and margin controls.',
     icon: Wallet,
+  },
+  {
+    title: 'Lead Source Integrations',
+    description: 'Connect Zapier/Facebook and Google Drive, then load inbox leads straight into Call Center.',
+    icon: Download,
   },
   {
     title: 'Security Gate',

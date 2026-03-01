@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { CheckCircle2, Database, KeyRound, PhoneCall, Rocket, ShieldCheck, Wallet } from 'lucide-react'
+import { CheckCircle2, Database, KeyRound, PhoneCall, Rocket, ShieldCheck, Wallet, Download } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/site-shell'
@@ -31,6 +31,15 @@ const setupSteps = [
       'Caller numbers are purchased per caller identity; credit packs are 30/60/90/140/200.',
       'Set GOOGLE_AI_API_KEY (or MANAGED_GOOGLE_AI_API_KEY) and optional GOOGLE_AI_MODEL.',
       'Set CRON_SECRET to secure scheduled campaign dispatch endpoint.',
+    ],
+  },
+  {
+    title: 'Connect lead sources',
+    icon: Download,
+    points: [
+      'Open Dashboard -> Sources and copy your webhook URL.',
+      'In Zapier, send Facebook Lead Ads (or any form source) to /api/integrations/zapier/lead.',
+      'Add Google Drive/Sheet CSV URL and run Sync Now, then load inbox leads into Call Center.',
     ],
   },
   {

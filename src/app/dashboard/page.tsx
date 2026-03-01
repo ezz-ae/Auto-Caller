@@ -3393,6 +3393,19 @@ export default function Dashboard() {
                     <p>Zapier trigger examples: Facebook Lead Ads, Typeform, Webflow forms, Google Sheets.</p>
                     <p>Action: Webhooks by Zapier - POST with lead fields including phone number.</p>
                   </div>
+
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 space-y-2">
+                    <p className="text-xs uppercase tracking-wide text-zinc-500">Recommended Zapier Fields</p>
+                    <div className="grid gap-2 md:grid-cols-2 text-xs text-zinc-300">
+                      <p><span className="text-zinc-500">phone</span>: lead phone number</p>
+                      <p><span className="text-zinc-500">name</span>: full name</p>
+                      <p><span className="text-zinc-500">email</span>: lead email (optional)</p>
+                      <p><span className="text-zinc-500">source</span>: facebook_lead_ads (optional)</p>
+                    </div>
+                    <p className="text-xs text-zinc-500">
+                      Arrays and Facebook webhook payloads are supported. Phone number is required.
+                    </p>
+                  </div>
                 </CardContent>
               </Card>
 

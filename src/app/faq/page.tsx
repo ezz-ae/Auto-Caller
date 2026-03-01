@@ -31,6 +31,11 @@ const faqs = [
       'Credit packs are fixed at 30/60/90/140/200 credits, priced from your estimated call cost and margin multiplier, then sold through checkout.',
   },
   {
+    question: 'Can I connect Facebook forms, Google Drive, or Zapier?',
+    answer:
+      'Yes. Use Dashboard -> Sources. You get a secure webhook URL for Zapier/Facebook lead flow, plus Google Drive CSV sync. Imported leads go into Lead Inbox, then one click moves them to Call Center.',
+  },
+  {
     question: 'How do I secure workspace access?',
     answer:
       'Set APP_ACCESS_USERNAME and APP_ACCESS_PASSWORD. Users must sign in at /login before accessing the dashboard.',
