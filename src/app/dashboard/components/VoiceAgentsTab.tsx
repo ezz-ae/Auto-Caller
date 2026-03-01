@@ -32,10 +32,6 @@ interface VoiceAgentsTabProps {
   openNumberPurchaseModal: (id: string, name: string) => void
   numberActivationPrice: number
   LANGUAGE_OPTIONS: any[]
-  settings: any
-  setSettings: (settings: any) => void
-  ttsConfigSaving: boolean
-  saveTtsProviderSettings: () => void
   selectedCallerIdentityId: string | null
   ttsHealth: { provider: 'elevenlabs' | 'csm'; status: 'ready' | 'disabled' | 'unreachable' | 'gpu_missing' | 'loading'; detail?: string; modelId?: string } | null
   loadingTtsHealth: boolean
@@ -64,28 +60,10 @@ export function VoiceAgentsTab({
   openNumberPurchaseModal,
   numberActivationPrice,
   LANGUAGE_OPTIONS,
-  settings,
-  setSettings,
-  ttsConfigSaving,
-  saveTtsProviderSettings,
   selectedCallerIdentityId,
   ttsHealth,
   loadingTtsHealth
 }: VoiceAgentsTabProps) {
-  const csmSpeakers = Array.from(new Set(
-    filteredIdentityVoices
-      .map(voice => {
-        const match = String(voice?.id || '').match(/^csm_speaker_(\d+)$/i)
-        if (!match) return null
-        const parsed = Number(match[1])
-        return Number.isFinite(parsed) ? parsed : null
-      })
-      .filter((value): value is number => value !== null)
-  )).sort((a, b) => a - b)
-
-  const speakerOptions = csmSpeakers.length > 0 ? csmSpeakers : [0, 1, 2, 3]
-  const selectedCsmSpeaker = Number.isFinite(Number(settings.csmSpeaker)) ? Number(settings.csmSpeaker) : 0
-
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-200">
       <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
@@ -94,10 +72,10 @@ export function VoiceAgentsTab({
             <div className="space-y-1">
               <CardTitle className="text-2xl flex items-center gap-2">
                 <Users className="w-7 h-7 text-emerald-400" />
-                Voice Agents
+                Hire Agents
               </CardTitle>
               <CardDescription className="text-base text-zinc-400">
-                Design your outreach team with natural-sounding AI agents.
+                Hire pre-built outbound agents by role, language, and objective.
               </CardDescription>
             </div>
             <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-2">
@@ -115,96 +93,19 @@ export function VoiceAgentsTab({
             <div>
               <p className="text-base font-semibold text-zinc-100">Conversation-first mode active.</p>
               <p className="text-sm text-zinc-400 mt-1 leading-relaxed">
-                Describe your agent briefly. Our AI will automatically refine its strategy, rules, and behavior as it learns from your campaigns.
+                Tell Maya the offer, ICP, and success event. The platform auto-assigns the best voice profile per hired agent.
               </p>
             </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-5">
-            <div className="space-y-2 md:col-span-1">
-              <Label className="text-zinc-400 uppercase tracking-tighter text-[10px] font-bold">TTS Provider</Label>
-              <Select
-                value={settings.ttsProvider === 'csm' ? 'csm' : 'elevenlabs'}
-                onValueChange={(value) => {
-                  const nextProvider = value === 'csm' ? 'csm' : 'elevenlabs'
-                  const nextSpeaker = Number.isFinite(Number(settings.csmSpeaker)) ? Number(settings.csmSpeaker) : 0
-                  const nextVoiceId = nextProvider === 'csm' ? `csm_speaker_${Math.max(0, Math.floor(nextSpeaker))}` : identityForm.voiceId
-                  setSettings({ ...settings, ttsProvider: nextProvider, csmEnabled: nextProvider === 'csm' ? true : settings.csmEnabled })
-                  if (nextProvider === 'csm') {
-                    setIdentityForm(prev => ({ ...prev, gender: 'any', voiceId: nextVoiceId }))
-                  }
-                }}
-              >
-                <SelectTrigger className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl">
-                  <SelectValue placeholder="Select provider" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="elevenlabs">ElevenLabs</SelectItem>
-                  <SelectItem value="csm">Sesame CSM</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {settings.ttsProvider === 'csm' && (
-              <>
-                <div className="space-y-2 md:col-span-1">
-                  <Label className="text-zinc-400 uppercase tracking-tighter text-[10px] font-bold">CSM Speaker</Label>
-                  <Select
-                    value={String(selectedCsmSpeaker)}
-                    onValueChange={(value) => {
-                      const speaker = Number(value)
-                      const nextSpeaker = Number.isFinite(speaker) ? Math.max(0, Math.floor(speaker)) : 0
-                      setSettings({ ...settings, csmEnabled: true, csmSpeaker: nextSpeaker, csmVoiceLabel: `Speaker ${nextSpeaker}` })
-                      setIdentityForm(prev => ({ ...prev, gender: 'any', voiceId: `csm_speaker_${nextSpeaker}` }))
-                    }}
-                  >
-                    <SelectTrigger className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl">
-                      <SelectValue placeholder="Select speaker" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {speakerOptions.map(speaker => (
-                        <SelectItem key={speaker} value={String(speaker)}>
-                          CSM Speaker {speaker}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-2 md:col-span-1">
-                  <Label className="text-zinc-400 uppercase tracking-tighter text-[10px] font-bold">Provider Config</Label>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className="w-full bg-zinc-800 hover:bg-zinc-700 h-12 rounded-xl border border-zinc-700"
-                    onClick={saveTtsProviderSettings}
-                    disabled={ttsConfigSaving}
-                  >
-                    {ttsConfigSaving ? 'Saving...' : 'Save CSM Provider'}
-                  </Button>
-                </div>
-              </>
-            )}
-
-            {settings.ttsProvider !== 'csm' && (
-              <div className="space-y-2 md:col-span-2">
-                <Label className="text-zinc-400 uppercase tracking-tighter text-[10px] font-bold">Provider Config</Label>
-                <Button
-                  type="button"
-                  variant="secondary"
-                  className="w-full bg-zinc-800 hover:bg-zinc-700 h-12 rounded-xl border border-zinc-700"
-                  onClick={saveTtsProviderSettings}
-                  disabled={ttsConfigSaving}
-                >
-                  {ttsConfigSaving ? 'Saving...' : 'Save ElevenLabs Provider'}
-                </Button>
-              </div>
-            )}
-
             <div className="md:col-span-3 rounded-xl border border-zinc-800 bg-zinc-950/40 px-3 py-2 flex items-center justify-between gap-3">
               <div>
-                <p className="text-xs text-zinc-400">
-                  Provider health: {loadingTtsHealth ? 'Checking…' : (ttsHealth?.status || 'unknown')}
+                <p className="text-xs text-zinc-400 font-medium">
+                  Voice infrastructure is platform-managed for consistency.
+                </p>
+                <p className="text-xs text-zinc-500 mt-1">
+                  Runtime health: {loadingTtsHealth ? 'Checking…' : (ttsHealth?.status || 'unknown')}
                 </p>
                 {!loadingTtsHealth && ttsHealth?.detail && (
                   <p className="text-[11px] text-zinc-500 mt-1">{ttsHealth.detail}</p>
@@ -235,7 +136,7 @@ export function VoiceAgentsTab({
             <div className="space-y-2">
               <Label className="text-zinc-400 uppercase tracking-tighter text-[10px] font-bold">Role / Position</Label>
               <Input
-                placeholder="e.g., Sales Advisor"
+                placeholder="e.g., Lead Reactivation Specialist"
                 value={identityForm.position}
                 onChange={e => setIdentityForm(prev => ({ ...prev, position: e.target.value }))}
                 className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl"
@@ -269,47 +170,14 @@ export function VoiceAgentsTab({
                 </SelectContent>
               </Select>
             </div>
-            {settings.ttsProvider === 'csm' ? (
-              <div className="space-y-2 md:col-span-2">
-                <Label className="text-zinc-400 uppercase tracking-tighter text-[10px] font-bold">CSM Speaker Voice</Label>
-                <Select
-                  value={identityForm.voiceId || `csm_speaker_${selectedCsmSpeaker}`}
-                  onValueChange={(value) => {
-                    const match = String(value).match(/^csm_speaker_(\d+)$/i)
-                    const speaker = match ? Number(match[1]) : selectedCsmSpeaker
-                    setIdentityForm(prev => ({ ...prev, voiceId: value, gender: 'any' }))
-                    setSettings({ ...settings, csmSpeaker: Number.isFinite(speaker) ? speaker : selectedCsmSpeaker, csmEnabled: true })
-                  }}
-                >
-                  <SelectTrigger className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl">
-                    <SelectValue placeholder="Select CSM speaker" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {speakerOptions.map(speaker => (
-                      <SelectItem key={speaker} value={`csm_speaker_${speaker}`}>
-                        CSM Speaker {speaker} • multi
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            <div className="space-y-2 md:col-span-2">
+              <Label className="text-zinc-400 uppercase tracking-tighter text-[10px] font-bold">Voice Profile</Label>
+              <div className="h-12 rounded-xl border border-zinc-700 bg-zinc-800/50 px-3 flex items-center text-sm text-zinc-300">
+                {selectedIdentityVoice
+                  ? `${selectedIdentityVoice.name} • ${selectedIdentityVoice.language || selectedIdentityVoice.labels?.language || 'multi'}`
+                  : 'Auto-assigned from role + language'}
               </div>
-            ) : (
-              <div className="space-y-2 md:col-span-2">
-                <Label className="text-zinc-400 uppercase tracking-tighter text-[10px] font-bold">Select Natural Voice</Label>
-                <Select value={identityForm.voiceId} onValueChange={(value) => setIdentityForm(prev => ({ ...prev, voiceId: value }))}>
-                  <SelectTrigger className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl">
-                    <SelectValue placeholder="Select voice" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredIdentityVoices.map(voice => (
-                      <SelectItem key={voice.id} value={voice.id}>
-                        {voice.name} ({voice.labels?.gender || 'N/A'}) • {voice.language || voice.labels?.language || 'multi'} {voice.source === 'elevenlabs' || voice.source === 'high-quality' ? '• Natural' : ''}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+            </div>
           </div>
 
           <div className="flex items-center justify-between p-6 rounded-2xl bg-zinc-950/40 border border-zinc-800 group hover:border-zinc-700 transition-colors">
@@ -368,17 +236,6 @@ export function VoiceAgentsTab({
                   <div className="flex items-center gap-3">
                     <Button
                       type="button"
-                      variant="ghost"
-                      className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 h-11 px-6 rounded-xl"
-                      onClick={() => {
-                        if (!filteredIdentityVoices[0]) return
-                        setIdentityForm(prev => ({ ...prev, voiceId: filteredIdentityVoices[0].id }))
-                      }}
-                    >
-                      AI Suggest Voice
-                    </Button>
-                    <Button
-                      type="button"
                       className="bg-emerald-500 hover:bg-emerald-600 h-11 px-8 rounded-xl shadow-lg shadow-emerald-500/20"
                       onClick={() => previewIdentityVoice(identityForm.voiceId, identityForm.language)}
                       disabled={!identityForm.voiceId || !!previewingVoice}
@@ -422,8 +279,8 @@ export function VoiceAgentsTab({
 
               <div className="flex items-center justify-between p-6 rounded-2xl border border-zinc-800 bg-zinc-950/40">
                 <div className="space-y-1">
-                  <p className="text-base font-semibold text-zinc-200">AI Disclosure</p>
-                  <p className="text-sm text-zinc-500">Enable to let leads know they are speaking to an AI assistant.</p>
+                  <p className="text-base font-semibold text-zinc-200">Automated-call Disclosure</p>
+                  <p className="text-sm text-zinc-500">Enable to include transparent automated-call notice and opt-out wording.</p>
                 </div>
                 <Switch
                   checked={identityForm.mentionAi}
@@ -440,7 +297,7 @@ export function VoiceAgentsTab({
               disabled={identityLoading}
               className="bg-emerald-500 hover:bg-emerald-600 h-14 px-10 text-lg font-bold rounded-2xl shadow-xl shadow-emerald-500/20"
             >
-              {identityLoading ? 'Saving...' : (editingCallerIdentityId ? 'Update Agent' : 'Create Voice Agent')}
+              {identityLoading ? 'Saving...' : (editingCallerIdentityId ? 'Update Agent' : 'Hire Agent')}
             </Button>
             {editingCallerIdentityId && (
               <Button
@@ -460,7 +317,7 @@ export function VoiceAgentsTab({
             {callerIdentities.length === 0 ? (
               <div className="text-center py-20 border-2 border-dashed border-zinc-800 rounded-3xl">
                 <Users className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
-                <p className="text-zinc-500">No voice agents created yet.</p>
+                <p className="text-zinc-500">No agents hired yet.</p>
               </div>
             ) : (
               <div className="grid gap-4">

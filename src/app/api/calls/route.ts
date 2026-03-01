@@ -181,6 +181,7 @@ export async function POST(request: NextRequest) {
           campaignId: '',
           phoneNumber,
           status: 'pending' as const,
+          pursuitState: 'NEW' as const,
           timestamp: new Date(),
           userComment: note.userComment,
           targetComment: note.targetComment,

@@ -282,7 +282,7 @@ export function CallCenterTab({
                   Managed by your selected agent profile. Voice selection is controlled by admin presets for quality consistency.
                 </p>
                 <p className="mt-1 text-xs text-zinc-500">
-                  Current: {selectedCallerIdentity?.name || 'No agent selected'} • {selectedCallerIdentity?.language || selectedLanguage || 'en-US'} • Voice {selectedCallerIdentity?.voiceId || selectedVoice}
+                  Current: {selectedCallerIdentity?.name || 'No agent selected'} • {selectedCallerIdentity?.language || selectedLanguage || 'en-US'}
                 </p>
               </div>
 
@@ -303,7 +303,7 @@ export function CallCenterTab({
                     }}
                   >
                     <Sparkles className="w-3.5 h-3.5 mr-1" />
-                    AI Smart Suggest
+                    Smart Suggest
                   </Button>
                 </div>
                 <Textarea

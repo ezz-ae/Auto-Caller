@@ -4,6 +4,7 @@ import { applyCallerIdentityKpiDelta } from '@/lib/caller-identity-store';
 import { syncParentFollowUpStatusFromChild } from '@/lib/follow-up-status';
 import { CallResult } from '@/lib/types';
 import { formDataToParams, isValidTwilioWebhook } from '@/lib/twilio-webhook-auth';
+import { derivePursuitState } from '@/lib/pursuit-state';
 
 // Handle call status updates from Twilio
 export async function POST(request: NextRequest) {
@@ -76,6 +77,7 @@ export async function POST(request: NextRequest) {
       patch.error = [errorCode, errorMessage].filter(Boolean).join(': ');
       patch.callComment = `Error: ${patch.error}`;
     }
+    patch.pursuitState = derivePursuitState(patch);
 
     const updated = await updateCampaignResultByCallSid(callSid, patch);
     if (updated.updated) {

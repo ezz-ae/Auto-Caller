@@ -4,8 +4,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { CookieConsent } from "@/components/cookie-consent";
 
 export const metadata: Metadata = {
-  title: "Acaller | AI Outbound Calling Platform",
-  description: "Launch outbound call campaigns, connect live leads, and optimize conversion with AI caller identities.",
+  title: "Callware | Outbound Execution Platform",
+  description: "Automated follow-up and lead reactivation with hired calling agents and conversion-focused campaign execution.",
   icons: {
     icon: '/logo.svg',
     shortcut: '/logo.svg',

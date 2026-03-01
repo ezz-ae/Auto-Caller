@@ -19,6 +19,11 @@ interface SettingsTabProps {
   teamMembers: any[]
   toggleTeamMember: (member: any) => void
   removeTeamMember: (id: string) => void
+  complianceLeadNumber: string
+  setComplianceLeadNumber: (value: string) => void
+  exportComplianceLogs: () => void
+  deleteLeadAndSuppress: () => void
+  complianceLoading: boolean
 }
 
 export function SettingsTab({
@@ -31,7 +36,12 @@ export function SettingsTab({
   teamLoading,
   teamMembers,
   toggleTeamMember,
-  removeTeamMember
+  removeTeamMember,
+  complianceLeadNumber,
+  setComplianceLeadNumber,
+  exportComplianceLogs,
+  deleteLeadAndSuppress,
+  complianceLoading
 }: SettingsTabProps) {
   return (
     <div className="space-y-10 animate-in fade-in-50 duration-200">
@@ -183,6 +193,44 @@ export function SettingsTab({
             <Button variant="secondary" className="h-12 px-8 bg-zinc-800 hover:bg-zinc-700 rounded-xl border border-zinc-700 font-bold" onClick={() => setActiveTab('callers')}>
               Go to Agents Tab
             </Button>
+          </div>
+
+          <div className="space-y-6 pt-8 border-t border-zinc-800/50">
+            <div className="flex items-center gap-3 px-2">
+              <ShieldCheck className="w-5 h-5 text-emerald-400" />
+              <h3 className="text-lg font-bold text-zinc-100">Compliance Center</h3>
+            </div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Button
+                type="button"
+                variant="secondary"
+                className="h-12 bg-zinc-800 hover:bg-zinc-700 rounded-xl border border-zinc-700"
+                onClick={exportComplianceLogs}
+                disabled={complianceLoading}
+              >
+                Export Compliance Logs
+              </Button>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="+971501234567"
+                  value={complianceLeadNumber}
+                  onChange={e => setComplianceLeadNumber(e.target.value)}
+                  className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl"
+                />
+                <Button
+                  type="button"
+                  variant="destructive"
+                  className="h-12 rounded-xl"
+                  onClick={deleteLeadAndSuppress}
+                  disabled={complianceLoading || !complianceLeadNumber.trim()}
+                >
+                  Delete + DNC
+                </Button>
+              </div>
+            </div>
+            <p className="text-xs text-zinc-500">
+              `Delete + DNC` removes the lead from active pursuit and adds the number to Do-Not-Call immediately.
+            </p>
           </div>
 
           <div className="space-y-8 pt-8 border-t border-zinc-800/50">

@@ -78,7 +78,7 @@ export default function LoginPage() {
           className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-200 transition"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          Back to Acaller
+          Back to Callware
         </Link>
       </div>
 
@@ -91,7 +91,7 @@ export default function LoginPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold tracking-tight">
-              {isRegister ? 'Create your workspace' : 'Sign in to Acaller'}
+              {isRegister ? 'Create your workspace' : 'Sign in to Callware'}
             </h1>
             <p className="text-sm text-zinc-400 mt-1">
               {isRegister ? 'Start your free outreach workspace' : 'Access your outreach workspace'}

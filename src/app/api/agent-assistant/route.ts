@@ -287,12 +287,12 @@ function buildDeterministicReply(prompt: string, context: AgentContext) {
 
   if (callerIdentitiesCount === 0) {
     return {
-      reply: `${agent} here. Let’s create your first caller identity before launch. I recommend setting name, language, voice, and a clear target blueprint.`,
+      reply: `${agent} here. Let’s hire your first agent before launch. I recommend setting role, language, focus, target profile, and a clear success event.`,
       action: 'open_callers' as AgentAction,
       checklist: [
-        'Create first caller identity',
-        'Set voice + language',
-        'Add target blueprint and call rules',
+        'Hire first agent identity',
+        'Set role + language',
+        'Define focus, target profile, and success event',
       ],
       actionReason: 'No caller identity exists yet, so campaign launch cannot proceed.',
       confidence: 95,
@@ -300,11 +300,11 @@ function buildDeterministicReply(prompt: string, context: AgentContext) {
       formDraft: {
         callerIdentity: {
           name: context.selectedAgentName || 'Sara',
-          position: 'Sales Advisor',
+          position: 'Lead Reactivation Specialist',
           gender: 'female',
           language: 'en-US',
           industry: context.industry || '',
-          campaignGoal: 'Qualify leads and transfer warm prospects to human team',
+          campaignGoal: 'Reactivate old leads and transfer qualified prospects to human team',
           script: context.targetBlueprint || '',
         },
         verificationQuestion: 'Should I apply this caller identity draft to your inputs now?',
@@ -398,9 +398,10 @@ export async function POST(request: NextRequest) {
       .map(message => `${message.role === 'user' ? 'User' : 'Agent'}: ${message.content}`)
       .join('\n');
 
-    const systemPrompt = `You are a proactive operations agent for an AI calling platform.
+    const systemPrompt = `You are Maya, a proactive operations planner for a goal-driven outbound calling platform.
 Speak naturally and clearly.
 You help users configure:
+- focus, target profile, success event
 - target blueprint
 - call launch readiness
 - reporting expectations

@@ -57,8 +57,8 @@ const features = [
     icon: CalendarClock,
   },
   {
-    title: 'AI voice provider options',
-    description: 'Use ElevenLabs or self-hosted Sesame CSM for voice generation.',
+    title: 'Managed human-like voices',
+    description: 'Callware assigns production-ready voice profiles automatically per hired agent.',
     icon: TrendingUp,
   },
   {
@@ -79,7 +79,7 @@ const pricing = [
 const faqs = [
   {
     q: 'Will it sound robotic?',
-    a: 'No. You can use high-quality ElevenLabs voices or self-hosted Sesame CSM. You can also run a live test call before launching.',
+    a: 'No. Each hired agent uses a tuned voice profile selected by Callware for natural delivery. You can run a live test call before launch.',
   },
   {
     q: 'Can I use my own number?',
@@ -114,7 +114,7 @@ export default function MarketingHomePage() {
           <div className="space-y-7">
             <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 text-xs font-semibold tracking-widest uppercase px-3 py-1">
               <Sparkles className="w-3 h-3 mr-1.5" />
-              Outbound AI Calls For UAE Teams
+              Outbound Follow-up For UAE Teams
             </Badge>
             <div className="space-y-4">
               <h1 className="text-4xl md:text-6xl font-bold leading-[1.08] tracking-tight">

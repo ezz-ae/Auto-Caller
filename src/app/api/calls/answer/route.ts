@@ -10,6 +10,7 @@ import { createSignedTtsParams } from '@/lib/tts-auth';
 import { formDataToParams, isValidTwilioWebhook } from '@/lib/twilio-webhook-auth';
 import { addSuppressionNumber } from '@/lib/compliance-store';
 import { detectOptOutRequest, getQuietHoursDecision, resolveLeadTimeZone } from '@/lib/compliance';
+import { derivePursuitState } from '@/lib/pursuit-state';
 
 interface ConversationState {
   turn: number;
@@ -79,6 +80,7 @@ async function scheduleFollowUpCampaign(payload: {
     followUpRequested: true,
     followUpAt: callbackAt,
     followUpStatus: 'scheduled',
+    pursuitState: 'RETRY_SCHEDULED',
   };
 
   const updated = await updateCampaignResultByCallSid(payload.callSid, patch);
@@ -119,6 +121,7 @@ async function scheduleFollowUpCampaign(payload: {
         campaignId: followUpCampaignId,
         phoneNumber: targetNumber,
         status: 'pending' as const,
+        pursuitState: 'NEW' as const,
         timestamp: new Date(),
         userComment: parentResult.userComment,
         targetComment: parentResult.targetComment,
@@ -138,6 +141,7 @@ async function scheduleFollowUpCampaign(payload: {
     followUpCampaignId: followUpCampaignId,
     followUpStatus: 'scheduled',
     callComment: `${payload.callbackReason}. Auto callback scheduled (${leadTimeZone}).`,
+    pursuitState: 'RETRY_SCHEDULED',
   });
 
   return {
@@ -665,6 +669,7 @@ async function handleAnswer(request: NextRequest) {
         callComment: 'Lead opted out. Number added to suppression list.',
         followUpRequested: false,
         followUpStatus: 'cancelled',
+        pursuitState: 'DNC',
       });
 
       const twiml = buildEndTwiml({
@@ -739,6 +744,7 @@ async function handleAnswer(request: NextRequest) {
       if (action === 'continue') {
         basePatch.callComment = 'Active conversation - follow-up question asked';
       }
+      basePatch.pursuitState = derivePursuitState(basePatch);
       await updateCampaignResultByCallSid(callSid, basePatch);
     }
 
@@ -755,6 +761,7 @@ async function handleAnswer(request: NextRequest) {
         await updateCampaignResultByCallSid(callSid, {
           callComment: 'Lead engaged, transferring to human team',
           leadRequest: decision.reason,
+          pursuitState: 'QUALIFIED',
         });
       }
       const twiml = buildForwardTwiml({

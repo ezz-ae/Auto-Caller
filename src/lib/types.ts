@@ -53,6 +53,7 @@ export interface CallResult {
   followUpStatus?: 'scheduled' | 'completed' | 'cancelled';
   followUpCampaignId?: string;
   parentCallSid?: string;
+  pursuitState?: 'NEW' | 'ATTEMPTED' | 'NO_ANSWER' | 'RETRY_SCHEDULED' | 'ENGAGED' | 'QUALIFIED' | 'SUCCESS' | 'DNC' | 'FAILED';
   timestamp: Date;
 }
 

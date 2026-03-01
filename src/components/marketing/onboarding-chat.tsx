@@ -27,28 +27,28 @@ const INDUSTRIES = [
 
 const GOAL_RESPONSES: Record<string, string> = {
   'Qualify new leads':
-    "Perfect — AI callers run structured qualification flows 24/7, flagging hot leads the moment intent is confirmed.",
+    "Perfect — your hired agent runs structured qualification flows 24/7 and flags hot leads the moment intent is confirmed.",
   'Follow up on cold lists':
-    "Smart call. Most pipelines fail in the follow-up gap. AI callers handle persistence without fatigue or drop-off.",
+    "Smart call. Most pipelines fail in the follow-up gap. Callware handles persistence without fatigue or drop-off.",
   'Book more appointments':
-    "Booking campaigns are our highest-ROI use case. AI callers confirm intent and offer time slots automatically.",
+    "Booking campaigns are a high-ROI use case. Callware confirms intent and offers time slots automatically.",
   'Re-engage past clients':
-    "Reactivation often converts best — the lead already knows you. AI callers warm them back up without manual effort.",
+    "Reactivation often converts best — the lead already knows you. Callware warms them back up without manual effort.",
 }
 
 const INDUSTRY_RESPONSES: Record<string, string> = {
   'Real Estate':
-    "Real estate teams on Acaller reach 3–5× more leads per hour, with transcripts that surface buyer budget and timeline automatically.",
+    "Real estate teams on Callware reach 3–5× more leads per hour, with transcripts that surface buyer budget and timeline automatically.",
   'Insurance':
-    "Insurance agents use Acaller to follow up on quote requests and reactivate lapsed policies — all while they focus on closing.",
+    "Insurance agents use Callware to follow up on quote requests and reactivate lapsed policies — all while they focus on closing.",
   'SaaS / Tech':
     "SaaS teams qualify inbound signups, re-engage trial drop-offs, and convert demo requests into booked meetings — automatically.",
   'Healthcare':
-    "Healthcare practices use Acaller for appointment follow-ups, missed-visit outreach, and patient reactivation campaigns.",
+    "Healthcare practices use Callware for appointment follow-ups, missed-visit outreach, and patient reactivation campaigns.",
   'Finance':
     "Finance teams qualify pre-approved leads and reach out on rate alerts while intent is at its peak.",
   'E-commerce':
-    "E-commerce brands use Acaller for cart recovery, VIP winbacks, and post-purchase upsells with voices that match brand tone.",
+    "E-commerce brands use Callware for cart recovery, VIP winbacks, and post-purchase upsells with voices that match brand tone.",
 }
 
 interface Props {
@@ -84,7 +84,7 @@ export function OnboardingChat({ onDemoRequested }: Props) {
       setIsTyping(false)
       const response =
         GOAL_RESPONSES[goal] ??
-        'Got it — AI callers handle that at scale without manual effort.'
+        'Got it — Callware handles that at scale without manual effort.'
       addMessage(
         'assistant',
         `${response}\n\nWhat industry are you in?`,
@@ -100,7 +100,7 @@ export function OnboardingChat({ onDemoRequested }: Props) {
       setIsTyping(false)
       const response =
         INDUSTRY_RESPONSES[industry] ??
-        'Teams like yours use Acaller to run consistent outreach without growing headcount.'
+        'Teams like yours use Callware to run consistent outreach without growing headcount.'
       addMessage(
         'assistant',
         `${response}\n\nYou can set up your workspace for free — no credit card needed until you launch your first campaign.`,
@@ -122,7 +122,7 @@ export function OnboardingChat({ onDemoRequested }: Props) {
           <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-zinc-900" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-white">Acaller Assistant</p>
+          <p className="text-sm font-semibold text-white">Maya @ Callware</p>
           <p className="text-[10px] text-zinc-400 tracking-wide">Online · Responds instantly</p>
         </div>
       </div>
@@ -178,7 +178,7 @@ export function OnboardingChat({ onDemoRequested }: Props) {
               onClick={onDemoRequested}
             >
               <Phone className="w-3 h-3" />
-              Or hear a live AI call demo first
+              Or hear a live call demo first
             </button>
           </div>
         ) : (

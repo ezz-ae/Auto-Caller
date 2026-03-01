@@ -12,7 +12,7 @@ const items = [
   },
   {
     title: 'Caller Identity Hub',
-    description: 'Create multiple caller personas with their own voice, language, role, and script profile.',
+    description: 'Hire multiple calling agents with role, language, script profile, and dedicated execution goals.',
     icon: Users,
   },
   {
@@ -21,8 +21,8 @@ const items = [
     icon: ClipboardList,
   },
   {
-    title: 'AI Script Copilot',
-    description: 'Generate script drafts from business context, audience goal, and campaign intent in seconds.',
+    title: 'Maya Planning Assistant',
+    description: 'Turn business context into a structured campaign plan with focus, target, and success event.',
     icon: Bot,
   },
   {
@@ -65,7 +65,7 @@ export default function FeaturesPage() {
           </div>
           <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">Everything Needed To Run A Calling Business</h1>
           <p className="text-zinc-400 max-w-3xl text-lg">
-            Acaller is structured for operators, not demo screens: build caller identities, launch campaigns,
+            Callware is structured for operators, not demo screens: hire agents, launch campaigns,
             capture outcomes, and monetize usage.
           </p>
         </section>

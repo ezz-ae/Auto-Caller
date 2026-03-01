@@ -83,7 +83,7 @@ export function RecordingsTab({
                    <Mic className="w-8 h-8 text-zinc-700" />
                 </div>
                 <p className="text-zinc-500 font-medium">No outreach recordings yet.</p>
-                <p className="text-xs text-zinc-600 max-w-xs mx-auto leading-relaxed">Launch a campaign to start capturing intelligent call records with full AI analysis.</p>
+                <p className="text-xs text-zinc-600 max-w-xs mx-auto leading-relaxed">Launch a campaign to start capturing intelligent call records with full transcript analysis.</p>
               </div>
             ) : filteredRecordings.length === 0 ? (
               <div className="py-20 text-center border border-zinc-800 rounded-2xl">

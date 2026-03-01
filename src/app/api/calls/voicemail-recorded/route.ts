@@ -32,7 +32,7 @@ async function handleVoicemail(request: NextRequest) {
   const phoneNumber = matchedCall?.result.phoneNumber || '';
 
   if (callSid) {
-    await updateCampaignResultByCallSid(callSid, { status: 'voicemail' });
+    await updateCampaignResultByCallSid(callSid, { status: 'voicemail', pursuitState: 'NO_ANSWER' });
   }
 
   const existingRecording = callSid ? await getRecordingByCallSid(callSid, userId) : null;

@@ -1,8 +1,8 @@
-# Auto Caller Platform
+# Callware Platform
 
-Production-ready outbound AI calling platform with:
+Production-ready outbound calling platform with:
 - campaign orchestration
-- AI conversation copilot
+- Maya planning assistant
 - call forwarding
 - call recordings + transcription
 - scheduled campaign dispatch
@@ -14,9 +14,9 @@ Production-ready outbound AI calling platform with:
 - Full multi-tab platform UI (`Overview`, `Agent Desk`, `Call Center`, `Sources`, `Callers`, `Recordings`, `Leads`, `Callbacks`, `History`, `Billing`, `Settings`)
 - Guided onboarding wizard in `Overview` for first-launch setup
 - Team accounts directory in `Settings` (owner/agent/manager operational records)
-- Caller identities in dedicated `Callers` tab (name, position, voice, language, disclosure mode, conversation constraints, KPI counters)
+- Caller identities in dedicated `Callers` tab (name, role, language, disclosure mode, conversation constraints, KPI counters)
 - Number upload flow with direct caller assignment + optional schedule in `Call Center`
-- Landing-page `Try Live AI Call Demo` form with consent gate, cooldown, and IP rate limits
+- Landing-page `Try Live Call Demo` form with consent gate, cooldown, and IP rate limits
 - Target blueprint-driven calling (goal, audience, offer, qualification, CTA) instead of fixed script reading
 - Lead notes support (`number | user comment | target comment | IANA timezone`) attached to per-call results
 - Auto callback scheduling when lead says “call me later” (server-side scheduled follow-up campaign)
@@ -233,7 +233,7 @@ Natural voices (ElevenLabs):
   - `ELEVENLABS_OPTIMIZE_STREAMING_LATENCY`
 
 Sesame CSM (self-hosted, GPU required):
-- Set workspace TTS provider to `Sesame CSM` in `Callers -> Voice Agents`.
+- Configure workspace `ttsProvider=csm` and `csmEnabled=true` in settings storage/env (normal user flow keeps voice provider hidden).
 - Next.js calls the CSM microservice via `CSM_TTS_URL`.
 - Recommended env:
   - `CSM_TTS_URL=http://localhost:7010` (or `http://csm-tts:7010` in Docker network)

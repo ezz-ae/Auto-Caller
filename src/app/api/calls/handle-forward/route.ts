@@ -4,6 +4,7 @@ import { updateCampaignResultByCallSid } from '@/lib/store';
 import { syncParentFollowUpStatusFromChild } from '@/lib/follow-up-status';
 import { CallResult } from '@/lib/types';
 import { formDataToParams, isValidTwilioWebhook } from '@/lib/twilio-webhook-auth';
+import { derivePursuitState } from '@/lib/pursuit-state';
 
 function mapDialStatus(dialStatus: string): CallResult['status'] {
   const statusMap: Record<string, CallResult['status']> = {
@@ -52,6 +53,7 @@ async function handleForward(request: NextRequest) {
         patch.duration = duration;
       }
     }
+    patch.pursuitState = derivePursuitState(patch);
 
     const updated = await updateCampaignResultByCallSid(callSid, patch);
     if (updated.updated) {

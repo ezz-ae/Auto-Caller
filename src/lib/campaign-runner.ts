@@ -8,6 +8,7 @@ import { resolvePublicAppUrl } from '@/lib/public-app-url';
 import { getQuietHoursDecision, resolveLeadTimeZone } from '@/lib/compliance';
 import { getSuppressionForNumber } from '@/lib/compliance-store';
 import { acquireCampaignSlot } from '@/lib/campaign-concurrency';
+import { derivePursuitState } from '@/lib/pursuit-state';
 
 function normalizePhoneKey(raw: string): string {
   return String(raw || '').replace(/[^\d+]/g, '');
@@ -121,6 +122,7 @@ export async function runCampaign(campaign: Campaign): Promise<void> {
       phoneNumber: number,
       status: 'pending',
       callAttemptState: 'queued',
+      pursuitState: 'NEW',
       attemptCount: existingResult?.attemptCount || 0,
       timestamp: new Date(),
       userComment: existingResult?.userComment,
@@ -144,6 +146,7 @@ export async function runCampaign(campaign: Campaign): Promise<void> {
       result.leadRequest = suppression.reason || 'Suppressed by compliance';
       result.followUpRequested = false;
       result.followUpStatus = 'cancelled';
+      result.pursuitState = derivePursuitState(result);
       await updateCampaignResult(campaign.id, result);
       continue;
     }
@@ -174,6 +177,7 @@ export async function runCampaign(campaign: Campaign): Promise<void> {
       result.followUpStatus = 'scheduled';
       result.followUpAt = nextAllowedAt;
       result.followUpCampaignId = followUpCampaignId;
+      result.pursuitState = derivePursuitState(result);
       await updateCampaignResult(campaign.id, result);
       continue;
     }
@@ -182,6 +186,7 @@ export async function runCampaign(campaign: Campaign): Promise<void> {
     result.callAttemptState = 'dialing';
     result.attemptCount = 0;
     result.callComment = 'Dialing lead';
+    result.pursuitState = derivePursuitState(result);
     await updateCampaignResult(campaign.id, result);
 
     try {
@@ -195,6 +200,7 @@ export async function runCampaign(campaign: Campaign): Promise<void> {
           attempt === 0
             ? 'Dialing lead'
             : `Retrying dial attempt ${attempt + 1} of ${maxRetries + 1}`;
+        result.pursuitState = derivePursuitState(result);
         await updateCampaignResult(campaign.id, result);
 
         try {
@@ -263,6 +269,7 @@ export async function runCampaign(campaign: Campaign): Promise<void> {
       result.callComment = billingEvent.created ? 'Call initiated' : 'Call initiated (billing already applied)';
       result.billingEventId = billingEventId;
       result.billedAt = billingEvent.event.createdAt;
+      result.pursuitState = derivePursuitState(result);
       await updateCampaignResult(campaign.id, result);
 
       await new Promise(resolve => setTimeout(resolve, 3000));
@@ -271,6 +278,7 @@ export async function runCampaign(campaign: Campaign): Promise<void> {
       result.callAttemptState = 'failed';
       result.error = error.message;
       result.callComment = `Dial failed after ${maxRetries + 1} attempt(s)`;
+      result.pursuitState = derivePursuitState(result);
       await updateCampaignResult(campaign.id, result);
     }
 

@@ -18,8 +18,8 @@ export function MarketingHeader() {
             <Phone className="w-5 h-5 text-white" />
           </div>
           <div>
-            <p className="text-sm font-semibold tracking-tight text-white">Acaller</p>
-            <p className="text-xs text-zinc-400">AI Outbound Calling Platform</p>
+            <p className="text-sm font-semibold tracking-tight text-white">Callware</p>
+            <p className="text-xs text-zinc-400">Outbound Execution Platform</p>
           </div>
         </Link>
 
@@ -49,9 +49,9 @@ export function MarketingFooter() {
     <footer className="border-t border-zinc-800 bg-zinc-950/70">
       <div className="mx-auto max-w-7xl px-4 py-10 grid gap-8 md:grid-cols-4">
         <div className="space-y-2">
-          <p className="text-sm font-semibold text-white">Acaller</p>
+          <p className="text-sm font-semibold text-white">Callware</p>
           <p className="text-sm text-zinc-400">
-            Run outbound calls with AI caller identities, scheduled campaigns, and conversion analytics.
+            Run automated follow-up campaigns with hired calling agents, scheduled execution, and conversion analytics.
           </p>
         </div>
         <div>
@@ -74,8 +74,8 @@ export function MarketingFooter() {
           <p className="text-sm font-semibold text-white mb-3">Support</p>
           <div className="space-y-2 text-sm text-zinc-400">
             <p>Production support window: Mon-Fri</p>
-            <a href="mailto:support@acaller.ai" className="block hover:text-emerald-300 transition">
-              support@acaller.ai
+            <a href="mailto:support@callware.ai" className="block hover:text-emerald-300 transition">
+              support@callware.ai
             </a>
             <p>Status: <span className="text-emerald-400">Operational</span></p>
           </div>
@@ -83,7 +83,7 @@ export function MarketingFooter() {
       </div>
       <div className="border-t border-zinc-800/80">
         <div className="mx-auto max-w-7xl px-4 py-4 text-xs text-zinc-500 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <p>© {new Date().getFullYear()} Acaller. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Callware. All rights reserved.</p>
           <p>Built for fast, measurable outbound calling.</p>
         </div>
       </div>
