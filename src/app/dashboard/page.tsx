@@ -171,6 +171,39 @@ interface AgentMessage {
   actionReason?: string
   confidence?: number
   conversationMode?: string
+  formDraft?: AgentFormDraft
+  verificationQuestion?: string
+}
+
+interface AgentFormDraft {
+  settings?: {
+    businessName?: string
+    industry?: string
+    companyDetails?: string
+    forwardToNumber?: string
+    sayThisRules?: string
+    avoidThisRules?: string
+  }
+  callerIdentity?: {
+    name?: string
+    position?: string
+    gender?: 'male' | 'female' | 'any'
+    language?: string
+    voiceId?: string
+    industry?: string
+    mentionAi?: boolean
+    campaignGoal?: string
+    script?: string
+    sayThisRules?: string
+    avoidThisRules?: string
+  }
+  callCenter?: {
+    targetBlueprint?: string
+    numbers?: string
+    leadNotes?: string
+    scheduledAt?: string
+  }
+  verificationQuestion?: string
 }
 
 interface AgentProfile {
@@ -1531,6 +1564,113 @@ export default function Dashboard() {
     setAgentListening(false)
   }
 
+  const summarizeAgentDraft = (draft: AgentFormDraft): string[] => {
+    const lines: string[] = []
+    if (draft.settings) {
+      if (draft.settings.businessName) lines.push(`Business: ${draft.settings.businessName}`)
+      if (draft.settings.industry) lines.push(`Industry: ${draft.settings.industry}`)
+      if (draft.settings.forwardToNumber) lines.push(`Forwarding number: ${draft.settings.forwardToNumber}`)
+      if (draft.settings.sayThisRules) lines.push('Global "say this" rules updated')
+      if (draft.settings.avoidThisRules) lines.push('Global "avoid this" rules updated')
+    }
+    if (draft.callerIdentity) {
+      if (draft.callerIdentity.name) lines.push(`Caller name: ${draft.callerIdentity.name}`)
+      if (draft.callerIdentity.position) lines.push(`Caller position: ${draft.callerIdentity.position}`)
+      if (draft.callerIdentity.language) lines.push(`Caller language: ${draft.callerIdentity.language}`)
+      if (draft.callerIdentity.voiceId) lines.push(`Caller voice: ${draft.callerIdentity.voiceId}`)
+      if (draft.callerIdentity.campaignGoal) lines.push(`Caller goal: ${draft.callerIdentity.campaignGoal}`)
+    }
+    if (draft.callCenter) {
+      if (draft.callCenter.targetBlueprint) lines.push('Call Center target blueprint updated')
+      if (draft.callCenter.numbers) lines.push('Lead numbers draft imported to composer')
+      if (draft.callCenter.leadNotes) lines.push('Lead notes draft added to composer')
+      if (draft.callCenter.scheduledAt) lines.push(`Campaign schedule: ${draft.callCenter.scheduledAt}`)
+    }
+    return lines
+  }
+
+  const applyAgentDraftToInputs = (draft: AgentFormDraft) => {
+    if (draft.settings) {
+      setSettings(prev => ({
+        ...prev,
+        businessName: draft.settings?.businessName || prev.businessName,
+        industry: draft.settings?.industry || prev.industry,
+        companyDetails: draft.settings?.companyDetails || prev.companyDetails,
+        forwardToNumber: draft.settings?.forwardToNumber || prev.forwardToNumber,
+        sayThisRules: draft.settings?.sayThisRules || prev.sayThisRules,
+        avoidThisRules: draft.settings?.avoidThisRules || prev.avoidThisRules,
+      }))
+    }
+
+    if (draft.callerIdentity) {
+      setShowAdvancedCallerInputs(true)
+      setIdentityForm(prev => ({
+        ...prev,
+        name: draft.callerIdentity?.name || prev.name,
+        position: draft.callerIdentity?.position || prev.position,
+        gender: draft.callerIdentity?.gender || prev.gender,
+        language: draft.callerIdentity?.language || prev.language,
+        voiceId: draft.callerIdentity?.voiceId || prev.voiceId,
+        industry: draft.callerIdentity?.industry || prev.industry,
+        mentionAi: typeof draft.callerIdentity?.mentionAi === 'boolean' ? draft.callerIdentity.mentionAi : prev.mentionAi,
+        campaignGoal: draft.callerIdentity?.campaignGoal || prev.campaignGoal,
+        script: draft.callerIdentity?.script || prev.script,
+        sayThisRules: draft.callerIdentity?.sayThisRules || prev.sayThisRules,
+        avoidThisRules: draft.callerIdentity?.avoidThisRules || prev.avoidThisRules,
+      }))
+      if (draft.callerIdentity.language) {
+        setSelectedLanguage(draft.callerIdentity.language)
+      }
+      if (draft.callerIdentity.voiceId) {
+        setSelectedVoice(draft.callerIdentity.voiceId)
+      }
+    }
+
+    if (draft.callCenter) {
+      if (draft.callCenter.targetBlueprint) {
+        setScript(draft.callCenter.targetBlueprint)
+      }
+      if (draft.callCenter.numbers) {
+        const normalized = Array.from(new Set(
+          draft.callCenter.numbers
+            .split(/[\n,;]+/)
+            .map(v => v.trim())
+            .filter(Boolean)
+        )).join('\n')
+        if (normalized) {
+          setNumbers(normalized)
+        }
+      }
+      if (draft.callCenter.leadNotes) {
+        setLeadNotesText(draft.callCenter.leadNotes)
+      }
+      if (draft.callCenter.scheduledAt) {
+        setScheduledAt(draft.callCenter.scheduledAt)
+      }
+    }
+
+    if (draft.callCenter) {
+      setActiveTab('call')
+    } else if (draft.callerIdentity) {
+      setActiveTab('callers')
+    } else if (draft.settings) {
+      setActiveTab('settings')
+    }
+  }
+
+  const approveAndApplyDraft = (draft?: AgentFormDraft, verificationQuestion?: string) => {
+    if (!draft) return
+    const summary = summarizeAgentDraft(draft)
+    const prompt = verificationQuestion || draft.verificationQuestion || 'Apply these drafted values to your inputs now?'
+    const confirmed = typeof window === 'undefined'
+      ? true
+      : window.confirm(`${prompt}\n\n${summary.length ? summary.map(line => `• ${line}`).join('\n') : 'No detailed values listed.'}`)
+
+    if (!confirmed) return
+    applyAgentDraftToInputs(draft)
+    toast.success('Draft applied to inputs. Please review and save.')
+  }
+
   const askAgent = async (promptOverride?: string, preferVoiceReply = false) => {
     if (!activeAgentId) {
       toast.error('Create an agent first from Hire an agent or Agents tab')
@@ -1582,9 +1722,15 @@ export default function Dashboard() {
             businessName: settings.businessName || '',
             industry: settings.industry || '',
             companyDetails: settings.companyDetails || '',
+            forwardToNumber: settings.forwardToNumber || '',
+            sayThisRules: settings.sayThisRules || '',
+            avoidThisRules: settings.avoidThisRules || '',
             managedMode,
             currentTab: activeTab,
             targetBlueprint: script,
+            currentCallerDraft: identityForm,
+            currentLeadNotes: leadNotesText,
+            currentSchedule: scheduledAt,
           },
         }),
       })
@@ -1604,6 +1750,8 @@ export default function Dashboard() {
         actionReason: String(data.actionReason || ''),
         confidence: Number(data.confidence || 0),
         conversationMode: String(data.conversationMode || ''),
+        formDraft: data.formDraft && typeof data.formDraft === 'object' ? data.formDraft as AgentFormDraft : undefined,
+        verificationQuestion: String(data.verificationQuestion || data.formDraft?.verificationQuestion || ''),
       }
       setAgentMessagesByAgent(prev => ({
         ...prev,
@@ -2704,6 +2852,35 @@ export default function Dashboard() {
                                 <li key={idx}>• {item}</li>
                               ))}
                             </ul>
+                          )}
+                          {msg.formDraft && (
+                            <div className="mt-3 rounded-md border border-emerald-500/20 bg-emerald-500/10 p-2 space-y-2">
+                              <p className="text-xs text-emerald-300 font-medium">
+                                Draft ready for inputs. Approve to write values into your forms.
+                              </p>
+                              <div className="flex flex-wrap gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-500"
+                                  onClick={() => approveAndApplyDraft(msg.formDraft, msg.verificationQuestion)}
+                                >
+                                  Approve & Apply
+                                </Button>
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="secondary"
+                                  className="h-7 px-2 text-xs bg-zinc-800 hover:bg-zinc-700"
+                                  onClick={() => {
+                                    const ask = msg.verificationQuestion || 'Revise this draft with changes:'
+                                    setAgentInput(ask)
+                                  }}
+                                >
+                                  Revise Draft
+                                </Button>
+                              </div>
+                            </div>
                           )}
                           {msg.action && msg.action !== 'none' && getActionLabel(msg.action) && (
                             <p className="mt-2 text-xs text-zinc-400">

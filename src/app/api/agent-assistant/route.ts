@@ -26,9 +26,128 @@ interface AgentContext {
   businessName?: string;
   industry?: string;
   companyDetails?: string;
+  forwardToNumber?: string;
+  sayThisRules?: string;
+  avoidThisRules?: string;
   managedMode?: boolean;
   currentTab?: string;
   targetBlueprint?: string;
+  currentCallerDraft?: Record<string, any>;
+  currentLeadNotes?: string;
+  currentSchedule?: string;
+}
+
+interface AgentFormDraft {
+  settings?: {
+    businessName?: string;
+    industry?: string;
+    companyDetails?: string;
+    forwardToNumber?: string;
+    sayThisRules?: string;
+    avoidThisRules?: string;
+  };
+  callerIdentity?: {
+    name?: string;
+    position?: string;
+    gender?: 'male' | 'female' | 'any';
+    language?: string;
+    voiceId?: string;
+    industry?: string;
+    mentionAi?: boolean;
+    campaignGoal?: string;
+    script?: string;
+    sayThisRules?: string;
+    avoidThisRules?: string;
+  };
+  callCenter?: {
+    targetBlueprint?: string;
+    numbers?: string;
+    leadNotes?: string;
+    scheduledAt?: string;
+  };
+  verificationQuestion?: string;
+}
+
+function clipText(input: unknown, max = 800): string {
+  const value = String(input || '').replace(/\s+/g, ' ').trim();
+  if (value.length <= max) return value;
+  return `${value.slice(0, max - 1).trim()}…`;
+}
+
+function sanitizeGender(value: unknown): 'male' | 'female' | 'any' | undefined {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (normalized === 'male') return 'male';
+  if (normalized === 'female') return 'female';
+  if (normalized === 'any') return 'any';
+  return undefined;
+}
+
+function toBoolean(value: unknown): boolean | undefined {
+  if (value === true) return true;
+  if (value === false) return false;
+  const normalized = String(value || '').trim().toLowerCase();
+  if (!normalized) return undefined;
+  if (normalized === 'true' || normalized === 'yes' || normalized === '1') return true;
+  if (normalized === 'false' || normalized === 'no' || normalized === '0') return false;
+  return undefined;
+}
+
+function sanitizeFormDraft(raw: unknown): AgentFormDraft | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const input = raw as Record<string, any>;
+  const draft: AgentFormDraft = {};
+
+  const settings = input.settings || {};
+  const settingsDraft = {
+    businessName: clipText(settings.businessName || '', 120),
+    industry: clipText(settings.industry || '', 80),
+    companyDetails: clipText(settings.companyDetails || '', 700),
+    forwardToNumber: clipText(settings.forwardToNumber || '', 40),
+    sayThisRules: clipText(settings.sayThisRules || '', 320),
+    avoidThisRules: clipText(settings.avoidThisRules || '', 320),
+  };
+  if (Object.values(settingsDraft).some(Boolean)) {
+    draft.settings = settingsDraft;
+  }
+
+  const callerIdentity = input.callerIdentity || {};
+  const identityDraft = {
+    name: clipText(callerIdentity.name || '', 80),
+    position: clipText(callerIdentity.position || '', 80),
+    gender: sanitizeGender(callerIdentity.gender),
+    language: clipText(callerIdentity.language || '', 40),
+    voiceId: clipText(callerIdentity.voiceId || '', 80),
+    industry: clipText(callerIdentity.industry || '', 80),
+    mentionAi: toBoolean(callerIdentity.mentionAi),
+    campaignGoal: clipText(callerIdentity.campaignGoal || '', 240),
+    script: clipText(callerIdentity.script || '', 900),
+    sayThisRules: clipText(callerIdentity.sayThisRules || '', 320),
+    avoidThisRules: clipText(callerIdentity.avoidThisRules || '', 320),
+  };
+  if (Object.values(identityDraft).some(value => value !== undefined && value !== '')) {
+    draft.callerIdentity = identityDraft;
+  }
+
+  const callCenter = input.callCenter || {};
+  const callCenterDraft = {
+    targetBlueprint: clipText(callCenter.targetBlueprint || '', 1200),
+    numbers: clipText(callCenter.numbers || '', 2000),
+    leadNotes: clipText(callCenter.leadNotes || '', 1200),
+    scheduledAt: clipText(callCenter.scheduledAt || '', 40),
+  };
+  if (Object.values(callCenterDraft).some(Boolean)) {
+    draft.callCenter = callCenterDraft;
+  }
+
+  const verificationQuestion = clipText(input.verificationQuestion || '', 220);
+  if (verificationQuestion) {
+    draft.verificationQuestion = verificationQuestion;
+  }
+
+  if (!draft.settings && !draft.callerIdentity && !draft.callCenter && !draft.verificationQuestion) {
+    return undefined;
+  }
+  return draft;
 }
 
 function normalizeGeminiModel(rawModel: string): string {
@@ -178,6 +297,18 @@ function buildDeterministicReply(prompt: string, context: AgentContext) {
       actionReason: 'No caller identity exists yet, so campaign launch cannot proceed.',
       confidence: 95,
       conversationMode: mode,
+      formDraft: {
+        callerIdentity: {
+          name: context.selectedAgentName || 'Sara',
+          position: 'Sales Advisor',
+          gender: 'female',
+          language: 'en-US',
+          industry: context.industry || '',
+          campaignGoal: 'Qualify leads and transfer warm prospects to human team',
+          script: context.targetBlueprint || '',
+        },
+        verificationQuestion: 'Should I apply this caller identity draft to your inputs now?',
+      } as AgentFormDraft,
     };
   }
 
@@ -195,6 +326,12 @@ function buildDeterministicReply(prompt: string, context: AgentContext) {
       actionReason: 'Queued contacts exceed current credits, which would block campaign dispatch.',
       confidence: 96,
       conversationMode: mode,
+      formDraft: {
+        callCenter: {
+          targetBlueprint: context.targetBlueprint || '',
+        },
+        verificationQuestion: 'Do you want me to keep this call setup and move you to Billing for recharge?',
+      } as AgentFormDraft,
     };
   }
 
@@ -209,6 +346,12 @@ function buildDeterministicReply(prompt: string, context: AgentContext) {
     actionReason: 'Core setup appears valid. Next best step is execution from Call Center.',
     confidence: 84,
     conversationMode: mode,
+    formDraft: {
+      callCenter: {
+        targetBlueprint: context.targetBlueprint || '',
+      },
+      verificationQuestion: 'Should I apply this blueprint to your Call Center inputs now?',
+    } as AgentFormDraft,
   };
 }
 
@@ -270,7 +413,37 @@ Always output strict JSON:
   "checklist": ["short step", "short step"],
   "actionReason": "short reason for the action",
   "confidence": 0-100,
-  "conversationMode": "onboarding|execution|optimization"
+  "conversationMode": "onboarding|execution|optimization",
+  "formDraft": {
+    "settings": {
+      "businessName": "",
+      "industry": "",
+      "companyDetails": "",
+      "forwardToNumber": "",
+      "sayThisRules": "",
+      "avoidThisRules": ""
+    },
+    "callerIdentity": {
+      "name": "",
+      "position": "",
+      "gender": "male|female|any",
+      "language": "en-US",
+      "voiceId": "",
+      "industry": "",
+      "mentionAi": false,
+      "campaignGoal": "",
+      "script": "",
+      "sayThisRules": "",
+      "avoidThisRules": ""
+    },
+    "callCenter": {
+      "targetBlueprint": "",
+      "numbers": "",
+      "leadNotes": "",
+      "scheduledAt": ""
+    },
+    "verificationQuestion": "ask user for approval before applying"
+  }
 }`;
 
     const userPrompt = `Context:
@@ -278,6 +451,9 @@ Always output strict JSON:
 - Workspace business: ${context.businessName || 'Not set'}
 - Industry: ${context.industry || 'Not set'}
 - Company details: ${context.companyDetails || 'Not set'}
+- Forwarding number: ${context.forwardToNumber || 'Not set'}
+- Global say rules: ${context.sayThisRules || 'Not set'}
+- Global avoid rules: ${context.avoidThisRules || 'Not set'}
 - Credits: ${credits}
 - Contacts queued: ${numbersCount}
 - Caller identities count: ${Number(context.callerIdentitiesCount || 0)}
@@ -293,6 +469,9 @@ Always output strict JSON:
 - Managed mode: ${context.managedMode ? 'yes' : 'no'}
 - Current tab: ${context.currentTab || 'unknown'}
 - Target blueprint: ${context.targetBlueprint || 'Not set'}
+- Current caller draft: ${JSON.stringify(context.currentCallerDraft || {})}
+- Current lead notes: ${context.currentLeadNotes || 'Not set'}
+- Current schedule: ${context.currentSchedule || 'Not set'}
 
 Conversation history:
 ${history || 'No previous history'}
@@ -305,7 +484,9 @@ Rules:
 - If no caller identity exists yet, action must be open_callers.
 - Recommend practical next steps, not abstract advice.
 - Keep reply concise and conversational.
-- Respond as an operations partner that is aware of the entire workspace.`;
+- Respond as an operations partner that is aware of the entire workspace.
+- When user asks to create/fill/write/update values, provide a concrete formDraft with best-effort input values.
+- Always include verificationQuestion when formDraft is present.`;
 
     try {
       const parsed = await generateJsonWithGemini({
@@ -325,6 +506,8 @@ Rules:
         conversationMode: ['onboarding', 'execution', 'optimization'].includes(String(parsed.conversationMode || '').toLowerCase())
           ? String(parsed.conversationMode || '').toLowerCase()
           : inferConversationMode(context),
+        formDraft: sanitizeFormDraft(parsed.formDraft),
+        verificationQuestion: clipText(parsed.verificationQuestion || parsed.formDraft?.verificationQuestion || '', 220),
       });
     } catch (providerError) {
       console.error('Agent assistant provider fallback:', providerError);
