@@ -1,182 +1,265 @@
+'use client'
+
+import { useRef, useState } from 'react'
 import Link from 'next/link'
-import { ArrowRight, Clock3, Headphones, Phone, ShieldCheck, Sparkles, TrendingUp, UserRound } from 'lucide-react'
+import {
+  ArrowRight,
+  CalendarClock,
+  CheckCircle2,
+  Clock3,
+  Headphones,
+  Phone,
+  Sparkles,
+  TrendingUp,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { MarketingFooter, MarketingHeader } from '@/components/marketing/site-shell'
+import { OnboardingChat } from '@/components/marketing/onboarding-chat'
 import { DemoCallHero } from '@/components/marketing/demo-call-hero'
 
-const scenarios = [
+const useCases = [
   {
-    title: 'Qualify Data into leads.',
-    description: 'Turn raw contact lists into qualified opportunities with structured qualification calls.',
+    title: 'Lead qualification at scale',
+    description:
+      'Run structured discovery calls across your full contact list. Flag hot leads the moment intent is confirmed.',
     icon: Phone,
   },
   {
-    title: 'Reconnect old lead.',
-    description: 'Re-open old pipelines and reconnect with contacts that went cold.',
+    title: 'Pipeline re-engagement',
+    description:
+      'Automatically reach contacts that went cold. Reconnect before they choose a competitor.',
     icon: Clock3,
   },
   {
-    title: 'Qualify Social Media lead.',
-    description: 'Follow up instantly on social leads before they lose intent.',
+    title: 'Social media follow-up',
+    description:
+      'Connect with inbound leads within seconds of form submission — when intent is at its highest.',
     icon: TrendingUp,
   },
   {
-    title: 'Run a professional Followup',
-    description: 'Execute consistent callback campaigns with clear lead context and next actions.',
+    title: 'Scheduled callback campaigns',
+    description:
+      'Keep every follow-up promise. Automated callbacks with full context from the previous conversation.',
+    icon: CalendarClock,
+  },
+  {
+    title: 'Appointment reminders',
+    description:
+      'Reduce no-shows with proactive outreach. AI callers confirm, reschedule, and follow up automatically.',
     icon: Headphones,
+  },
+  {
+    title: 'Post-purchase upsells',
+    description:
+      'Reach customers at the right moment after a purchase. Warm, contextual conversations that convert.',
+    icon: Sparkles,
   },
 ]
 
-const faqs = [
-  {
-    q: 'Can I launch calls without technical setup?',
-    a: 'Yes. You only need your workflow inside the dashboard: callers, leads, and campaigns.',
-  },
-  {
-    q: 'Can I create multiple callers for one account?',
-    a: 'Yes. Each caller identity has its own script behavior, voice, language, and KPI tracking.',
-  },
-  {
-    q: 'Can campaigns be scheduled ahead of time?',
-    a: 'Yes. You can schedule campaigns and run callbacks automatically from one workspace.',
-  },
+const trustItems = [
+  { label: '30 free calls included', icon: CheckCircle2 },
+  { label: 'No credit card required', icon: CheckCircle2 },
+  { label: 'Live in under 10 minutes', icon: CheckCircle2 },
 ]
 
 export default function MarketingHomePage() {
+  const demoRef = useRef<HTMLDivElement>(null)
+  const [demoVisible, setDemoVisible] = useState(false)
+
+  const handleDemoRequested = () => {
+    setDemoVisible(true)
+    setTimeout(() => {
+      demoRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }, 50)
+  }
+
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#19342a_0%,#0c1110_45%,#09090b_100%)] text-white">
+    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,#172b22_0%,#0c1110_40%,#09090b_100%)] text-white">
       <MarketingHeader />
 
-      <main className="mx-auto max-w-7xl px-4 py-12 md:py-20 space-y-16">
-        <section className="space-y-8">
-          <div className="space-y-4">
-            <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30">
-              <Sparkles className="w-3.5 h-3.5 mr-1" />
-              Call center, simplified
+      <main className="mx-auto max-w-7xl px-4">
+
+        {/* ── Hero ── */}
+        <section className="py-20 md:py-28 grid gap-12 lg:grid-cols-[1fr_480px] items-start">
+
+          {/* Left: copy + CTAs */}
+          <div className="space-y-8 lg:pt-4">
+            <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 text-xs font-semibold tracking-widest uppercase px-3 py-1">
+              <Sparkles className="w-3 h-3 mr-1.5" />
+              AI Outbound Calling
             </Badge>
-            <h1 className="text-4xl md:text-6xl font-semibold leading-tight tracking-tight">
-              Who would you like to call today?
-            </h1>
-            <p className="text-zinc-300 text-lg leading-relaxed max-w-3xl">
-              Choose your call objective, run a live demo call, then launch your real campaign from the dashboard.
+
+            <div className="space-y-4">
+              <h1 className="text-5xl md:text-7xl font-bold leading-[1.08] tracking-tight">
+                Your leads are waiting{' '}
+                <span className="text-emerald-400">for the right call.</span>
+              </h1>
+              <p className="text-zinc-400 text-xl leading-relaxed max-w-lg font-medium">
+                AI voice agents that qualify, follow up, and book on your behalf — while you focus on closing.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <Button
+                asChild
+                size="lg"
+                className="h-13 px-7 rounded-2xl text-base font-bold bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-xl shadow-emerald-500/20"
+              >
+                <Link href="/login">
+                  Start free — 30 calls included
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Link>
+              </Button>
+              <Button
+                variant="ghost"
+                size="lg"
+                asChild
+                className="h-13 px-6 rounded-2xl text-base text-zinc-300 hover:text-white border border-zinc-700/60 hover:border-zinc-600 hover:bg-zinc-800/50"
+              >
+                <Link href="/how-it-works">How it works</Link>
+              </Button>
+            </div>
+
+            <div className="flex flex-wrap gap-5 pt-2">
+              {trustItems.map(item => (
+                <div key={item.label} className="flex items-center gap-2 text-sm text-zinc-400">
+                  <item.icon className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  {item.label}
+                </div>
+              ))}
+            </div>
+
+            {/* Industry quick-select chips — decorative context */}
+            <div className="pt-2 space-y-2">
+              <p className="text-[11px] text-zinc-600 uppercase tracking-widest font-bold">Works for</p>
+              <div className="flex flex-wrap gap-2">
+                {['Real Estate', 'Insurance', 'SaaS', 'Healthcare', 'Finance', 'E-commerce'].map(
+                  industry => (
+                    <span
+                      key={industry}
+                      className="px-3 py-1 rounded-full border border-zinc-800 text-xs text-zinc-500 bg-zinc-900/50"
+                    >
+                      {industry}
+                    </span>
+                  ),
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Right: chat widget */}
+          <div className="lg:sticky lg:top-24">
+            <OnboardingChat onDemoRequested={handleDemoRequested} />
+            <p className="text-center text-[11px] text-zinc-600 mt-3">
+              Not a chatbot — this is exactly how your AI caller will sound and respond.
+            </p>
+          </div>
+        </section>
+
+        {/* ── Use cases ── */}
+        <section className="py-16 border-t border-zinc-800/60 space-y-10">
+          <div className="text-center space-y-2">
+            <p className="text-emerald-400 text-xs font-bold uppercase tracking-widest">Use cases</p>
+            <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Built for every outreach scenario</h2>
+            <p className="text-zinc-400 max-w-xl mx-auto">
+              One platform, any industry. Acaller adapts to your workflow in minutes.
             </p>
           </div>
 
-          <div className="grid gap-6 lg:grid-cols-2 items-start">
-            <Card className="bg-zinc-900/80 border-zinc-800 shadow-xl shadow-black/30">
-              <CardHeader>
-                <CardTitle className="text-lg">Call Goal Box</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4 min-h-[96px]">
-                  <p className="text-sm text-zinc-300">
-                    Example: “Call new real-estate leads from this week and qualify budget + timeline before transfer.”
-                  </p>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {useCases.map(item => (
+              <div
+                key={item.title}
+                className="group rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-6 hover:border-emerald-500/30 hover:bg-zinc-900/70 transition-all duration-200"
+              >
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/15 text-emerald-400 flex items-center justify-center mb-4">
+                  <item.icon className="w-5 h-5" />
                 </div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <Button size="lg" asChild className="bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700">
-                    <Link href="/login">
-                      Start Free
-                      <ArrowRight className="ml-2 w-4 h-4" />
-                    </Link>
-                  </Button>
-                  <Button size="lg" variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
-                    <Link href="/how-it-works">See the Workflow</Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <DemoCallHero />
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {scenarios.map(item => (
-              <Card key={item.title} className="bg-zinc-900 border-zinc-800">
-                <CardHeader>
-                  <div className="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center mb-2">
-                    <item.icon className="w-5 h-5" />
-                  </div>
-                  <CardTitle className="text-xl leading-snug">{item.title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-zinc-400">{item.description}</p>
-                </CardContent>
-              </Card>
+                <h3 className="font-semibold text-zinc-100 mb-2 group-hover:text-white transition-colors">
+                  {item.title}
+                </h3>
+                <p className="text-sm text-zinc-500 leading-relaxed">{item.description}</p>
+              </div>
             ))}
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-2">
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-2xl">What Makes It Reliable</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-md bg-emerald-500/20 flex items-center justify-center">
-                  <UserRound className="w-4 h-4 text-emerald-300" />
-                </div>
-                <div>
-                  <p className="font-medium text-zinc-100">Identity-first campaign design</p>
-                  <p className="text-sm text-zinc-400">Each caller keeps its own voice, language, script, and KPI metrics.</p>
-                </div>
+        {/* ── Demo call section ── */}
+        <section
+          ref={demoRef}
+          className={`py-16 border-t border-zinc-800/60 transition-all duration-500 ${
+            demoVisible ? 'opacity-100 translate-y-0' : 'opacity-70'
+          }`}
+        >
+          <div className="grid gap-12 lg:grid-cols-2 items-center">
+            <div className="space-y-5">
+              <div className="space-y-1">
+                <p className="text-emerald-400 text-xs font-bold uppercase tracking-widest">Live demo</p>
+                <h2 className="text-3xl md:text-4xl font-bold tracking-tight">
+                  Hear what your AI caller sounds like.
+                </h2>
               </div>
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-md bg-emerald-500/20 flex items-center justify-center">
-                  <Headphones className="w-4 h-4 text-emerald-300" />
-                </div>
-                <div>
-                  <p className="font-medium text-zinc-100">Natural voice playback controls</p>
-                  <p className="text-sm text-zinc-400">Test and lock voices before launch to protect brand quality.</p>
-                </div>
+              <p className="text-zinc-400 text-lg leading-relaxed">
+                Enter your number and one of our AI voice agents will call you right now. No scripts, no slides — just a real conversation.
+              </p>
+              <div className="space-y-2">
+                {[
+                  'Natural, human-like voice',
+                  'Handles objections and questions',
+                  'Full transcript after the call',
+                ].map(point => (
+                  <div key={point} className="flex items-center gap-2 text-sm text-zinc-300">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    {point}
+                  </div>
+                ))}
               </div>
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-md bg-emerald-500/20 flex items-center justify-center">
-                  <ShieldCheck className="w-4 h-4 text-emerald-300" />
-                </div>
-                <div>
-                  <p className="font-medium text-zinc-100">One clear operating workflow</p>
-                  <p className="text-sm text-zinc-400">Setup callers, launch campaigns, and track follow-up outcomes in one place.</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+            </div>
 
-          <Card className="bg-zinc-900 border-zinc-800">
-            <CardHeader>
-              <CardTitle className="text-2xl">Quick Answers</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {faqs.map(item => (
-                <div key={item.q} className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
-                  <p className="font-medium text-zinc-100">{item.q}</p>
-                  <p className="text-sm text-zinc-400 mt-1">{item.a}</p>
-                </div>
-              ))}
-              <Button variant="secondary" asChild className="w-full bg-zinc-800 hover:bg-zinc-700">
-                <Link href="/faq">View Full FAQ</Link>
+            <div>
+              <DemoCallHero />
+            </div>
+          </div>
+        </section>
+
+        {/* ── CTA ── */}
+        <section className="py-16 border-t border-zinc-800/60">
+          <div className="rounded-2xl border border-emerald-500/25 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent p-8 md:p-12 text-center space-y-6">
+            <div className="space-y-3">
+              <h2 className="text-3xl md:text-5xl font-bold tracking-tight">
+                Ready to launch your first campaign?
+              </h2>
+              <p className="text-zinc-400 text-lg max-w-xl mx-auto">
+                Set up in under 10 minutes. 30 calls included free. No credit card until you scale.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3 justify-center">
+              <Button
+                asChild
+                size="lg"
+                className="h-14 px-8 rounded-2xl text-base font-bold bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-500/20"
+              >
+                <Link href="/login">
+                  Start free workspace
+                  <ArrowRight className="ml-2 w-5 h-5" />
+                </Link>
               </Button>
-            </CardContent>
-          </Card>
+              <Button
+                variant="ghost"
+                size="lg"
+                asChild
+                className="h-14 px-8 rounded-2xl text-base border border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800/50"
+              >
+                <Link href="/docs">Read the docs</Link>
+              </Button>
+            </div>
+            <p className="text-xs text-zinc-600">
+              No credit card · No setup fee · Cancel anytime
+            </p>
+          </div>
         </section>
 
-        <section className="rounded-2xl border border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
-            <h3 className="text-2xl md:text-3xl font-semibold tracking-tight">Ready To Start?</h3>
-            <p className="text-zinc-300 mt-2">Open the dashboard and launch your first campaign.</p>
-          </div>
-          <div className="flex flex-wrap gap-3">
-            <Button asChild className="bg-emerald-500 hover:bg-emerald-600">
-              <Link href="/docs">Open Launch Docs</Link>
-            </Button>
-            <Button variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
-              <Link href="/login">Open Dashboard</Link>
-            </Button>
-          </div>
-        </section>
       </main>
 
       <MarketingFooter />
