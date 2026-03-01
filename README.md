@@ -11,7 +11,7 @@ Production-ready outbound AI calling platform with:
 
 ## What Is Included
 
-- Full multi-tab platform UI (`Overview`, `Agent Desk`, `Call Center`, `Callers`, `Recordings`, `Leads`, `Callbacks`, `History`, `Billing`, `Settings`)
+- Full multi-tab platform UI (`Overview`, `Agent Desk`, `Call Center`, `Sources`, `Callers`, `Recordings`, `Leads`, `Callbacks`, `History`, `Billing`, `Settings`)
 - Guided onboarding wizard in `Overview` for first-launch setup
 - Team accounts directory in `Settings` (owner/agent/manager operational records)
 - Caller identities in dedicated `Callers` tab (name, position, voice, language, disclosure mode, conversation constraints, KPI counters)
@@ -34,6 +34,11 @@ Production-ready outbound AI calling platform with:
   - `/api/leads`
   - `/api/callbacks`
   - `/api/reports/daily`
+- Lead source ingestion APIs:
+  - `/api/integrations/sources`
+  - `/api/integrations/google-drive/sync`
+  - `/api/integrations/inbox/consume`
+  - `/api/integrations/zapier/lead`
 - Data layer with dual drivers:
   - `postgres` (Neon/Postgres via Prisma, recommended for production)
   - `filesystem` (local JSON store for quick dev)
@@ -182,6 +187,14 @@ Automatic number provisioning:
   - `MANAGED_NUMBER_CONTAINS` (optional)
 - `MANAGED_NUMBER_POOL` remains fallback if auto-provisioning fails.
 - Keep `MANAGED_ASSIGN_NUMBER_ON_REGISTRATION=false` (recommended) so users explicitly buy number per caller identity.
+
+Lead sources (Zapier / Facebook / Google Drive):
+- Open Dashboard -> `Sources`.
+- Save your source settings once.
+- Copy your Zapier webhook URL and use it in Zapier actions.
+- For Facebook Lead Ads, send new leads into that Zapier webhook action.
+- Add a public Google Sheet/Drive CSV URL and click `Sync Now`.
+- Click `Load Leads Into Call Center` to move inbox leads into the call composer.
 
 Credit pricing with margin:
 - `TWILIO_ESTIMATED_COST_PER_CALL_USD` (example `0.02`)

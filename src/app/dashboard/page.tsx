@@ -193,6 +193,26 @@ interface BillingProduct {
   credits?: number
 }
 
+interface LeadSourceSettingsState {
+  zapierEnabled: boolean
+  zapierInboundSecret: string
+  zapierWebhookUrl: string
+  googleDriveEnabled: boolean
+  googleDriveCsvUrl: string
+  googleDriveAutoSync: boolean
+  inboxNewCount: number
+  inboxConsumedCount: number
+}
+
+interface IntegrationActivityEvent {
+  id: string
+  source: string
+  status: 'success' | 'warning' | 'error'
+  message: string
+  importedCount: number
+  createdAt: string
+}
+
 interface CallerIdentity {
   id: string
   name: string
@@ -446,6 +466,20 @@ export default function Dashboard() {
   const [teamForm, setTeamForm] = useState({ name: '', email: '', role: 'Agent' })
   const [teamLoading, setTeamLoading] = useState(false)
   const [billingProducts, setBillingProducts] = useState<Record<string, BillingProduct>>(DEFAULT_BILLING_PRODUCTS)
+  const [leadSourceSettings, setLeadSourceSettings] = useState<LeadSourceSettingsState>({
+    zapierEnabled: true,
+    zapierInboundSecret: '',
+    zapierWebhookUrl: '',
+    googleDriveEnabled: false,
+    googleDriveCsvUrl: '',
+    googleDriveAutoSync: false,
+    inboxNewCount: 0,
+    inboxConsumedCount: 0,
+  })
+  const [integrationEvents, setIntegrationEvents] = useState<IntegrationActivityEvent[]>([])
+  const [savingLeadSources, setSavingLeadSources] = useState(false)
+  const [syncingGoogleDrive, setSyncingGoogleDrive] = useState(false)
+  const [loadingLeadInbox, setLoadingLeadInbox] = useState(false)
   const initRef = useRef(false)
 
   const fetchCampaigns = useCallback(async () => {
@@ -516,6 +550,30 @@ export default function Dashboard() {
       }
     } catch {
       console.error('Failed to load billing products')
+    }
+  }, [])
+
+  const fetchLeadSources = useCallback(async () => {
+    try {
+      const res = await fetch('/api/integrations/sources')
+      if (!res.ok) {
+        throw new Error('Failed to load lead sources')
+      }
+
+      const data = await res.json()
+      setLeadSourceSettings({
+        zapierEnabled: !!data?.settings?.zapierEnabled,
+        zapierInboundSecret: String(data?.settings?.zapierInboundSecret || ''),
+        zapierWebhookUrl: String(data?.webhookUrl || ''),
+        googleDriveEnabled: !!data?.settings?.googleDriveEnabled,
+        googleDriveCsvUrl: String(data?.settings?.googleDriveCsvUrl || ''),
+        googleDriveAutoSync: !!data?.settings?.googleDriveAutoSync,
+        inboxNewCount: Number(data?.inbox?.newCount || 0),
+        inboxConsumedCount: Number(data?.inbox?.consumedCount || 0),
+      })
+      setIntegrationEvents(Array.isArray(data?.events) ? data.events : [])
+    } catch {
+      console.error('Failed to load lead sources')
     }
   }, [])
 
@@ -976,11 +1034,18 @@ export default function Dashboard() {
         ])
       }
       
-      await Promise.all([fetchCampaigns(), fetchRecordings(), fetchTeamMembers(), fetchBillingProducts(), fetchCallerIdentities()])
+      await Promise.all([
+        fetchCampaigns(),
+        fetchRecordings(),
+        fetchTeamMembers(),
+        fetchBillingProducts(),
+        fetchCallerIdentities(),
+        fetchLeadSources(),
+      ])
     }
     
     init()
-  }, [fetchCampaigns, fetchRecordings, fetchTeamMembers, fetchBillingProducts, fetchCallerIdentities])
+  }, [fetchCampaigns, fetchRecordings, fetchTeamMembers, fetchBillingProducts, fetchCallerIdentities, fetchLeadSources])
 
   useEffect(() => {
     const hasLiveCampaign = isCalling || currentCampaign?.status === 'scheduled'
@@ -1034,6 +1099,164 @@ export default function Dashboard() {
       toast.error('Failed to save settings')
     }
     setLoading(false)
+  }
+
+  const saveLeadSourcesConfig = async () => {
+    setSavingLeadSources(true)
+    try {
+      const res = await fetch('/api/integrations/sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          zapierEnabled: leadSourceSettings.zapierEnabled,
+          googleDriveEnabled: leadSourceSettings.googleDriveEnabled,
+          googleDriveCsvUrl: leadSourceSettings.googleDriveCsvUrl.trim(),
+          googleDriveAutoSync: leadSourceSettings.googleDriveAutoSync,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.success) {
+        toast.error(data?.error || 'Failed to save lead source settings')
+        return
+      }
+
+      setLeadSourceSettings(prev => ({
+        ...prev,
+        zapierEnabled: !!data?.settings?.zapierEnabled,
+        zapierInboundSecret: String(data?.settings?.zapierInboundSecret || prev.zapierInboundSecret),
+        zapierWebhookUrl: String(data?.webhookUrl || prev.zapierWebhookUrl),
+        googleDriveEnabled: !!data?.settings?.googleDriveEnabled,
+        googleDriveCsvUrl: String(data?.settings?.googleDriveCsvUrl || ''),
+        googleDriveAutoSync: !!data?.settings?.googleDriveAutoSync,
+        inboxNewCount: Number(data?.inbox?.newCount || 0),
+        inboxConsumedCount: Number(data?.inbox?.consumedCount || 0),
+      }))
+      setIntegrationEvents(Array.isArray(data?.events) ? data.events : [])
+      toast.success('Lead source settings saved')
+    } catch {
+      toast.error('Failed to save lead source settings')
+    } finally {
+      setSavingLeadSources(false)
+    }
+  }
+
+  const rotateZapierWebhookKey = async () => {
+    setSavingLeadSources(true)
+    try {
+      const res = await fetch('/api/integrations/sources', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rotateZapierSecret: true }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.success) {
+        toast.error(data?.error || 'Failed to rotate webhook key')
+        return
+      }
+
+      setLeadSourceSettings(prev => ({
+        ...prev,
+        zapierInboundSecret: String(data?.settings?.zapierInboundSecret || prev.zapierInboundSecret),
+        zapierWebhookUrl: String(data?.webhookUrl || prev.zapierWebhookUrl),
+        inboxNewCount: Number(data?.inbox?.newCount || prev.inboxNewCount),
+        inboxConsumedCount: Number(data?.inbox?.consumedCount || prev.inboxConsumedCount),
+      }))
+      setIntegrationEvents(Array.isArray(data?.events) ? data.events : [])
+      toast.success('Webhook key rotated. Update your Zapier step now.')
+    } catch {
+      toast.error('Failed to rotate webhook key')
+    } finally {
+      setSavingLeadSources(false)
+    }
+  }
+
+  const syncGoogleDriveLeads = async () => {
+    const fileUrl = leadSourceSettings.googleDriveCsvUrl.trim()
+    if (!fileUrl) {
+      toast.error('Add Google Drive CSV URL first')
+      return
+    }
+
+    setSyncingGoogleDrive(true)
+    try {
+      const res = await fetch('/api/integrations/google-drive/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          fileUrl,
+          persistUrl: true,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.success) {
+        toast.error(data?.error || 'Google Drive sync failed')
+        return
+      }
+
+      toast.success(`Google Drive synced: ${data.imported} imported${data.duplicates ? `, ${data.duplicates} duplicates` : ''}`)
+      await fetchLeadSources()
+    } catch {
+      toast.error('Google Drive sync failed')
+    } finally {
+      setSyncingGoogleDrive(false)
+    }
+  }
+
+  const pullLeadInboxToComposer = async () => {
+    setLoadingLeadInbox(true)
+    try {
+      const res = await fetch('/api/integrations/inbox/consume', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ limit: 300 }),
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.success) {
+        toast.error(data?.error || 'Failed to pull inbox leads')
+        return
+      }
+
+      const incomingNumbers = Array.isArray(data?.numbers) ? data.numbers.map((item: unknown) => String(item || '').trim()).filter(Boolean) : []
+      if (incomingNumbers.length === 0) {
+        toast.error('No new leads in inbox')
+        await fetchLeadSources()
+        return
+      }
+
+      const combinedNumbers = Array.from(new Set([...extractNumbers(numbers), ...incomingNumbers]))
+      setNumbers(combinedNumbers.join('\\n'))
+
+      const incomingNotes = Array.isArray(data?.notes) ? data.notes.map((item: unknown) => String(item || '').trim()).filter(Boolean) : []
+      if (incomingNotes.length > 0) {
+        setLeadNotesText(prev => {
+          const prefix = prev.trim()
+          return prefix ? `${prefix}\\n${incomingNotes.join('\\n')}` : incomingNotes.join('\\n')
+        })
+      }
+
+      toast.success(`Loaded ${incomingNumbers.length} leads into Call Center`)
+      setActiveTab('call')
+      await fetchLeadSources()
+    } catch {
+      toast.error('Failed to pull inbox leads')
+    } finally {
+      setLoadingLeadInbox(false)
+    }
+  }
+
+  const copyWebhookUrl = async () => {
+    const url = leadSourceSettings.zapierWebhookUrl
+    if (!url) {
+      toast.error('Webhook URL is not ready yet')
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(url)
+      toast.success('Webhook URL copied')
+    } catch {
+      toast.error('Failed to copy URL')
+    }
   }
 
   const purchaseProduct = async (productId: string, callerIdentityId?: string) => {
@@ -1165,6 +1388,12 @@ export default function Dashboard() {
     if (priority === 'high') return 'text-red-300 bg-red-500/15 border-red-500/30'
     if (priority === 'medium') return 'text-amber-300 bg-amber-500/15 border-amber-500/30'
     return 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
+  }
+
+  const getIntegrationStatusTone = (status: IntegrationActivityEvent['status']) => {
+    if (status === 'success') return 'text-emerald-300 bg-emerald-500/15 border-emerald-500/30'
+    if (status === 'error') return 'text-red-300 bg-red-500/15 border-red-500/30'
+    return 'text-amber-300 bg-amber-500/15 border-amber-500/30'
   }
 
   const createAgentWelcomeMessage = (profile: AgentProfile, agentDisplayName: string): AgentMessage => ({
@@ -1572,6 +1801,9 @@ export default function Dashboard() {
     if (tab === 'recordings') {
       fetchRecordings()
     }
+    if (tab === 'sources') {
+      fetchLeadSources()
+    }
     if (tab === 'history' || tab === 'overview' || tab === 'leads' || tab === 'callbacks') {
       fetchCampaigns()
     }
@@ -1713,6 +1945,8 @@ export default function Dashboard() {
         ? 'Agents'
       : activeTab === 'call'
         ? 'Call Center'
+      : activeTab === 'sources'
+        ? 'Lead Sources'
       : activeTab === 'callers'
         ? 'Callers'
       : activeTab === 'recordings'
@@ -1734,6 +1968,8 @@ export default function Dashboard() {
         ? 'Create agents and review each agent conversation history.'
       : activeTab === 'call'
         ? 'Upload numbers and start or schedule campaigns.'
+      : activeTab === 'sources'
+        ? 'Connect Zapier/Facebook and Google Drive to feed your lead inbox.'
       : activeTab === 'callers'
         ? 'Create and manage caller identities and target blueprints.'
       : activeTab === 'recordings'
@@ -2301,7 +2537,7 @@ export default function Dashboard() {
               {isCalling ? 'Campaign currently running' : 'No active campaign'}
             </div>
           </div>
-          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 xl:grid-cols-10 gap-2 h-auto bg-transparent p-0">
+          <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 xl:grid-cols-11 gap-2 h-auto bg-transparent p-0">
             <TabsTrigger value="overview" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <LayoutDashboard className="w-4 h-4 mr-2" />
               Overview
@@ -2313,6 +2549,10 @@ export default function Dashboard() {
             <TabsTrigger value="call" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <Phone className="w-4 h-4 mr-2" />
               Call Center
+            </TabsTrigger>
+            <TabsTrigger value="sources" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
+              <Download className="w-4 h-4 mr-2" />
+              Sources
             </TabsTrigger>
             <TabsTrigger value="callers" className="h-11 rounded-xl border border-zinc-800 bg-zinc-900/80 data-[state=active]:bg-emerald-500 data-[state=active]:text-zinc-950 data-[state=active]:font-semibold data-[state=active]:border-emerald-300">
               <Users className="w-4 h-4 mr-2" />
@@ -3104,6 +3344,200 @@ export default function Dashboard() {
               </div>
 	            </div>
 	          </TabsContent>
+
+          {/* Sources Tab */}
+          <TabsContent value="sources" className="space-y-6 animate-in fade-in-50 duration-200">
+            <div className="grid gap-6 xl:grid-cols-3">
+              <Card className="xl:col-span-2 bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Download className="w-5 h-5 text-emerald-400" />
+                    Zapier + Facebook Lead Forms
+                  </CardTitle>
+                  <CardDescription>
+                    Use this webhook in Zapier. Facebook Lead Ads should send each new lead to this URL.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                    <div>
+                      <p className="text-sm font-medium text-zinc-100">Enable webhook imports</p>
+                      <p className="text-xs text-zinc-400 mt-1">When enabled, incoming payloads are stored in Lead Inbox.</p>
+                    </div>
+                    <Switch
+                      checked={leadSourceSettings.zapierEnabled}
+                      onCheckedChange={checked => setLeadSourceSettings(prev => ({ ...prev, zapierEnabled: checked }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Webhook URL</Label>
+                    <Input
+                      value={leadSourceSettings.zapierWebhookUrl}
+                      readOnly
+                      className="bg-zinc-800 border-zinc-700 text-zinc-200"
+                    />
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" variant="secondary" className="bg-zinc-800 hover:bg-zinc-700" onClick={copyWebhookUrl}>
+                        <Upload className="w-4 h-4 mr-2" />
+                        Copy Webhook URL
+                      </Button>
+                      <Button type="button" variant="secondary" className="bg-zinc-800 hover:bg-zinc-700" onClick={rotateZapierWebhookKey} disabled={savingLeadSources}>
+                        <RefreshCw className="w-4 h-4 mr-2" />
+                        Rotate Key
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 text-xs text-zinc-400 space-y-1">
+                    <p>Zapier trigger examples: Facebook Lead Ads, Typeform, Webflow forms, Google Sheets.</p>
+                    <p>Action: Webhooks by Zapier - POST with lead fields including phone number.</p>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="text-lg">Lead Inbox</CardTitle>
+                  <CardDescription>
+                    Pull imported leads into your Call Center composer.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                      <p className="text-xs text-zinc-500">New</p>
+                      <p className="text-xl font-semibold text-emerald-300">{leadSourceSettings.inboxNewCount}</p>
+                    </div>
+                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                      <p className="text-xs text-zinc-500">Consumed</p>
+                      <p className="text-xl font-semibold text-zinc-200">{leadSourceSettings.inboxConsumedCount}</p>
+                    </div>
+                  </div>
+
+                  <Button
+                    type="button"
+                    className="w-full"
+                    onClick={pullLeadInboxToComposer}
+                    disabled={loadingLeadInbox || leadSourceSettings.inboxNewCount === 0}
+                  >
+                    <Download className="w-4 h-4 mr-2" />
+                    {loadingLeadInbox ? 'Loading Inbox...' : 'Load Leads Into Call Center'}
+                  </Button>
+
+                  <p className="text-xs text-zinc-500">
+                    This appends imported numbers and lead notes directly to your current campaign draft.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="grid gap-6 xl:grid-cols-3">
+              <Card className="xl:col-span-2 bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <RefreshCw className="w-5 h-5 text-emerald-400" />
+                    Google Drive CSV Sync
+                  </CardTitle>
+                  <CardDescription>
+                    Paste a public Google Sheet or Drive CSV URL and import leads to inbox.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                    <div>
+                      <p className="text-sm font-medium text-zinc-100">Enable Google Drive source</p>
+                      <p className="text-xs text-zinc-400 mt-1">Keep this on if your team is syncing from Drive.</p>
+                    </div>
+                    <Switch
+                      checked={leadSourceSettings.googleDriveEnabled}
+                      onCheckedChange={checked => setLeadSourceSettings(prev => ({ ...prev, googleDriveEnabled: checked }))}
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Google Drive / Sheet URL</Label>
+                    <Input
+                      value={leadSourceSettings.googleDriveCsvUrl}
+                      onChange={e => setLeadSourceSettings(prev => ({ ...prev, googleDriveCsvUrl: e.target.value }))}
+                      placeholder="https://docs.google.com/spreadsheets/d/... or CSV link"
+                      className="bg-zinc-800 border-zinc-700"
+                    />
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="secondary" className="bg-zinc-800 hover:bg-zinc-700" onClick={saveLeadSourcesConfig} disabled={savingLeadSources}>
+                      <Settings className="w-4 h-4 mr-2" />
+                      {savingLeadSources ? 'Saving...' : 'Save Source Settings'}
+                    </Button>
+                    <Button type="button" onClick={syncGoogleDriveLeads} disabled={syncingGoogleDrive}>
+                      <RefreshCw className="w-4 h-4 mr-2" />
+                      {syncingGoogleDrive ? 'Syncing...' : 'Sync Now'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="bg-zinc-900 border-zinc-800">
+                <CardHeader>
+                  <CardTitle className="text-lg">Source Settings</CardTitle>
+                  <CardDescription>Save integration toggles and webhook status.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                    <span className="text-sm text-zinc-300">Zapier webhook</span>
+                    <Badge className={leadSourceSettings.zapierEnabled ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-zinc-700 text-zinc-200 border-zinc-600'}>
+                      {leadSourceSettings.zapierEnabled ? 'Enabled' : 'Disabled'}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 p-3">
+                    <span className="text-sm text-zinc-300">Google Drive source</span>
+                    <Badge className={leadSourceSettings.googleDriveEnabled ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' : 'bg-zinc-700 text-zinc-200 border-zinc-600'}>
+                      {leadSourceSettings.googleDriveEnabled ? 'Enabled' : 'Disabled'}
+                    </Badge>
+                  </div>
+                  <Button type="button" className="w-full" onClick={saveLeadSourcesConfig} disabled={savingLeadSources}>
+                    {savingLeadSources ? 'Saving...' : 'Save All'}
+                  </Button>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="bg-zinc-900 border-zinc-800">
+              <CardHeader>
+                <CardTitle className="text-lg">Integration Activity</CardTitle>
+                <CardDescription>Latest source events, imports, and sync results.</CardDescription>
+              </CardHeader>
+              <CardContent>
+                {integrationEvents.length === 0 ? (
+                  <div className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-4 text-sm text-zinc-500">
+                    No activity yet. Send a lead from Zapier or run Google Drive sync.
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    {integrationEvents.slice(0, 12).map(event => (
+                      <div key={event.id} className="rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="text-sm text-zinc-100">{event.message}</p>
+                          <p className="text-xs text-zinc-500 mt-1">
+                            {event.source} • {new Date(event.createdAt).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge className={getIntegrationStatusTone(event.status)}>
+                            {event.status}
+                          </Badge>
+                          <Badge className="bg-zinc-800 text-zinc-200 border-zinc-700">
+                            +{event.importedCount}
+                          </Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
 	          {/* Callers Tab */}
 	          <TabsContent value="callers" className="space-y-6 animate-in fade-in-50 duration-200">

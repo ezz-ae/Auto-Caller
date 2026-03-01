@@ -55,6 +55,7 @@ export function shouldSkipAuthPath(pathname: string) {
       '/api/transcriptions',
       '/api/cron/dispatch-scheduled',
       '/api/paypal/webhook',
+      '/api/integrations/zapier/lead',
     ];
 
     return publicApiPrefixes.some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`));
