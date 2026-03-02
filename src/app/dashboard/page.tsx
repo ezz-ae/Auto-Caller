@@ -2957,7 +2957,7 @@ export default function Dashboard() {
             </div>
             <div className="min-w-0">
               <p className="text-sm font-bold tracking-tight truncate text-white">Callware</p>
-              <p className="text-[10px] text-zinc-500 truncate">Outbound Execution Platform</p>
+              <p className="text-[10px] text-zinc-500 truncate">the sound of conversations.</p>
             </div>
           </div>
         </div>

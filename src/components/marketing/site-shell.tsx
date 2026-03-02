@@ -19,7 +19,7 @@ export function MarketingHeader() {
           </div>
           <div>
             <p className="text-sm font-semibold tracking-tight text-white">Callware</p>
-            <p className="text-xs text-zinc-400">Outbound Execution Platform</p>
+            <p className="text-xs text-zinc-400">the sound of conversations.</p>
           </div>
         </Link>
 
