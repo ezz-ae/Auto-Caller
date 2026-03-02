@@ -13,6 +13,12 @@ import { Progress } from '@/components/ui/progress'
 import { Tabs, TabsContent } from '@/components/ui/tabs'
 import { Switch } from '@/components/ui/switch'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import {
   LayoutDashboard,
   Phone, 
   PhoneOff, 
@@ -45,7 +51,8 @@ import {
   Trash2,
   ClipboardList,
   CalendarClock,
-  TimerReset
+  TimerReset,
+  Plus
 } from 'lucide-react'
 import { StatCard } from './components/StatCard'
 import { OverviewTab } from './components/OverviewTab'
@@ -3206,21 +3213,14 @@ export default function Dashboard() {
           <TabsContent value="agents" className="space-y-6 animate-in fade-in-50 duration-200">
             <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
               <CardHeader className="pb-4">
-                <div className="flex items-center justify-between gap-4">
-                  <div>
-                    <CardTitle className="text-2xl flex items-center gap-2">
-                      <Bot className="w-6 h-6 text-orange-400" />
-                      Start with your calling agent
-                    </CardTitle>
-                    <CardDescription className="mt-1">
-                      Pick an agent from the list below to start.
-                    </CardDescription>
-                  </div>
-                  {activeAgentId && (
-                    <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30">
-                      {activeAgentName}
-                    </Badge>
-                  )}
+                <div>
+                  <CardTitle className="text-2xl flex items-center gap-2">
+                    <Bot className="w-6 h-6 text-orange-400" />
+                    Start with your calling agent
+                  </CardTitle>
+                  <CardDescription className="mt-1">
+                    Pick an agent from the list below to start.
+                  </CardDescription>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -3231,7 +3231,7 @@ export default function Dashboard() {
                         key={profile.id}
                         type="button"
                         onClick={() => startAgentSession(profile.id)}
-                        className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4 text-left hover:border-orange-500/40 transition"
+                        className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4 text-left hover:border-zinc-600 transition"
                       >
                         <p className="text-base font-semibold text-zinc-100">{profile.name}</p>
                         <p className="text-xs text-zinc-400 mt-1">{profile.language} • {profile.style}</p>
@@ -3242,40 +3242,93 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex flex-wrap gap-2">
-                      {workspaceAgents.map(agent => (
-                        <button
-                          key={agent.id}
-                          type="button"
-                          onClick={() => setActiveAgentId(agent.id)}
-                          className={`px-3 py-1.5 rounded-full text-xs border transition ${
-                            agent.id === activeAgentId
-                              ? 'border-orange-500/40 bg-orange-500/15 text-orange-300'
-                              : 'border-zinc-700 bg-zinc-900/60 text-zinc-400 hover:text-zinc-200'
-                          }`}
-                        >
-                          {agent.name}
-                        </button>
-                      ))}
-                    </div>
-
-                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/30 p-3">
-                      <p className="text-xs text-zinc-500 mb-2">Available starter agents</p>
-                      <div className="flex flex-wrap gap-2">
-                        {agentProfiles.map(profile => (
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950/35 p-2 flex flex-wrap items-center gap-2">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
                           <Button
-                            key={`add-${profile.id}`}
                             type="button"
                             size="sm"
                             variant="secondary"
-                            className="bg-zinc-800 hover:bg-zinc-700 text-xs"
-                            onClick={() => startAgentSession(profile.id)}
+                            className="h-9 px-3 bg-zinc-800 hover:bg-zinc-700"
                             disabled={agentLoading}
                           >
-                            Start {profile.name}
+                            <Plus className="w-4 h-4" />
                           </Button>
-                        ))}
-                      </div>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start" className="bg-zinc-900 border-zinc-700">
+                          <DropdownMenuItem
+                            className="text-zinc-200 hover:bg-zinc-800"
+                            onClick={() => agentFileInputRef.current?.click()}
+                          >
+                            Upload file
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-zinc-200 hover:bg-zinc-800"
+                            onClick={() => setActiveTab('sources')}
+                          >
+                            Connect source
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            className="text-zinc-200 hover:bg-zinc-800"
+                            onClick={() => {
+                              const shareUrl = typeof window !== 'undefined' ? `${window.location.origin}/dashboard` : ''
+                              if (!shareUrl) return
+                              navigator.clipboard
+                                .writeText(shareUrl)
+                                .then(() => toast.success('Dashboard link copied'))
+                                .catch(() => toast.error('Could not copy link'))
+                            }}
+                          >
+                            Share dashboard link
+                          </DropdownMenuItem>
+                          {agentProfiles.map(profile => (
+                            <DropdownMenuItem
+                              key={`start-${profile.id}`}
+                              className="text-zinc-200 hover:bg-zinc-800"
+                              onClick={() => startAgentSession(profile.id)}
+                            >
+                              Start {profile.name}
+                            </DropdownMenuItem>
+                          ))}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+
+                      <Select value={activeAgentId} onValueChange={setActiveAgentId}>
+                        <SelectTrigger className="h-9 min-w-[180px] bg-zinc-900 border-zinc-700 text-zinc-200">
+                          <SelectValue placeholder="Select model" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-900 border-zinc-700">
+                          {workspaceAgents.map(agent => (
+                            <SelectItem key={agent.id} value={agent.id}>
+                              {`SAM - ${agent.name}`}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
+                        <SelectTrigger className="h-9 min-w-[160px] bg-zinc-900 border-zinc-700 text-zinc-200">
+                          <SelectValue placeholder="Language" />
+                        </SelectTrigger>
+                        <SelectContent className="bg-zinc-900 border-zinc-700">
+                          {LANGUAGE_OPTIONS.map(option => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      <Button
+                        type="button"
+                        variant={liveVoiceCallEnabled ? 'default' : 'secondary'}
+                        className={liveVoiceCallEnabled ? 'h-9 bg-zinc-200 text-zinc-900 hover:bg-zinc-100' : 'h-9 bg-zinc-800 hover:bg-zinc-700'}
+                        onClick={toggleLiveVoiceCall}
+                        disabled={agentLoading}
+                      >
+                        {liveVoiceCallEnabled ? <Square className="w-4 h-4 mr-2" /> : <Phone className="w-4 h-4 mr-2" />}
+                        {liveVoiceCallEnabled ? 'End Voice Call' : 'Voice Call'}
+                      </Button>
                     </div>
 
                     <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 h-[58vh] overflow-y-auto p-4 space-y-3">
@@ -3287,7 +3340,7 @@ export default function Dashboard() {
                         agentMessages.map(msg => (
                           <div
                             key={msg.id}
-                            className={`rounded-lg p-3 ${msg.role === 'user' ? 'bg-zinc-800/80' : 'bg-orange-500/10 border border-orange-500/20'}`}
+                            className={`rounded-lg p-3 ${msg.role === 'user' ? 'bg-zinc-800/80' : 'bg-zinc-900 border border-zinc-700'}`}
                           >
                             <div className="flex items-center justify-between mb-1">
                               <p className="text-xs uppercase tracking-wide text-zinc-400">{msg.role === 'user' ? 'You' : activeAgentName}</p>
@@ -3312,15 +3365,15 @@ export default function Dashboard() {
                               </ul>
                             )}
                             {msg.formDraft && (
-                              <div className="mt-3 rounded-md border border-orange-500/20 bg-orange-500/10 p-2 space-y-2">
-                                <p className="text-xs text-orange-300 font-medium">
+                              <div className="mt-3 rounded-md border border-zinc-700 bg-zinc-950/70 p-2 space-y-2">
+                                <p className="text-xs text-zinc-300 font-medium">
                                   Draft ready for inputs. Approve to write values into your forms.
                                 </p>
                                 <div className="flex flex-wrap gap-2">
                                   <Button
                                     type="button"
                                     size="sm"
-                                    className="h-7 px-2 text-xs bg-orange-600 hover:bg-orange-500"
+                                    className="h-7 px-2 text-xs bg-zinc-200 text-zinc-900 hover:bg-zinc-100"
                                     onClick={() => approveAndApplyDraft(msg.formDraft, msg.verificationQuestion)}
                                   >
                                     Approve & Apply
@@ -3367,59 +3420,6 @@ export default function Dashboard() {
                         </div>
                       </div>
                     )}
-
-                    <div className="flex flex-wrap gap-2">
-                      <Button
-                        type="button"
-                        variant={voiceChatEnabled ? 'default' : 'secondary'}
-                        className={voiceChatEnabled ? '' : 'bg-zinc-800 hover:bg-zinc-700'}
-                        onClick={() => {
-                          if (liveVoiceCallEnabled) {
-                            toast.error('End Live Call first to disable voice mode')
-                            return
-                          }
-                          const next = !voiceChatEnabled
-                          setVoiceChatEnabled(next)
-                          if (!next) {
-                            stopAgentListening()
-                            stopAgentVoicePlayback()
-                          }
-                        }}
-                      >
-                        <Volume2 className="w-4 h-4 mr-2" />
-                        {voiceChatEnabled ? 'Voice On' : 'Voice Off'}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className={agentListening ? 'bg-orange-600 hover:bg-orange-500' : 'bg-zinc-800 hover:bg-zinc-700'}
-                        onClick={agentListening ? stopAgentListening : startAgentListening}
-                        disabled={agentLoading || liveVoiceCallEnabled}
-                      >
-                        {agentListening ? <Square className="w-4 h-4 mr-2" /> : <Mic className="w-4 h-4 mr-2" />}
-                        {agentListening ? 'Listening…' : 'Talk'}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant={liveVoiceCallEnabled ? 'default' : 'secondary'}
-                        className={liveVoiceCallEnabled ? 'bg-orange-600 hover:bg-orange-500' : 'bg-zinc-800 hover:bg-zinc-700'}
-                        onClick={toggleLiveVoiceCall}
-                        disabled={agentLoading}
-                      >
-                        {liveVoiceCallEnabled ? <Square className="w-4 h-4 mr-2" /> : <Phone className="w-4 h-4 mr-2" />}
-                        {liveVoiceCallEnabled ? 'End Voice Call' : 'Start Voice Call'}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="secondary"
-                        className="bg-zinc-800 hover:bg-zinc-700"
-                        onClick={() => agentFileInputRef.current?.click()}
-                        disabled={agentLoading}
-                      >
-                        <Upload className="w-4 h-4 mr-2" />
-                        Upload Files
-                      </Button>
-                    </div>
 
                     <div className="space-y-2">
                       <Textarea
