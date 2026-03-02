@@ -3,6 +3,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ClipboardList, RefreshCw, CalendarClock, Phone, Info } from "lucide-react"
 
 interface LeadsTabProps {
@@ -12,6 +14,24 @@ interface LeadsTabProps {
   setActiveTab: (tab: string) => void
   filteredLeads: any[]
   formatDateTime: (date: string) => string
+  contentInput: {
+    offer: string
+    goal: string
+    notes: string
+  }
+  setContentInput: React.Dispatch<React.SetStateAction<{
+    offer: string
+    goal: string
+    notes: string
+  }>>
+  submitContentInputToAgent: () => Promise<void>
+  agentLoading: boolean
+  leadLists: string[]
+  selectedLeadList: string
+  onSelectLeadList: (name: string) => void
+  newLeadListName: string
+  setNewLeadListName: (value: string) => void
+  addLeadList: () => void
 }
 
 export function LeadsTab({
@@ -20,7 +40,17 @@ export function LeadsTab({
   fetchCampaigns,
   setActiveTab,
   filteredLeads,
-  formatDateTime
+  formatDateTime,
+  contentInput,
+  setContentInput,
+  submitContentInputToAgent,
+  agentLoading,
+  leadLists,
+  selectedLeadList,
+  onSelectLeadList,
+  newLeadListName,
+  setNewLeadListName,
+  addLeadList
 }: LeadsTabProps) {
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-200">
@@ -65,6 +95,73 @@ export function LeadsTab({
                 </div>
               </div>
            </div>
+        </CardContent>
+      </Card>
+
+      <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
+        <CardContent className="p-6 space-y-3">
+          <p className="text-xs text-zinc-500">Lead context input</p>
+          <div className="grid gap-2 md:grid-cols-[220px_1fr_auto]">
+            <Select value={selectedLeadList} onValueChange={onSelectLeadList}>
+              <SelectTrigger className="bg-zinc-800 border-zinc-700">
+                <SelectValue placeholder="Select list" />
+              </SelectTrigger>
+              <SelectContent>
+                {leadLists.map((list) => (
+                  <SelectItem key={list} value={list}>
+                    {list}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Input
+              value={newLeadListName}
+              onChange={(e) => setNewLeadListName(e.target.value)}
+              placeholder="New lead list name"
+              className="bg-zinc-800 border-zinc-700"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="bg-zinc-800 hover:bg-zinc-700"
+              onClick={addLeadList}
+            >
+              Add List
+            </Button>
+          </div>
+          <div className="grid gap-2 md:grid-cols-2">
+            <Input
+              value={contentInput.offer}
+              onChange={(e) => setContentInput(prev => ({ ...prev, offer: e.target.value }))}
+              placeholder="Offer"
+              className="bg-zinc-800 border-zinc-700"
+            />
+            <Input
+              value={contentInput.goal}
+              onChange={(e) => setContentInput(prev => ({ ...prev, goal: e.target.value }))}
+              placeholder="Goal"
+              className="bg-zinc-800 border-zinc-700"
+            />
+          </div>
+          <Textarea
+            value={contentInput.notes}
+            onChange={(e) => setContentInput(prev => ({ ...prev, notes: e.target.value }))}
+            placeholder="Lead notes, rules, and expected report output"
+            className="min-h-[90px] bg-zinc-800 border-zinc-700 text-sm"
+          />
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="bg-zinc-800 hover:bg-zinc-700"
+              onClick={() => void submitContentInputToAgent()}
+              disabled={agentLoading}
+            >
+              Send To Agent
+            </Button>
+          </div>
         </CardContent>
       </Card>
 

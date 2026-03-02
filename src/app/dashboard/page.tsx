@@ -622,9 +622,15 @@ export default function Dashboard() {
   const [agentInput, setAgentInput] = useState('')
   const [agentLoading, setAgentLoading] = useState(false)
   const [agentUploads, setAgentUploads] = useState<UploadedChatFile[]>([])
+  const [selectedLeadList, setSelectedLeadList] = useState('Default List')
+  const [newLeadListName, setNewLeadListName] = useState('')
+  const [leadListContexts, setLeadListContexts] = useState<Record<string, {
+    offer: string
+    goal: string
+    notes: string
+  }>>({})
   const [contentInput, setContentInput] = useState({
     offer: '',
-    audience: '',
     goal: '',
     notes: '',
   })
@@ -2233,21 +2239,48 @@ export default function Dashboard() {
     await askAgent(nextPrompt, liveVoiceCallEnabled || voiceChatEnabled)
   }
 
+  const applyLeadListSelection = (name: string) => {
+    const nextName = String(name || '').trim()
+    if (!nextName) return
+
+    let nextContext = { offer: '', goal: '', notes: '' }
+    setLeadListContexts(prev => {
+      const withCurrent = {
+        ...prev,
+        [selectedLeadList]: contentInput,
+      }
+      nextContext = withCurrent[nextName] || { offer: '', goal: '', notes: '' }
+      return withCurrent
+    })
+    setSelectedLeadList(nextName)
+    setContentInput(nextContext)
+  }
+
+  const addLeadList = () => {
+    const name = newLeadListName.trim()
+    if (!name) {
+      toast.error('Add a list name first')
+      return
+    }
+    applyLeadListSelection(name)
+    setNewLeadListName('')
+    toast.success(`Lead list "${name}" is ready`)
+  }
+
   const submitContentInputToAgent = async () => {
     const offer = contentInput.offer.trim()
-    const audience = contentInput.audience.trim()
     const goal = contentInput.goal.trim()
     const notes = contentInput.notes.trim()
 
-    if (!offer && !audience && !goal && !notes) {
+    if (!offer && !goal && !notes) {
       toast.error('Add at least one content input field')
       return
     }
 
     const prompt = [
       'Use this structured content input to create/update my setup and ask for approval before applying:',
+      `Lead List: ${selectedLeadList}`,
       offer ? `Offer: ${offer}` : '',
-      audience ? `Audience: ${audience}` : '',
       goal ? `Goal: ${goal}` : '',
       notes ? `Notes/constraints: ${notes}` : '',
     ]
@@ -2816,6 +2849,31 @@ export default function Dashboard() {
   const activeAgentName = activeWorkspaceAgent?.name || activeAgentProfile?.name || 'Sara'
   const agentMessages = activeAgentId ? (agentMessagesByAgent[activeAgentId] || []) : []
   const showSideAssistant = agentSessionStarted && activeTab !== 'agents'
+  const leadLists = useMemo(() => {
+    const names = Object.keys(leadListContexts)
+    if (!names.includes(selectedLeadList)) {
+      names.unshift(selectedLeadList)
+    }
+    return Array.from(new Set(names.filter(Boolean)))
+  }, [leadListContexts, selectedLeadList])
+
+  useEffect(() => {
+    setLeadListContexts(prev => {
+      const existing = prev[selectedLeadList]
+      if (
+        existing &&
+        existing.offer === contentInput.offer &&
+        existing.goal === contentInput.goal &&
+        existing.notes === contentInput.notes
+      ) {
+        return prev
+      }
+      return {
+        ...prev,
+        [selectedLeadList]: contentInput,
+      }
+    })
+  }, [contentInput, selectedLeadList])
 
   const filteredRecordings = recordings.filter(recording => {
     const query = recordingSearch.trim().toLowerCase()
@@ -3022,7 +3080,7 @@ export default function Dashboard() {
           {showSideAssistant && (
             <aside className="xl:sticky xl:top-24 xl:h-[calc(100vh-7rem)]">
               <Card className="h-full bg-zinc-900/90 border-zinc-800 shadow-lg shadow-black/30">
-                <CardHeader className="space-y-3 pb-4">
+                <CardHeader className="space-y-2 pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2">
                       <Bot className="w-4 h-4 text-emerald-400" />
@@ -3032,23 +3090,19 @@ export default function Dashboard() {
                       {activeAgentName}
                     </Badge>
                   </div>
-                  <p className="text-xs text-zinc-400">
-                    {activeAgentProfile?.language} • {activeAgentProfile?.expertise}
-                  </p>
-                  <div className="flex items-center justify-between rounded-lg border border-zinc-800 bg-zinc-950/40 p-2">
-                    <span className="text-xs text-zinc-400">{workspaceAgents.length} active agents in this account</span>
+                  <div className="flex justify-end">
                     <Button
                       type="button"
                       size="sm"
                       variant="secondary"
-                      className="bg-zinc-800 hover:bg-zinc-700"
+                      className="bg-zinc-800 hover:bg-zinc-700 h-8"
                       onClick={() => setActiveTab('agents')}
                     >
                       Open Agents
                     </Button>
                   </div>
                 </CardHeader>
-                <CardContent className="h-[calc(100%-8rem)] flex flex-col gap-3">
+                <CardContent className="h-[calc(100%-7rem)] flex flex-col gap-3">
                   <div className="flex-1 overflow-y-auto rounded-lg border border-zinc-800 bg-zinc-950/40 p-3 space-y-3">
                     {!activeAgentId ? (
                       <p className="text-sm text-zinc-500">
@@ -3064,123 +3118,26 @@ export default function Dashboard() {
                           key={msg.id}
                           className={`rounded-lg p-3 ${msg.role === 'user' ? 'bg-zinc-800/80' : 'bg-emerald-500/10 border border-emerald-500/20'}`}
                         >
-                          <div className="flex items-center justify-between mb-1">
-                            <p className="text-xs uppercase tracking-wide text-zinc-400">{msg.role === 'user' ? 'You' : activeAgentName}</p>
-                            {msg.role === 'assistant' && (
+                          <p className="text-xs uppercase tracking-wide text-zinc-400 mb-1">{msg.role === 'user' ? 'You' : activeAgentName}</p>
+                          <p className="text-sm text-zinc-200 whitespace-pre-wrap">{msg.content}</p>
+                          {msg.formDraft && (
+                            <div className="mt-3 rounded-md border border-emerald-500/20 bg-emerald-500/10 p-2 space-y-2">
                               <Button
                                 type="button"
                                 size="sm"
-                                variant="secondary"
-                                className="bg-zinc-800 hover:bg-zinc-700 text-xs"
-                                onClick={() => speakAgentMessage(msg.content)}
+                                className="h-8 px-3 text-xs bg-emerald-600 hover:bg-emerald-500"
+                                onClick={() => approveAndApplyDraft(msg.formDraft, msg.verificationQuestion)}
                               >
-                                Voice
+                                Approve & Apply
                               </Button>
-                            )}
-                          </div>
-                          <p className="text-sm text-zinc-200 whitespace-pre-wrap">{msg.content}</p>
-                          {msg.checklist && msg.checklist.length > 0 && (
-                            <ul className="mt-2 text-xs text-zinc-300 space-y-1">
-                              {msg.checklist.map((item, idx) => (
-                                <li key={idx}>• {item}</li>
-                              ))}
-                            </ul>
-                          )}
-                          {msg.formDraft && (
-                            <div className="mt-3 rounded-md border border-emerald-500/20 bg-emerald-500/10 p-2 space-y-2">
-                              <p className="text-xs text-emerald-300 font-medium">
-                                Draft ready for inputs. Approve to write values into your forms.
-                              </p>
-                              <div className="flex flex-wrap gap-2">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-500"
-                                  onClick={() => approveAndApplyDraft(msg.formDraft, msg.verificationQuestion)}
-                                >
-                                  Approve & Apply
-                                </Button>
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="secondary"
-                                  className="h-7 px-2 text-xs bg-zinc-800 hover:bg-zinc-700"
-                                  onClick={() => {
-                                    const ask = msg.verificationQuestion || 'Revise this draft with changes:'
-                                    setAgentInput(ask)
-                                  }}
-                                >
-                                  Revise Draft
-                                </Button>
-                              </div>
                             </div>
-                          )}
-                          {msg.action && msg.action !== 'none' && getActionLabel(msg.action) && (
-                            <p className="mt-2 text-xs text-zinc-400">
-                              Suggested workspace: <span className="text-emerald-300">{getActionLabel(msg.action)}</span>
-                            </p>
-                          )}
-                          {!!msg.actionReason && (
-                            <p className="mt-1 text-xs text-zinc-500">
-                              Why: {msg.actionReason}
-                            </p>
-                          )}
-                          {typeof msg.confidence === 'number' && msg.confidence > 0 && (
-                            <p className="mt-1 text-xs text-zinc-500">
-                              Confidence: {Math.max(0, Math.min(100, Math.round(msg.confidence)))}%
-                              {msg.conversationMode ? ` • ${msg.conversationMode}` : ''}
-                            </p>
                           )}
                         </div>
                       ))
                     )}
                   </div>
-                  {activeAgentId && (
-                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/30 p-2">
-                      <p className="text-[11px] text-zinc-500 mb-2">Onboarding with one tap</p>
-                      <div className="flex flex-wrap gap-2">
-                        {[
-                          'Set up my first caller identity with role and language.',
-                          'Guide me to connect forwarding and compliance settings.',
-                          'Help me import leads and schedule my first campaign.',
-                          'Check if my credits and number setup are enough to launch.',
-                        ].map((prompt) => (
-                          <button
-                            key={prompt}
-                            type="button"
-                            className="text-xs px-2.5 py-1.5 rounded-md border border-zinc-700 bg-zinc-900/60 text-zinc-300 hover:text-white hover:border-emerald-500/40 hover:bg-zinc-800"
-                            onClick={() => void sendOnboardingPrompt(prompt)}
-                            disabled={agentLoading}
-                          >
-                            {prompt.length > 54 ? `${prompt.slice(0, 54)}...` : prompt}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                   <div className="space-y-2">
                     <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant={voiceChatEnabled ? 'default' : 'secondary'}
-                        className={voiceChatEnabled ? '' : 'bg-zinc-800 hover:bg-zinc-700'}
-                        onClick={() => {
-                          if (liveVoiceCallEnabled) {
-                            toast.error('End Live Call first to disable voice mode')
-                            return
-                          }
-                          const next = !voiceChatEnabled
-                          setVoiceChatEnabled(next)
-                          if (!next) {
-                            stopAgentListening()
-                            stopAgentVoicePlayback()
-                          }
-                        }}
-                        disabled={!activeAgentId}
-                      >
-                        <Volume2 className="w-4 h-4 mr-2" />
-                        {voiceChatEnabled ? 'Voice On' : 'Voice Off'}
-                      </Button>
                       <Button
                         type="button"
                         variant="secondary"
@@ -3203,7 +3160,7 @@ export default function Dashboard() {
                       </Button>
                     </div>
                     <div className="flex gap-2">
-                    <Input
+                      <Input
                       value={agentInput}
                       onChange={(e) => setAgentInput(e.target.value)}
                       onKeyDown={(e) => {
@@ -3213,7 +3170,7 @@ export default function Dashboard() {
                         }
                       }}
                       placeholder={`Message ${activeAgentName}...`}
-                      className="bg-zinc-800 border-zinc-700"
+                      className="bg-zinc-800 border-zinc-700 h-10"
                       disabled={!activeAgentId}
                     />
                     <Button onClick={() => void askAgent()} disabled={agentLoading || !agentInput.trim() || !activeAgentId}>
@@ -3221,10 +3178,7 @@ export default function Dashboard() {
                     </Button>
                   </div>
                     <p className="text-[11px] text-zinc-500">
-                      {liveVoiceCallEnabled
-                        ? 'Voice call mode is active: speak naturally, wait for reply, and the mic re-opens automatically.'
-                        : 'Voice mode: press Talk, speak naturally, and the agent replies back in voice using your selected caller voice.'}
-                      {agentSpeaking ? ' Replying now…' : agentListening ? ' Listening…' : ''}
+                      {agentSpeaking ? 'Replying…' : agentListening ? 'Listening…' : liveVoiceCallEnabled ? 'Live voice call active' : 'Type or press Talk'}
                     </p>
                   </div>
                 </CardContent>
@@ -3282,10 +3236,10 @@ export default function Dashboard() {
                   <div>
                     <CardTitle className="text-2xl flex items-center gap-2">
                       <Bot className="w-6 h-6 text-emerald-400" />
-                      Smart Chat Workspace
+                      Start with your calling agent
                     </CardTitle>
                     <CardDescription className="mt-1">
-                      One place for onboarding and execution. Chat, voice call, and file uploads.
+                      Pick an agent from the list below to start.
                     </CardDescription>
                   </div>
                   {activeAgentId && (
@@ -3329,48 +3283,6 @@ export default function Dashboard() {
                           {agent.name}
                         </button>
                       ))}
-                    </div>
-
-                    <div className="rounded-lg border border-zinc-800 bg-zinc-950/30 p-3 space-y-3">
-                      <p className="text-xs text-zinc-500">Structured content input</p>
-                      <div className="grid gap-2 md:grid-cols-3">
-                        <Input
-                          value={contentInput.offer}
-                          onChange={(e) => setContentInput(prev => ({ ...prev, offer: e.target.value }))}
-                          placeholder="Offer"
-                          className="bg-zinc-800 border-zinc-700"
-                        />
-                        <Input
-                          value={contentInput.audience}
-                          onChange={(e) => setContentInput(prev => ({ ...prev, audience: e.target.value }))}
-                          placeholder="Audience"
-                          className="bg-zinc-800 border-zinc-700"
-                        />
-                        <Input
-                          value={contentInput.goal}
-                          onChange={(e) => setContentInput(prev => ({ ...prev, goal: e.target.value }))}
-                          placeholder="Goal"
-                          className="bg-zinc-800 border-zinc-700"
-                        />
-                      </div>
-                      <Textarea
-                        value={contentInput.notes}
-                        onChange={(e) => setContentInput(prev => ({ ...prev, notes: e.target.value }))}
-                        placeholder="Extra notes, rules, data context, or report expectations"
-                        className="min-h-[72px] bg-zinc-800 border-zinc-700 text-sm"
-                      />
-                      <div className="flex justify-end">
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="secondary"
-                          className="bg-zinc-800 hover:bg-zinc-700"
-                          onClick={() => void submitContentInputToAgent()}
-                          disabled={agentLoading}
-                        >
-                          Send Content Input
-                        </Button>
-                      </div>
                     </div>
 
                     <div className="rounded-lg border border-zinc-800 bg-zinc-950/30 p-3">
@@ -3689,6 +3601,16 @@ export default function Dashboard() {
               setActiveTab={setActiveTab}
               filteredLeads={filteredLeads}
               formatDateTime={formatDateTime}
+              contentInput={contentInput}
+              setContentInput={setContentInput}
+              submitContentInputToAgent={submitContentInputToAgent}
+              agentLoading={agentLoading}
+              leadLists={leadLists}
+              selectedLeadList={selectedLeadList}
+              onSelectLeadList={applyLeadListSelection}
+              newLeadListName={newLeadListName}
+              setNewLeadListName={setNewLeadListName}
+              addLeadList={addLeadList}
             />
           </TabsContent>
 
