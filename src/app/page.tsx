@@ -106,13 +106,13 @@ const icpCards = [
 
 export default function MarketingHomePage() {
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,#172b22_0%,#0c1110_40%,#09090b_100%)] text-white">
+    <div className="cw-editor-marketing min-h-screen text-white">
       <MarketingHeader />
 
       <main className="mx-auto max-w-7xl px-4">
         <section className="py-20 md:py-24 grid gap-10 lg:grid-cols-[1fr_460px] items-start">
           <div className="space-y-7">
-            <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30 text-xs font-semibold tracking-widest uppercase px-3 py-1">
+            <Badge className="bg-cyan-500/15 text-cyan-300 border-cyan-500/30 text-xs font-semibold tracking-widest uppercase px-3 py-1">
               <Sparkles className="w-3 h-3 mr-1.5" />
               Outbound Follow-up For UAE Teams
             </Badge>
@@ -126,7 +126,7 @@ export default function MarketingHomePage() {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg" className="h-13 px-7 rounded-2xl text-base font-bold bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-xl shadow-emerald-500/20">
+              <Button asChild size="lg" className="h-13 px-7 rounded-2xl text-base font-bold bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 shadow-xl shadow-cyan-500/20">
                 <Link href="/login">
                   Start free / Create account
                   <ArrowRight className="ml-2 w-4 h-4" />
@@ -141,8 +141,8 @@ export default function MarketingHomePage() {
 
             <div className="grid gap-2 sm:grid-cols-2">
               {icpCards.map(card => (
-                <div key={card.title} className="rounded-xl border border-zinc-800 bg-zinc-900/40 px-4 py-3 text-sm text-zinc-200 flex items-center gap-2">
-                  <card.icon className="w-4 h-4 text-emerald-400" />
+                <div key={card.title} className="rounded-xl border border-zinc-700/70 bg-zinc-900/45 px-4 py-3 text-sm text-zinc-200 flex items-center gap-2">
+                  <card.icon className="w-4 h-4 text-cyan-300" />
                   {card.title}
                 </div>
               ))}
@@ -151,7 +151,7 @@ export default function MarketingHomePage() {
             <div className="flex flex-wrap gap-5 pt-1">
               {trustItems.map(item => (
                 <div key={item} className="flex items-center gap-2 text-xs text-zinc-400">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-cyan-300 shrink-0" />
                   {item}
                 </div>
               ))}

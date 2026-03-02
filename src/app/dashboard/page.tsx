@@ -355,38 +355,6 @@ const AGENT_CATALOG: AgentProfile[] = [
     expertise: 'Follow-up and reactivation',
     intro: 'Best for Arabic outreach, callback handling, and lead re-engagement.',
   },
-  {
-    id: 'maya',
-    name: 'Maya',
-    language: 'English',
-    style: 'Empathetic and patient',
-    expertise: 'Qualification and discovery',
-    intro: 'Best for early-stage qualification and detailed need discovery.',
-  },
-  {
-    id: 'omar',
-    name: 'Omar',
-    language: 'Arabic',
-    style: 'Direct and professional',
-    expertise: 'Appointment setting',
-    intro: 'Best for securing appointment slots and confirming attendance.',
-  },
-  {
-    id: 'lina',
-    name: 'Lina',
-    language: 'English/Arabic',
-    style: 'Warm and consultative',
-    expertise: 'Retention and upsell',
-    intro: 'Best for renewals, account expansion, and long-term relationship calls.',
-  },
-  {
-    id: 'noah',
-    name: 'Noah',
-    language: 'English',
-    style: 'Executive and structured',
-    expertise: 'B2B discovery',
-    intro: 'Best for enterprise qualification and decision-maker mapping.',
-  },
 ]
 
 const AGENT_ADMIN_PRESETS: Record<string, { voiceId: string; language: string; gender: 'male' | 'female' | 'any'; position: string }> = {
@@ -1123,7 +1091,7 @@ export default function Dashboard() {
       try {
         const parsed = JSON.parse(storedWorkspaceAgents) as WorkspaceAgent[]
         if (!Array.isArray(parsed)) return []
-        return parsed.filter(item => item?.id && item?.profileId && item?.name)
+        return parsed.filter(item => item?.id && item?.profileId && item?.name && agentProfiles.some(profile => profile.id === item.profileId))
       } catch {
         return []
       }
@@ -1843,6 +1811,12 @@ export default function Dashboard() {
   const startAgentSession = (profileId: string) => {
     const profile = agentProfiles.find(agent => agent.id === profileId) || agentProfiles[0]
     if (!profile) return
+    const existingAgent = workspaceAgents.find(agent => agent.profileId === profile.id)
+    if (existingAgent) {
+      setActiveAgentId(existingAgent.id)
+      setActiveTab('agents')
+      return
+    }
     const now = new Date().toISOString()
     const nextAgentId = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     const safeName = profile.name
@@ -2948,14 +2922,14 @@ export default function Dashboard() {
       : 'Update account and forwarding settings.'
 
   return (
-    <div className="min-h-screen flex bg-zinc-950 text-white">
+    <div className="cw-editor-shell min-h-screen flex bg-zinc-950 text-white">
       {/* Hidden audio elements */}
       <audio ref={audioRef} onEnded={() => setPlayingRecording(null)} />
       <audio ref={voicePreviewAudioRef} onEnded={() => setPreviewingVoice(null)} />
       <audio ref={agentVoiceAudioRef} onEnded={handleAgentVoicePlaybackEnded} onPause={handleAgentVoicePlaybackEnded} />
 
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-screen w-60 border-r border-zinc-800/70 bg-zinc-900/60 backdrop-blur-xl flex flex-col z-30 overflow-hidden">
+      <aside className="fixed left-0 top-0 h-screen w-60 border-r border-cyan-400/15 bg-zinc-950/75 backdrop-blur-xl flex flex-col z-30 overflow-hidden shadow-[0_0_30px_rgba(56,189,248,0.08)]">
         {/* Logo */}
         <div className="px-5 py-5 border-b border-zinc-800/60 shrink-0">
           <div className="flex items-center gap-3">
@@ -3027,7 +3001,7 @@ export default function Dashboard() {
       {/* Main wrapper (offset by sidebar width) */}
       <div className="pl-60 flex-1 flex flex-col min-h-screen min-w-0">
         {/* Top bar */}
-        <header className="sticky top-0 z-20 border-b border-zinc-800/60 bg-zinc-950/80 backdrop-blur-xl shrink-0">
+        <header className="sticky top-0 z-20 border-b border-cyan-400/15 bg-zinc-950/70 backdrop-blur-xl shrink-0">
           <div className="px-6 md:px-8 py-4 flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[11px] text-zinc-500 uppercase tracking-widest font-medium">Workspace</p>
@@ -3286,7 +3260,7 @@ export default function Dashboard() {
                     </div>
 
                     <div className="rounded-lg border border-zinc-800 bg-zinc-950/30 p-3">
-                      <p className="text-xs text-zinc-500 mb-2">Run multiple agents in parallel (same wallet)</p>
+                      <p className="text-xs text-zinc-500 mb-2">Available starter agents</p>
                       <div className="flex flex-wrap gap-2">
                         {agentProfiles.map(profile => (
                           <Button
@@ -3298,7 +3272,7 @@ export default function Dashboard() {
                             onClick={() => startAgentSession(profile.id)}
                             disabled={agentLoading}
                           >
-                            + Start {profile.name}
+                            Start {profile.name}
                           </Button>
                         ))}
                       </div>
