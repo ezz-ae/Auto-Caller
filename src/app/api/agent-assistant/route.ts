@@ -205,6 +205,36 @@ function inferConversationMode(context: AgentContext): ConversationMode {
   return 'optimization';
 }
 
+function normalizeText(input: unknown): string {
+  return String(input || '').trim();
+}
+
+function isGreetingPrompt(prompt: string): boolean {
+  const normalized = prompt.trim().toLowerCase();
+  if (!normalized) return true;
+  if (normalized.length <= 5 && /^(hi|hey|hello|yo|hola|salam|مرحبا)$/i.test(normalized)) return true;
+  return /^(hi|hey|hello)\b[!.?]*$/i.test(normalized);
+}
+
+function userRequestedDraft(prompt: string): boolean {
+  const normalized = prompt.toLowerCase();
+  return /(create|set up|setup|build|fill|apply|write|update|configure|draft|generate|prepare).{0,30}(agent|identity|profile|caller|settings|plan)/i.test(normalized)
+    || /(create|fill|apply|write|update|configure).{0,20}(this|it|them)/i.test(normalized);
+}
+
+function getMissingOnboardingFields(context: AgentContext): string[] {
+  const missing: string[] = [];
+  if (!normalizeText(context.businessName)) missing.push('company name');
+  if (!normalizeText(context.industry)) missing.push('industry');
+  if (!normalizeText(context.companyDetails)) missing.push('offer details');
+  if (!normalizeText(context.targetBlueprint)) missing.push('target audience and call goal');
+  return missing;
+}
+
+function hasOnboardingContext(context: AgentContext): boolean {
+  return getMissingOnboardingFields(context).length <= 1;
+}
+
 async function generateJsonWithGemini(payload: {
   apiKey: string;
   model: string;
@@ -286,6 +316,24 @@ function buildDeterministicReply(prompt: string, context: AgentContext) {
   const mode = inferConversationMode(context);
 
   if (callerIdentitiesCount === 0) {
+    const missingFields = getMissingOnboardingFields(context);
+    const shouldCreateDraft = userRequestedDraft(prompt) && hasOnboardingContext(context);
+    if (!shouldCreateDraft || isGreetingPrompt(prompt)) {
+      const missingLabel = missingFields.slice(0, 4).join(', ');
+      return {
+        reply: `${agent} here. Great start. Before I create your first calling agent, share ${missingLabel || 'your company details and campaign goal'} so I can build it correctly.`,
+        action: 'open_callers' as AgentAction,
+        checklist: [
+          'Company name and industry',
+          'Offer details (what you are promoting)',
+          'Target audience and call objective',
+        ],
+        actionReason: 'Need core business context before generating a caller identity draft.',
+        confidence: 94,
+        conversationMode: mode,
+      };
+    }
+
     return {
       reply: `${agent} here. Let’s hire your first agent before launch. I recommend setting role, language, focus, target profile, and a clear success event.`,
       action: 'open_callers' as AgentAction,
@@ -483,6 +531,7 @@ ${prompt}
 Rules:
 - If credits < contacts queued, action must be open_billing.
 - If no caller identity exists yet, action must be open_callers.
+- Do not create formDraft on greeting-only messages (example: "hi", "hello").
 - Recommend practical next steps, not abstract advice.
 - Keep reply concise and conversational.
 - Respond as an operations partner that is aware of the entire workspace.
@@ -497,6 +546,11 @@ Rules:
         userPrompt,
       });
 
+      const sanitizedDraft = sanitizeFormDraft(parsed.formDraft);
+      const shouldSuppressDraft =
+        !!sanitizedDraft &&
+        (isGreetingPrompt(prompt) || (!userRequestedDraft(prompt) && !hasOnboardingContext(context)));
+
       return NextResponse.json({
         success: true,
         reply: String(parsed.reply || buildDeterministicReply(prompt, context).reply),
@@ -507,8 +561,10 @@ Rules:
         conversationMode: ['onboarding', 'execution', 'optimization'].includes(String(parsed.conversationMode || '').toLowerCase())
           ? String(parsed.conversationMode || '').toLowerCase()
           : inferConversationMode(context),
-        formDraft: sanitizeFormDraft(parsed.formDraft),
-        verificationQuestion: clipText(parsed.verificationQuestion || parsed.formDraft?.verificationQuestion || '', 220),
+        formDraft: shouldSuppressDraft ? undefined : sanitizedDraft,
+        verificationQuestion: shouldSuppressDraft
+          ? ''
+          : clipText(parsed.verificationQuestion || parsed.formDraft?.verificationQuestion || '', 220),
       });
     } catch (providerError) {
       console.error('Agent assistant provider fallback:', providerError);

@@ -85,9 +85,9 @@
   --card-foreground: oklch(0.975 0.004 250);
   --popover: oklch(0.19 0.01 262);
   --popover-foreground: oklch(0.975 0.004 250);
-  --primary: oklch(0.8 0.09 56);
+  --primary: oklch(0.73 0.12 243);
   --primary-foreground: oklch(0.2 0.01 262);
-  --secondary: oklch(0.69 0.05 151);
+  --secondary: oklch(0.67 0.06 188);
   --secondary-foreground: oklch(0.975 0.004 250);
   --muted: oklch(0.24 0.01 262);
   --muted-foreground: oklch(0.72 0.014 262);
@@ -96,7 +96,7 @@
   --destructive: oklch(0.66 0.22 25);
   --border: oklch(0.3 0.012 262 / 0.9);
   --input: oklch(0.26 0.01 262 / 0.9);
-  --ring: oklch(0.8 0.09 56);
+  --ring: oklch(0.73 0.12 243);
   --chart-1: oklch(0.488 0.243 264.376);
   --chart-2: oklch(0.696 0.17 162.48);
   --chart-3: oklch(0.769 0.188 70.08);
@@ -104,12 +104,12 @@
   --chart-5: oklch(0.645 0.246 16.439);
   --sidebar: oklch(0.18 0.01 262);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.8 0.09 56);
+  --sidebar-primary: oklch(0.73 0.12 243);
   --sidebar-primary-foreground: oklch(0.2 0.01 262);
   --sidebar-accent: oklch(0.25 0.01 262);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.3 0.012 262 / 0.9);
-  --sidebar-ring: oklch(0.8 0.09 56);
+  --sidebar-ring: oklch(0.73 0.12 243);
 }
 
 @layer base {
@@ -133,11 +133,11 @@ body {
 
 .dark body {
   background-image:
-    linear-gradient(to right, oklch(0.38 0.014 262 / 0.36) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(0.38 0.014 262 / 0.32) 1px, transparent 1px),
-    radial-gradient(820px 420px at 15% -8%, oklch(0.81 0.085 56 / 0.08), transparent 66%),
-    radial-gradient(960px 520px at 96% -8%, oklch(0.69 0.045 151 / 0.07), transparent 66%),
-    linear-gradient(180deg, oklch(0.16 0.012 258) 0%, oklch(0.125 0.01 262) 100%);
+    linear-gradient(to right, oklch(0.39 0.02 252 / 0.34) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.39 0.02 252 / 0.3) 1px, transparent 1px),
+    radial-gradient(840px 440px at 14% -8%, oklch(0.76 0.1 243 / 0.08), transparent 66%),
+    radial-gradient(980px 540px at 96% -8%, oklch(0.69 0.06 188 / 0.07), transparent 66%),
+    linear-gradient(180deg, oklch(0.16 0.014 252) 0%, oklch(0.125 0.012 258) 100%);
   background-size: 52px 52px, 52px 52px, auto, auto, auto;
   background-attachment: fixed;
 }
@@ -156,16 +156,16 @@ body {
   border-color: oklch(0.34 0.012 262 / 0.85);
   box-shadow:
     0 8px 30px oklch(0.09 0.01 262 / 0.45),
-    inset 0 1px 0 oklch(0.81 0.085 56 / 0.08);
+    inset 0 1px 0 oklch(0.76 0.1 243 / 0.08);
 }
 
 .cw-editor-marketing {
   background-image:
-    linear-gradient(to right, oklch(0.38 0.014 262 / 0.3) 1px, transparent 1px),
-    linear-gradient(to bottom, oklch(0.38 0.014 262 / 0.26) 1px, transparent 1px),
-    radial-gradient(860px 460px at 15% -8%, oklch(0.81 0.085 56 / 0.08), transparent 66%),
-    radial-gradient(920px 520px at 96% -6%, oklch(0.69 0.045 151 / 0.07), transparent 66%),
-    linear-gradient(180deg, oklch(0.16 0.012 258) 0%, oklch(0.125 0.01 262) 100%);
+    linear-gradient(to right, oklch(0.39 0.02 252 / 0.28) 1px, transparent 1px),
+    linear-gradient(to bottom, oklch(0.39 0.02 252 / 0.24) 1px, transparent 1px),
+    radial-gradient(860px 460px at 15% -8%, oklch(0.76 0.1 243 / 0.08), transparent 66%),
+    radial-gradient(920px 520px at 96% -6%, oklch(0.69 0.06 188 / 0.07), transparent 66%),
+    linear-gradient(180deg, oklch(0.16 0.014 252) 0%, oklch(0.125 0.012 258) 100%);
   background-size: 52px 52px, 52px 52px, auto, auto, auto;
 }
 
