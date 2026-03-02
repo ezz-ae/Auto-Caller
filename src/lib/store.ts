@@ -39,6 +39,10 @@ interface StoredSettings {
   includeAutomatedDisclosure: boolean;
 }
 
+function isManagedModeEnabled(): boolean {
+  return ['1', 'true', 'yes', 'on'].includes(String(process.env.MANAGED_MODE || '').trim().toLowerCase());
+}
+
 function normalizeUserId(userId?: string): string {
   return String(userId || '').trim() || 'default';
 }
@@ -67,7 +71,7 @@ function ensureDataDir() {
 }
 
 function defaultSettings(): StoredSettings {
-  const managedMode = process.env.MANAGED_MODE === 'true';
+  const managedMode = isManagedModeEnabled();
 
   return {
     elevenLabsApiKey: '',
@@ -95,7 +99,8 @@ function defaultSettings(): StoredSettings {
 }
 
 function withManagedOverrides(settings: StoredSettings): StoredSettings {
-  if (!settings.managedMode) {
+  const managedMode = isManagedModeEnabled() || settings.managedMode;
+  if (!managedMode) {
     return settings;
   }
 
@@ -111,6 +116,7 @@ function withManagedOverrides(settings: StoredSettings): StoredSettings {
 
   return {
     ...settings,
+    managedMode: true,
     twilioAccountSid: managedSid || settings.twilioAccountSid,
     twilioAuthToken: managedToken || settings.twilioAuthToken,
     openaiApiKey: managedOpenAI || settings.openaiApiKey,
