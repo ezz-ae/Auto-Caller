@@ -18,8 +18,6 @@ import { MarketingFooter, MarketingHeader } from '@/components/marketing/site-sh
 import { OnboardingChat } from '@/components/marketing/onboarding-chat'
 import { DemoCallHero } from '@/components/marketing/demo-call-hero'
 
-const BOOK_DEMO_URL = process.env.NEXT_PUBLIC_BOOK_DEMO_URL || '/login'
-
 const howItWorks = [
   {
     title: 'Create your caller agent',
@@ -120,8 +118,8 @@ export default function MarketingHomePage() {
               <h1 className="text-4xl md:text-6xl font-bold leading-[1.08] tracking-tight">
                 Reactivate 200 old leads in 30 minutes.
               </h1>
-              <p className="text-zinc-400 text-lg leading-relaxed max-w-xl">
-                Built for brokerages and agencies that lose deals because follow-up is late. Launch automated outbound campaigns, qualify leads, and push hot prospects to your team instantly.
+              <p className="text-zinc-400 text-base md:text-lg leading-relaxed max-w-xl">
+                Launch automated follow-up, qualify leads, and transfer hot prospects to your team.
               </p>
             </div>
 
@@ -133,8 +131,8 @@ export default function MarketingHomePage() {
                 </Link>
               </Button>
               <Button variant="ghost" size="lg" asChild className="h-13 px-6 rounded-2xl text-base text-zinc-300 hover:text-white border border-zinc-700/60 hover:border-zinc-600 hover:bg-zinc-800/50">
-                <Link href={BOOK_DEMO_URL} target="_blank" rel="noreferrer">
-                  Book demo
+                <Link href="#live-test">
+                  Test it now
                 </Link>
               </Button>
             </div>
@@ -222,7 +220,7 @@ export default function MarketingHomePage() {
           </div>
         </section>
 
-        <section className="py-16 border-t border-zinc-800/60">
+        <section id="live-test" className="py-16 border-t border-zinc-800/60">
           <div className="grid gap-12 lg:grid-cols-2 items-center">
             <div className="space-y-5">
               <div className="space-y-1">
@@ -278,9 +276,6 @@ export default function MarketingHomePage() {
                   Start free / Create account
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Link>
-              </Button>
-              <Button variant="ghost" size="lg" asChild className="h-14 px-8 rounded-2xl text-base border border-zinc-700 hover:border-zinc-600 hover:bg-zinc-800/50">
-                <Link href={BOOK_DEMO_URL} target="_blank" rel="noreferrer">Book demo</Link>
               </Button>
             </div>
           </div>

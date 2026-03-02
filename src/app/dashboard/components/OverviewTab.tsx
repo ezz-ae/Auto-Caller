@@ -79,18 +79,18 @@ export function OverviewTab({
     (hasPerformanceData ? 1 : 0) + (currentCampaign ? 1 : 0) + (showResourceCard ? 1 : 0)
 
   return (
-    <div className="space-y-10 animate-in fade-in-50 duration-200">
-      <div className="grid gap-8 xl:grid-cols-3">
+    <div className="space-y-6 md:space-y-10 animate-in fade-in-50 duration-200">
+      <div className="grid gap-6 md:gap-8 xl:grid-cols-3">
         <Card className="xl:col-span-2 bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
-          <CardHeader className="pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
-            <div className="flex items-center justify-between">
+          <CardHeader className="pb-4 md:pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div className="space-y-1">
-                <CardTitle className="text-2xl flex items-center gap-2">
-                  <Target className="w-7 h-7 text-orange-300" />
+                <CardTitle className="text-xl md:text-2xl flex items-center gap-2">
+                  <Target className="w-5 h-5 md:w-7 md:h-7 text-orange-300" />
                   Launch Checklist
                 </CardTitle>
-                <CardDescription className="text-base text-zinc-400">
-                  Follow these simple steps to get your first campaign live.
+                <CardDescription className="text-sm md:text-base text-zinc-400">
+                  Follow the next steps to get your campaign live.
                 </CardDescription>
               </div>
               <div className="text-right">
@@ -99,8 +99,8 @@ export function OverviewTab({
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-8 pt-8 px-8">
-            <div className="grid gap-4 md:grid-cols-3">
+          <CardContent className="space-y-5 md:space-y-8 pt-4 md:pt-8 px-4 md:px-8">
+            <div className="grid gap-3 md:gap-4 md:grid-cols-3">
               {startSteps.map((step, index) => (
                 <button
                   key={step.label}
@@ -117,7 +117,7 @@ export function OverviewTab({
               ))}
             </div>
             
-            <div className="grid gap-4 md:grid-cols-2">
+            <div className="grid gap-3 md:gap-4 md:grid-cols-2">
               {readinessItems.map((item) => (
                 <button
                   key={item.label}
@@ -141,13 +141,13 @@ export function OverviewTab({
         </Card>
 
         <Card className="bg-zinc-900 border-zinc-800 shadow-lg border-orange-400/5">
-          <CardHeader className="pb-6">
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-orange-300" />
+          <CardHeader className="pb-4 md:pb-6">
+            <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+              <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-orange-300" />
               Quick Actions
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4 px-6 pb-8">
+          <CardContent className="space-y-3 md:space-y-4 px-4 md:px-6 pb-4 md:pb-8">
             <Button
               variant="secondary"
               className="w-full justify-start bg-zinc-800/50 hover:bg-zinc-800 h-12 rounded-xl border border-zinc-700/50"
@@ -296,17 +296,17 @@ export function OverviewTab({
       <div className={`grid gap-8 ${hasDailyData ? 'lg:grid-cols-2' : 'lg:grid-cols-1'}`}>
         {hasDailyData && (
         <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-orange-400/5">
-          <CardHeader className="pb-8">
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-orange-300" />
+          <CardHeader className="pb-4 md:pb-8">
+            <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+              <Sparkles className="w-5 h-5 md:w-6 md:h-6 text-orange-300" />
               How are we doing today?
             </CardTitle>
             <CardDescription className="text-zinc-400">
               Your daily outreach performance summary.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6 px-8 pb-8">
-            <div className="grid grid-cols-2 gap-4">
+          <CardContent className="space-y-5 md:space-y-6 px-4 md:px-8 pb-4 md:pb-8">
+            <div className="grid grid-cols-2 gap-3 md:gap-4">
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-5 space-y-2">
                 <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium">Calls</p>
                 <p className="text-2xl font-bold text-white">{dailyReport.totalCalls}</p>
@@ -336,16 +336,16 @@ export function OverviewTab({
         )}
 
         <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-orange-400/10">
-          <CardHeader className="pb-8">
-            <CardTitle className="text-xl flex items-center gap-2">
-              <Bot className="w-6 h-6 text-orange-300" />
+          <CardHeader className="pb-4 md:pb-8">
+            <CardTitle className="text-lg md:text-xl flex items-center gap-2">
+              <Bot className="w-5 h-5 md:w-6 md:h-6 text-orange-300" />
               Smart Insights
             </CardTitle>
             <CardDescription className="text-zinc-400">
               Intelligent observations to help you optimize.
             </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-6 px-8 pb-8">
+          <CardContent className="space-y-5 md:space-y-6 px-4 md:px-8 pb-4 md:pb-8">
             <div className="flex items-center justify-between rounded-2xl border border-zinc-800 bg-zinc-950/40 p-5">
               <div className="space-y-1">
                 <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium">Workspace Health</p>

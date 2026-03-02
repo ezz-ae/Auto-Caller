@@ -44,22 +44,22 @@ export function SettingsTab({
   complianceLoading
 }: SettingsTabProps) {
   return (
-    <div className="space-y-10 animate-in fade-in-50 duration-200">
+    <div className="space-y-6 md:space-y-10 animate-in fade-in-50 duration-200">
       <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
-        <CardHeader className="pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
-           <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-orange-400/10 flex items-center justify-center">
-                 <Settings className="w-6 h-6 text-orange-300" />
+        <CardHeader className="pb-5 md:pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
+           <div className="flex items-center gap-3 md:gap-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-orange-400/10 flex items-center justify-center">
+                 <Settings className="w-5 h-5 md:w-6 md:h-6 text-orange-300" />
               </div>
               <div>
-                 <CardTitle className="text-2xl font-bold">Workspace Configuration</CardTitle>
+                 <CardTitle className="text-xl md:text-2xl font-bold">Workspace Configuration</CardTitle>
                  <CardDescription className="text-zinc-400 mt-1">Global settings for your outreach agents, team, and security.</CardDescription>
               </div>
            </div>
         </CardHeader>
-        <CardContent className="p-8 space-y-12">
-          <div className="rounded-2xl border border-orange-400/20 bg-orange-400/5 p-6 flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-orange-400/20 flex items-center justify-center shrink-0">
+        <CardContent className="p-4 md:p-8 space-y-8 md:space-y-12">
+          <div className="rounded-2xl border border-orange-400/20 bg-orange-400/5 p-4 md:p-6 flex items-start gap-3 md:gap-4">
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-orange-400/20 flex items-center justify-center shrink-0">
                <ShieldCheck className="w-5 h-5 text-orange-300" />
             </div>
             <div>
@@ -70,12 +70,12 @@ export function SettingsTab({
             </div>
           </div>
 
-          <div className="space-y-8">
+          <div className="space-y-6 md:space-y-8">
             <div className="flex items-center gap-3 px-2">
                <Briefcase className="w-5 h-5 text-orange-300" />
                <h3 className="text-lg font-bold text-zinc-100">Business Profile</h3>
             </div>
-            <div className="grid gap-8 md:grid-cols-2">
+            <div className="grid gap-5 md:gap-8 md:grid-cols-2">
               <div className="space-y-3">
                 <Label className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">Brand Name</Label>
                 <Input
@@ -106,12 +106,12 @@ export function SettingsTab({
             </div>
           </div>
 
-          <div className="space-y-8 pt-8 border-t border-zinc-800/50">
+          <div className="space-y-6 md:space-y-8 pt-6 md:pt-8 border-t border-zinc-800/50">
              <div className="flex items-center gap-3 px-2">
                <div className="w-1.5 h-1.5 rounded-full bg-orange-300" />
                <h3 className="text-lg font-bold text-zinc-100">Global Behavior Guards</h3>
             </div>
-            <div className="grid gap-8 md:grid-cols-2">
+            <div className="grid gap-5 md:gap-8 md:grid-cols-2">
               <div className="space-y-3">
                 <Label className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest text-orange-300">Standard "Say This" Rules</Label>
                 <Textarea
@@ -131,7 +131,7 @@ export function SettingsTab({
                 />
               </div>
             </div>
-            <div className="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-950/30 px-4 py-3">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between rounded-xl border border-zinc-800 bg-zinc-950/30 px-4 py-3 gap-3">
               <div>
                 <p className="text-sm font-semibold text-zinc-200">Include automated-call disclosure</p>
                 <p className="text-xs text-zinc-500 mt-1">
@@ -145,7 +145,7 @@ export function SettingsTab({
             </div>
           </div>
 
-          <div className="space-y-8 pt-8 border-t border-zinc-800/50">
+          <div className="space-y-6 md:space-y-8 pt-6 md:pt-8 border-t border-zinc-800/50">
              <div className="flex items-center gap-3 px-2">
                <div className="w-1.5 h-1.5 rounded-full bg-orange-300" />
                <h3 className="text-lg font-bold text-zinc-100">Routing & Recording</h3>
@@ -161,7 +161,7 @@ export function SettingsTab({
               <p className="text-xs text-zinc-500">When a lead is ready for a live agent, the AI will bridge them to this line.</p>
             </div>
 
-            <div className="flex flex-wrap gap-12 p-8 rounded-[32px] bg-zinc-950/40 border border-zinc-800">
+            <div className="flex flex-col sm:flex-row sm:flex-wrap gap-5 sm:gap-12 p-4 md:p-8 rounded-3xl bg-zinc-950/40 border border-zinc-800">
                <div className="flex items-center gap-4">
                  <Switch
                    checked={settings.recordCalls}
@@ -185,7 +185,7 @@ export function SettingsTab({
             </div>
           </div>
 
-          <div className="p-8 rounded-[32px] border border-zinc-800 bg-zinc-950/20 flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:border-orange-400/20 transition-all duration-500">
+          <div className="p-4 md:p-8 rounded-3xl border border-zinc-800 bg-zinc-950/20 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 group hover:border-orange-400/20 transition-all duration-500">
             <div className="space-y-1">
               <p className="text-base font-bold text-zinc-100 tracking-tight">Design & Manage Voice Agents</p>
               <p className="text-sm text-zinc-500">Create, edit, and train your outreach outreach team.</p>
@@ -195,7 +195,7 @@ export function SettingsTab({
             </Button>
           </div>
 
-          <div className="space-y-6 pt-8 border-t border-zinc-800/50">
+          <div className="space-y-5 md:space-y-6 pt-6 md:pt-8 border-t border-zinc-800/50">
             <div className="flex items-center gap-3 px-2">
               <ShieldCheck className="w-5 h-5 text-orange-300" />
               <h3 className="text-lg font-bold text-zinc-100">Compliance Center</h3>
@@ -210,7 +210,7 @@ export function SettingsTab({
               >
                 Export Compliance Logs
               </Button>
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <Input
                   placeholder="+971501234567"
                   value={complianceLeadNumber}
@@ -220,7 +220,7 @@ export function SettingsTab({
                 <Button
                   type="button"
                   variant="destructive"
-                  className="h-12 rounded-xl"
+                  className="h-12 rounded-xl w-full sm:w-auto"
                   onClick={deleteLeadAndSuppress}
                   disabled={complianceLoading || !complianceLeadNumber.trim()}
                 >
@@ -233,12 +233,12 @@ export function SettingsTab({
             </p>
           </div>
 
-          <div className="space-y-8 pt-8 border-t border-zinc-800/50">
+          <div className="space-y-6 md:space-y-8 pt-6 md:pt-8 border-t border-zinc-800/50">
              <div className="flex items-center gap-3 px-2">
                <UserPlus className="w-5 h-5 text-orange-300" />
                <h3 className="text-lg font-bold text-zinc-100">Team Collaboration</h3>
             </div>
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-3 md:gap-4 md:grid-cols-4">
               <Input
                 placeholder="Full Name"
                 value={teamForm.name}
@@ -274,7 +274,7 @@ export function SettingsTab({
                 </div>
               ) : (
                 teamMembers.map(member => (
-                  <div key={member.id} className="p-6 rounded-2xl border border-zinc-800 bg-zinc-950/40 hover:border-zinc-700 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-6">
+                  <div key={member.id} className="p-4 md:p-6 rounded-2xl border border-zinc-800 bg-zinc-950/40 hover:border-zinc-700 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4 md:gap-6">
                     <div className="flex items-center gap-4">
                        <div className="w-10 h-10 rounded-full bg-zinc-900 border border-zinc-800 flex items-center justify-center font-bold text-zinc-400">
                           {member.name.charAt(0)}

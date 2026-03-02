@@ -169,6 +169,14 @@ body {
   background-size: 18px 18px, 18px 18px, auto, auto, auto;
 }
 
+@media (max-width: 767px) {
+  .mobile-flat-cards [data-slot="card"] {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+  }
+}
+
 .scrollbar-thin {
   scrollbar-width: thin;
   scrollbar-color: hsl(var(--muted-foreground) / 0.2) transparent;

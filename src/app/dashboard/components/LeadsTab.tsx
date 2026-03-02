@@ -53,16 +53,16 @@ export function LeadsTab({
   addLeadList
 }: LeadsTabProps) {
   return (
-    <div className="space-y-8 animate-in fade-in-50 duration-200">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in-50 duration-200">
       <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-orange-400/5 overflow-hidden">
         <CardContent className="p-0">
-           <div className="p-8 bg-zinc-950/50 border-b border-zinc-800/50 flex flex-col md:flex-row gap-6 md:items-center justify-between">
+           <div className="p-5 md:p-8 bg-zinc-950/50 border-b border-zinc-800/50 flex flex-col md:flex-row gap-4 md:gap-6 md:items-center justify-between">
               <div className="space-y-1">
-                 <h2 className="text-2xl font-bold text-zinc-100 flex items-center gap-3">
-                    <ClipboardList className="w-7 h-7 text-orange-300" />
+                 <h2 className="text-xl md:text-2xl font-bold text-zinc-100 flex items-center gap-2 md:gap-3">
+                    <ClipboardList className="w-5 h-5 md:w-7 md:h-7 text-orange-300" />
                     Lead Intelligence
                  </h2>
-                 <p className="text-zinc-400 text-sm">Unified timeline and history for every contact in your workspace.</p>
+                 <p className="text-zinc-400 text-xs md:text-sm">Unified timeline and history for every contact in your workspace.</p>
               </div>
               <div className="flex flex-col sm:flex-row gap-3">
                 <div className="relative">
@@ -70,7 +70,7 @@ export function LeadsTab({
                     value={leadSearch}
                     onChange={(e) => setLeadSearch(e.target.value)}
                     placeholder="Search by phone, name, or note..."
-                    className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl pl-10 w-full sm:w-80 focus:ring-orange-400/30"
+                    className="bg-zinc-800/50 border-zinc-700 h-11 md:h-12 rounded-xl pl-10 w-full sm:w-80 focus:ring-orange-400/30"
                   />
                   <div className="absolute left-3.5 top-1/2 -translate-y-1/2">
                     <svg className="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -79,14 +79,14 @@ export function LeadsTab({
                 <div className="flex gap-2">
                   <Button
                     variant="secondary"
-                    className="bg-zinc-800 hover:bg-zinc-700 h-12 rounded-xl border border-zinc-700 font-bold"
+                    className="bg-zinc-800 hover:bg-zinc-700 h-11 md:h-12 rounded-xl border border-zinc-700 font-bold"
                     onClick={fetchCampaigns}
                   >
                     <RefreshCw className="w-4 h-4" />
                   </Button>
                   <Button
                     variant="secondary"
-                    className="bg-zinc-800 hover:bg-zinc-700 h-12 rounded-xl border border-zinc-700 px-6 font-bold"
+                    className="bg-zinc-800 hover:bg-zinc-700 h-11 md:h-12 rounded-xl border border-zinc-700 px-4 md:px-6 font-bold"
                     onClick={() => setActiveTab('callbacks')}
                   >
                     <CalendarClock className="w-4 h-4 mr-2" />
@@ -99,7 +99,7 @@ export function LeadsTab({
       </Card>
 
       <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
-        <CardContent className="p-6 space-y-3">
+        <CardContent className="p-4 md:p-6 space-y-3">
           <p className="text-xs text-zinc-500">Lead context input</p>
           <div className="grid gap-2 md:grid-cols-[220px_1fr_auto]">
             <Select value={selectedLeadList} onValueChange={onSelectLeadList}>
@@ -124,7 +124,7 @@ export function LeadsTab({
               type="button"
               size="sm"
               variant="secondary"
-              className="bg-zinc-800 hover:bg-zinc-700"
+              className="bg-zinc-800 hover:bg-zinc-700 h-10 w-full md:w-auto"
               onClick={addLeadList}
             >
               Add List
@@ -155,7 +155,7 @@ export function LeadsTab({
               type="button"
               size="sm"
               variant="secondary"
-              className="bg-zinc-800 hover:bg-zinc-700"
+              className="bg-zinc-800 hover:bg-zinc-700 h-10 w-full md:w-auto"
               onClick={() => void submitContentInputToAgent()}
               disabled={agentLoading}
             >
@@ -167,7 +167,7 @@ export function LeadsTab({
 
       <div className="space-y-4">
         {filteredLeads.length === 0 ? (
-          <div className="py-32 text-center border-2 border-dashed border-zinc-800 rounded-[32px] space-y-6">
+          <div className="py-20 md:py-32 text-center border-2 border-dashed border-zinc-800 rounded-3xl space-y-5 md:space-y-6">
             <div className="w-20 h-20 rounded-3xl bg-zinc-900 border border-zinc-800 flex items-center justify-center mx-auto">
                <ClipboardList className="w-10 h-10 text-zinc-700" />
             </div>
@@ -184,11 +184,11 @@ export function LeadsTab({
             {filteredLeads.slice(0, 100).map((lead: any) => (
               <Card key={lead.phoneNumber} className="bg-zinc-900 border-zinc-800 shadow-lg hover:border-zinc-700 transition-all duration-300 group overflow-hidden">
                 <CardContent className="p-0">
-                  <div className="p-8 space-y-6">
+                  <div className="p-4 md:p-8 space-y-5 md:space-y-6">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                       <div className="space-y-2">
-                        <p className="text-2xl font-bold text-zinc-100 group-hover:text-orange-300 transition-colors tracking-tight">{lead.phoneNumber}</p>
-                        <div className="flex items-center gap-3">
+                        <p className="text-xl md:text-2xl font-bold text-zinc-100 group-hover:text-orange-300 transition-colors tracking-tight">{lead.phoneNumber}</p>
+                        <div className="flex flex-wrap items-center gap-2 md:gap-3">
                            <div className="flex items-center gap-1.5 text-zinc-500 text-xs font-medium uppercase tracking-tighter">
                               <span>First Seen:</span>
                               <span className="text-zinc-400">{formatDateTime(lead.firstSeenAt)}</span>
@@ -209,7 +209,7 @@ export function LeadsTab({
                     </div>
 
                     {(lead.latestUserComment || lead.latestTargetComment || lead.latestCallComment || lead.latestLeadSummary) && (
-                      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6 space-y-4">
+                      <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 md:p-6 space-y-4">
                         <div className="flex items-center gap-2">
                            <Info className="w-4 h-4 text-orange-300" />
                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Latest intelligence</p>
@@ -238,7 +238,7 @@ export function LeadsTab({
                         </div>
                         Lead Timeline ({lead.timeline.length} Events)
                       </summary>
-                      <div className="mt-6 space-y-3 pl-7 border-l border-zinc-800 ml-2.5">
+                        <div className="mt-4 md:mt-6 space-y-3 pl-4 md:pl-7 border-l border-zinc-800 ml-2.5">
                         {lead.timeline.slice(0, 20).map((item: any, index: number) => (
                           <div key={`${item.campaignId}-${item.timestamp}-${index}`} className="relative">
                             <div className="absolute -left-[33px] top-3 w-3 h-3 rounded-full bg-zinc-900 border-2 border-zinc-800 group-hover:border-orange-400/50 transition-colors" />

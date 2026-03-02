@@ -34,20 +34,20 @@ export function BillingTab({
 
   if (!managedMode) {
     return (
-      <div className="space-y-8 animate-in fade-in-50 duration-200">
+      <div className="space-y-6 md:space-y-8 animate-in fade-in-50 duration-200">
         <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
-          <CardHeader className="pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
-                <Wallet className="w-6 h-6 text-amber-400" />
+          <CardHeader className="pb-5 md:pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-amber-500/10 flex items-center justify-center">
+                <Wallet className="w-5 h-5 md:w-6 md:h-6 text-amber-400" />
               </div>
               <div>
-                <CardTitle className="text-2xl font-bold">Billing Architecture</CardTitle>
+                <CardTitle className="text-xl md:text-2xl font-bold">Billing Architecture</CardTitle>
                 <CardDescription className="text-zinc-400 mt-1">Configure your workspace for commercial outreach.</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-8 text-center space-y-6">
+          <CardContent className="p-5 md:p-8 text-center space-y-5 md:space-y-6">
             <div className="max-w-md mx-auto space-y-4">
               <p className="text-sm text-zinc-400 leading-relaxed">
                 Managed Billing is currently disabled for this workspace. To unlock credit top-ups, number purchasing, and PayPal integration, please update your platform settings.
@@ -67,21 +67,21 @@ export function BillingTab({
   }
 
   return (
-    <div className="space-y-10 animate-in fade-in-50 duration-200">
-      <div className="grid gap-8 xl:grid-cols-3">
+    <div className="space-y-6 md:space-y-10 animate-in fade-in-50 duration-200">
+      <div className="grid gap-6 md:gap-8 xl:grid-cols-3">
         <Card className="xl:col-span-2 bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
-          <CardHeader className="pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
-            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-orange-400/10 flex items-center justify-center">
-                <Wallet className="w-6 h-6 text-orange-300" />
+          <CardHeader className="pb-5 md:pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-2xl bg-orange-400/10 flex items-center justify-center">
+                <Wallet className="w-5 h-5 md:w-6 md:h-6 text-orange-300" />
               </div>
               <div>
-                <CardTitle className="text-2xl font-bold">Recharge & Balance</CardTitle>
+                <CardTitle className="text-xl md:text-2xl font-bold">Recharge & Balance</CardTitle>
                 <CardDescription className="text-zinc-400 mt-1">Securely manage your outreach credits and active lines via PayPal.</CardDescription>
               </div>
             </div>
           </CardHeader>
-          <CardContent className="p-8 space-y-12">
+          <CardContent className="p-5 md:p-8 space-y-8 md:space-y-12">
             {credits <= lowCreditThreshold && (
               <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 flex items-start gap-3">
                 <AlertTriangle className="w-4 h-4 text-amber-400 mt-0.5 shrink-0" />
@@ -90,8 +90,8 @@ export function BillingTab({
                 </p>
               </div>
             )}
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="rounded-[32px] border border-zinc-800 bg-zinc-950/40 p-8 space-y-6 group hover:border-blue-500/20 transition-all duration-500">
+            <div className="grid gap-4 md:gap-6 md:grid-cols-2">
+              <div className="rounded-3xl border border-zinc-800 bg-zinc-950/40 p-5 md:p-8 space-y-5 md:space-y-6 group hover:border-blue-500/20 transition-all duration-500">
                 <div className="flex items-center justify-between">
                    <p className="text-sm font-bold text-zinc-300">Agent Line Activation</p>
                    <Phone className="w-5 h-5 text-blue-400 group-hover:scale-110 transition-transform" />
@@ -114,13 +114,13 @@ export function BillingTab({
                 </Button>
               </div>
 
-              <div className="rounded-[32px] border border-zinc-800 bg-zinc-950/40 p-8 space-y-4 group hover:border-orange-400/20 transition-all duration-500">
+              <div className="rounded-3xl border border-zinc-800 bg-zinc-950/40 p-5 md:p-8 space-y-4 group hover:border-orange-400/20 transition-all duration-500">
                  <div className="flex items-center justify-between">
                     <p className="text-sm font-bold text-zinc-300">Credit Balance</p>
                     <Sparkles className="w-5 h-5 text-orange-300 group-hover:rotate-12 transition-transform" />
                  </div>
                  <div className="space-y-1 py-2">
-                    <p className="text-5xl font-black text-white tracking-tighter">{credits.toLocaleString()}</p>
+                    <p className="text-4xl md:text-5xl font-black text-white tracking-tighter">{credits.toLocaleString()}</p>
                     <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold pt-2">Available outreach attempts</p>
                  </div>
                  <div className="pt-2 border-t border-zinc-800/70">
@@ -136,16 +136,16 @@ export function BillingTab({
                  <div className="w-1.5 h-1.5 rounded-full bg-orange-300" />
                  <h3 className="text-sm font-bold text-zinc-200 uppercase tracking-widest">Select Credit Package</h3>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid gap-3 md:gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {creditProducts.map((product, index) => (
                   <button
                     key={product.id}
                     type="button"
                     onClick={() => setSelectedProduct(product)}
-                    className="group relative rounded-3xl border border-zinc-800 bg-zinc-900/50 p-8 text-left hover:border-orange-400/40 hover:bg-zinc-900 transition-all duration-300 overflow-hidden"
+                    className="group relative rounded-3xl border border-zinc-800 bg-zinc-900/50 p-5 md:p-8 text-left hover:border-orange-400/40 hover:bg-zinc-900 transition-all duration-300 overflow-hidden"
                   >
                     <div className="space-y-1 relative z-10">
-                       <p className="text-3xl font-black text-white group-hover:text-orange-300 transition-colors">{(product.credits || 0).toLocaleString()}</p>
+                       <p className="text-2xl md:text-3xl font-black text-white group-hover:text-orange-300 transition-colors">{(product.credits || 0).toLocaleString()}</p>
                        <p className="text-sm text-zinc-500 font-medium">Credits</p>
                     </div>
                     <div className="mt-8 relative z-10">
@@ -180,7 +180,7 @@ export function BillingTab({
                   <div className="p-4 text-xs text-zinc-500">No billing events yet.</div>
                 ) : (
                   billingEvents.slice(0, 8).map(event => (
-                    <div key={event.id} className="p-4 flex items-center justify-between gap-3">
+                    <div key={event.id} className="p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3">
                       <div>
                         <p className="text-sm text-zinc-200 font-medium">
                           {event.kind.replace(/_/g, ' ')}
@@ -204,10 +204,10 @@ export function BillingTab({
         </Card>
 
         <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden border-orange-400/5">
-          <CardHeader className="pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
+          <CardHeader className="pb-5 md:pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
             <CardTitle className="text-lg font-bold">Workspace Standard</CardTitle>
           </CardHeader>
-          <CardContent className="p-8 space-y-8">
+          <CardContent className="p-5 md:p-8 space-y-6 md:space-y-8">
             <div className="space-y-6">
                <div className="flex items-start gap-4">
                   <div className="w-6 h-6 rounded-full bg-orange-400/10 flex items-center justify-center shrink-0 mt-0.5">

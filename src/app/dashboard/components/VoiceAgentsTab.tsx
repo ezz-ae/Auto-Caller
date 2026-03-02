@@ -65,29 +65,29 @@ export function VoiceAgentsTab({
   loadingTtsHealth
 }: VoiceAgentsTabProps) {
   return (
-    <div className="space-y-8 animate-in fade-in-50 duration-200">
+    <div className="space-y-6 md:space-y-8 animate-in fade-in-50 duration-200">
       <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
-        <CardHeader className="pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
-          <div className="flex items-center justify-between">
+        <CardHeader className="pb-5 md:pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="space-y-1">
-              <CardTitle className="text-2xl flex items-center gap-2">
-                <Users className="w-7 h-7 text-orange-300" />
+              <CardTitle className="text-xl md:text-2xl flex items-center gap-2">
+                <Users className="w-5 h-5 md:w-7 md:h-7 text-orange-300" />
                 Hire Agents
               </CardTitle>
-              <CardDescription className="text-base text-zinc-400">
+              <CardDescription className="text-sm md:text-base text-zinc-400">
                 Hire pre-built outbound agents by role, language, and objective.
               </CardDescription>
             </div>
-            <div className="rounded-xl border border-orange-400/20 bg-orange-400/5 px-4 py-2">
+            <div className="rounded-xl border border-orange-400/20 bg-orange-400/5 px-4 py-2 sm:self-auto self-start">
               <p className="text-xs text-orange-300 font-bold uppercase tracking-widest">Active Agents</p>
               <p className="text-xl font-bold text-zinc-100">{callerIdentities.length}</p>
             </div>
           </div>
         </CardHeader>
         
-        <CardContent className="space-y-10 pt-8 px-8">
-          <div className="rounded-2xl border border-orange-400/20 bg-orange-400/5 p-6 flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-orange-400/20 flex items-center justify-center shrink-0">
+        <CardContent className="space-y-6 md:space-y-10 pt-5 md:pt-8 px-4 md:px-8">
+          <div className="rounded-2xl border border-orange-400/20 bg-orange-400/5 p-4 md:p-6 flex items-start gap-3 md:gap-4">
+            <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-orange-400/20 flex items-center justify-center shrink-0">
               <Sparkles className="w-5 h-5 text-orange-300" />
             </div>
             <div>
@@ -98,7 +98,7 @@ export function VoiceAgentsTab({
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-3 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-5">
+          <div className="grid gap-3 md:gap-4 md:grid-cols-3 rounded-2xl border border-zinc-800 bg-zinc-950/40 p-4 md:p-5">
             <div className="md:col-span-3 rounded-xl border border-zinc-800 bg-zinc-950/40 px-3 py-2 flex items-center justify-between gap-3">
               <div>
                 <p className="text-xs text-zinc-400 font-medium">
@@ -123,7 +123,7 @@ export function VoiceAgentsTab({
             </div>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="grid gap-4 md:gap-6 md:grid-cols-2">
             <div className="space-y-2">
               <Label className="text-zinc-400 uppercase tracking-tighter text-[10px] font-bold">Agent Name</Label>
               <Input
@@ -180,7 +180,7 @@ export function VoiceAgentsTab({
             </div>
           </div>
 
-          <div className="flex items-center justify-between p-6 rounded-2xl bg-zinc-950/40 border border-zinc-800 group hover:border-zinc-700 transition-colors">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 md:p-6 rounded-2xl bg-zinc-950/40 border border-zinc-800 group hover:border-zinc-700 transition-colors gap-3">
             <div className="space-y-1">
               <p className="text-base font-semibold text-zinc-200">Advanced behavior controls</p>
               <p className="text-sm text-zinc-500">Fine-tune industry knowledge and custom rules.</p>
@@ -197,7 +197,7 @@ export function VoiceAgentsTab({
 
           {showAdvancedCallerInputs && (
             <div className="space-y-8 animate-in slide-in-from-top-4 duration-300">
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-4 md:gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">Industry focus</Label>
                   <Input
@@ -218,7 +218,7 @@ export function VoiceAgentsTab({
                 </div>
               </div>
 
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-6 space-y-6">
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-4 md:p-6 space-y-5 md:space-y-6">
                 <div className="flex items-center gap-2">
                   <Volume2 className="w-5 h-5 text-orange-300" />
                   <p className="text-base font-semibold text-zinc-100">Voice Quality Test</p>
@@ -227,16 +227,16 @@ export function VoiceAgentsTab({
                   placeholder="Type a sample message here to hear how your agent sounds..."
                   value={voicePreviewText}
                   onChange={e => setVoicePreviewText(e.target.value)}
-                  className="min-h-[100px] bg-zinc-900 border-zinc-700 rounded-xl text-lg italic"
+                  className="min-h-[100px] bg-zinc-900 border-zinc-700 rounded-xl text-base md:text-lg italic"
                 />
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                   <p className="text-sm text-zinc-500">
                     Selected: <span className="text-zinc-300">{selectedIdentityVoice ? selectedIdentityVoice.name : 'None'}</span>
                   </p>
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
                     <Button
                       type="button"
-                      className="bg-orange-400 hover:bg-orange-500 h-11 px-8 rounded-xl shadow-lg shadow-orange-400/20"
+                      className="bg-orange-400 hover:bg-orange-500 h-11 px-6 md:px-8 rounded-xl shadow-lg shadow-orange-400/20 w-full sm:w-auto"
                       onClick={() => previewIdentityVoice(identityForm.voiceId, identityForm.language)}
                       disabled={!identityForm.voiceId || !!previewingVoice}
                     >
@@ -246,7 +246,7 @@ export function VoiceAgentsTab({
                 </div>
               </div>
 
-              <div className="grid gap-6 md:grid-cols-2">
+              <div className="grid gap-4 md:gap-6 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest">Behavior Rules (Do)</Label>
                   <Textarea
@@ -277,7 +277,7 @@ export function VoiceAgentsTab({
                 />
               </div>
 
-              <div className="flex items-center justify-between p-6 rounded-2xl border border-zinc-800 bg-zinc-950/40">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between p-4 md:p-6 rounded-2xl border border-zinc-800 bg-zinc-950/40 gap-3">
                 <div className="space-y-1">
                   <p className="text-base font-semibold text-zinc-200">Automated-call Disclosure</p>
                   <p className="text-sm text-zinc-500">Enable to include transparent automated-call notice and opt-out wording.</p>
@@ -290,12 +290,12 @@ export function VoiceAgentsTab({
             </div>
           )}
 
-          <div className="flex flex-wrap gap-4 pt-4">
+          <div className="flex flex-col sm:flex-row flex-wrap gap-3 md:gap-4 pt-2 md:pt-4">
             <Button
               type="button"
               onClick={saveCallerIdentity}
               disabled={identityLoading}
-              className="bg-orange-400 hover:bg-orange-500 h-14 px-10 text-lg font-bold rounded-2xl shadow-xl shadow-orange-400/20"
+              className="bg-orange-400 hover:bg-orange-500 h-12 md:h-14 px-6 md:px-10 text-base md:text-lg font-bold rounded-2xl shadow-xl shadow-orange-400/20 w-full sm:w-auto"
             >
               {identityLoading ? 'Saving...' : (editingCallerIdentityId ? 'Update Agent' : 'Hire Agent')}
             </Button>
@@ -303,7 +303,7 @@ export function VoiceAgentsTab({
               <Button
                 type="button"
                 variant="secondary"
-                className="bg-zinc-800 hover:bg-zinc-700 h-14 px-8 rounded-2xl border border-zinc-700"
+                className="bg-zinc-800 hover:bg-zinc-700 h-12 md:h-14 px-6 md:px-8 rounded-2xl border border-zinc-700 w-full sm:w-auto"
                 onClick={resetCallerIdentityForm}
                 disabled={identityLoading}
               >
@@ -327,7 +327,7 @@ export function VoiceAgentsTab({
                     : 0
                   const isActive = selectedCallerIdentityId === identity.id
                   return (
-                    <div key={identity.id} className={`group rounded-2xl border p-6 transition-all duration-300 ${isActive ? 'border-orange-400/50 bg-orange-400/10 shadow-lg shadow-orange-400/5' : 'border-zinc-800 bg-zinc-950/40 hover:border-zinc-700'}`}>
+                  <div key={identity.id} className={`group rounded-2xl border p-4 md:p-6 transition-all duration-300 ${isActive ? 'border-orange-400/50 bg-orange-400/10 shadow-lg shadow-orange-400/5' : 'border-zinc-800 bg-zinc-950/40 hover:border-zinc-700'}`}>
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
@@ -381,7 +381,7 @@ export function VoiceAgentsTab({
                               Line Active
                             </Badge>
                           )}
-                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <div className="flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-300">
                             <Button
                               type="button"
                               size="sm"

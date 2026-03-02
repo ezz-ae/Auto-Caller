@@ -2941,7 +2941,7 @@ export default function Dashboard() {
       : 'Update account and forwarding settings.'
 
   return (
-    <div className="cw-editor-shell min-h-screen flex bg-zinc-950 text-white">
+    <div className="cw-editor-shell mobile-flat-cards min-h-screen flex bg-zinc-950 text-white">
       {/* Hidden audio elements */}
       <audio ref={audioRef} onEnded={() => setPlayingRecording(null)} />
       <audio ref={voicePreviewAudioRef} onEnded={() => setPreviewingVoice(null)} />
@@ -3078,8 +3078,24 @@ export default function Dashboard() {
 
         {/* Main Content */}
         <main className="flex-1 px-4 md:px-10 py-5 md:py-8 pb-24 md:pb-8 space-y-6 md:space-y-8">
+        <section className="md:hidden rounded-xl border border-zinc-800 bg-zinc-950/50 p-3">
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500">Credits</p>
+              <p className="text-base font-bold text-zinc-100">{credits}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500">Calls</p>
+              <p className="text-base font-bold text-zinc-100">{totalCalls}</p>
+            </div>
+            <div>
+              <p className="text-[10px] uppercase tracking-wider text-zinc-500">Success</p>
+              <p className="text-base font-bold text-orange-300">{successRate}%</p>
+            </div>
+          </div>
+        </section>
         {topStats.length > 0 && (
-          <section className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
+          <section className="hidden md:grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
             {topStats.map((stat) => (
               <StatCard
                 key={stat.label}
