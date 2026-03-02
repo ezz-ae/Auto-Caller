@@ -15,11 +15,11 @@ export function HistoryTab({
 }: HistoryTabProps) {
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-200">
-      <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-emerald-500/5 overflow-hidden">
+      <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-cyan-500/5 overflow-hidden">
         <CardHeader className="pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
            <div className="space-y-1">
               <h2 className="text-2xl font-bold text-zinc-100 flex items-center gap-3">
-                 <History className="w-7 h-7 text-emerald-400" />
+                 <History className="w-7 h-7 text-cyan-400" />
                  Campaign History
               </h2>
               <p className="text-zinc-400 text-sm">Review your past outreach efforts and reuse high-performing configurations.</p>
@@ -42,7 +42,7 @@ export function HistoryTab({
                     <div className="space-y-4">
                       <div className="flex items-center gap-4">
                         <div className="w-12 h-12 rounded-2xl bg-zinc-900 border border-zinc-800 flex items-center justify-center">
-                           <Phone className="w-6 h-6 text-zinc-500 group-hover:text-emerald-400 transition-colors" />
+                           <Phone className="w-6 h-6 text-zinc-500 group-hover:text-cyan-400 transition-colors" />
                         </div>
                         <div className="space-y-1">
                            <h3 className="text-xl font-bold text-zinc-100">{campaign.name}</h3>
@@ -64,7 +64,7 @@ export function HistoryTab({
                       <Badge 
                         className={`h-9 px-4 rounded-xl text-[10px] uppercase font-bold tracking-widest ${
                           campaign.status === 'completed' 
-                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                            ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' 
                             : 'bg-zinc-800 text-zinc-400 border-zinc-700'
                         }`}
                       >
@@ -106,7 +106,7 @@ export function HistoryTab({
                        {(campaign.results || []).length > 6 && (
                          <div className="pt-2 px-2 flex items-center justify-between">
                             <p className="text-[10px] text-zinc-600 font-medium">Showing 6 of {campaign.results.length} total outreach attempts</p>
-                            <Button variant="link" className="text-emerald-500 text-xs h-auto p-0 font-bold group/btn" onClick={() => loadCampaignToComposer(campaign)}>
+                            <Button variant="link" className="text-cyan-500 text-xs h-auto p-0 font-bold group/btn" onClick={() => loadCampaignToComposer(campaign)}>
                                See All in Analytics <ArrowRight className="w-3 h-3 ml-1 group-hover/btn:translate-x-1 transition-transform" />
                             </Button>
                          </div>

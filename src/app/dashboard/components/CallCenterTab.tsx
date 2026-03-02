@@ -120,12 +120,12 @@ export function CallCenterTab({
 }: CallCenterTabProps) {
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-200">
-      <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden border-emerald-500/10">
+      <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden border-cyan-500/10">
         <CardContent className="p-0">
            <div className="bg-zinc-950/50 p-8 border-b border-zinc-800/50">
              <div className="flex items-center gap-4">
-               <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 flex items-center justify-center">
-                 <Bot className="w-6 h-6 text-emerald-400" />
+               <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 flex items-center justify-center">
+                 <Bot className="w-6 h-6 text-cyan-400" />
                </div>
                <div className="space-y-1">
                  <h2 className="text-xl font-bold text-zinc-100">Smart Campaign Advisor</h2>
@@ -134,10 +134,10 @@ export function CallCenterTab({
              </div>
              <div className="grid gap-4 md:grid-cols-3 mt-8">
                {workspaceIntelligence.coachingTips.slice(0, 3).map((tip: string, index: number) => (
-                 <div key={index} className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 relative overflow-hidden group hover:border-emerald-500/30 transition-all">
+                 <div key={index} className="rounded-xl border border-zinc-800 bg-zinc-900/50 p-4 relative overflow-hidden group hover:border-cyan-500/30 transition-all">
                     <p className="text-sm text-zinc-300 relative z-10 leading-relaxed italic">"{tip}"</p>
                     <div className="absolute top-0 right-0 p-2 opacity-10 group-hover:opacity-20 transition-opacity">
-                      <Sparkles className="w-8 h-8 text-emerald-500" />
+                      <Sparkles className="w-8 h-8 text-cyan-500" />
                     </div>
                  </div>
                ))}
@@ -151,7 +151,7 @@ export function CallCenterTab({
           <Card className="bg-zinc-900 border-zinc-800 shadow-xl">
             <CardHeader className="pb-6">
               <CardTitle className="text-xl flex items-center gap-2">
-                <Users className="w-6 h-6 text-emerald-400" />
+                <Users className="w-6 h-6 text-cyan-400" />
                 Target Audience
               </CardTitle>
               <CardDescription>
@@ -172,7 +172,7 @@ export function CallCenterTab({
                   value={numbers}
                   onChange={(e) => setNumbers(e.target.value)}
                   disabled={isCalling}
-                  className="min-h-[200px] bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-600 rounded-2xl p-6 text-lg focus:ring-emerald-500/30"
+                  className="min-h-[200px] bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-600 rounded-2xl p-6 text-lg focus:ring-cyan-500/30"
                 />
                 <div className="absolute bottom-4 right-4 flex items-center gap-3">
                    <Badge className="bg-zinc-900/80 text-zinc-400 border-zinc-800 px-3 py-1.5 rounded-lg text-xs font-bold">
@@ -271,7 +271,7 @@ export function CallCenterTab({
           <Card className="bg-zinc-900 border-zinc-800 shadow-xl">
             <CardHeader className="pb-6">
               <CardTitle className="text-xl flex items-center gap-2">
-                <Volume2 className="w-6 h-6 text-emerald-400" />
+                <Volume2 className="w-6 h-6 text-cyan-400" />
                 Agent Behavior & Blueprint
               </CardTitle>
             </CardHeader>
@@ -293,7 +293,7 @@ export function CallCenterTab({
                     type="button" 
                     variant="ghost" 
                     size="sm" 
-                    className="text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 h-7 rounded-lg font-bold"
+                    className="text-cyan-400 hover:text-cyan-300 hover:bg-cyan-500/10 h-7 rounded-lg font-bold"
                     onClick={() => {
                       const goal = prompt("What is your goal for this campaign?")
                       if (goal) {
@@ -311,11 +311,11 @@ export function CallCenterTab({
                   value={script}
                   onChange={(e) => setScript(e.target.value)}
                   disabled={isCalling}
-                  className="min-h-[160px] bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-600 rounded-2xl p-6 text-lg leading-relaxed focus:ring-emerald-500/30"
+                  className="min-h-[160px] bg-zinc-800/50 border-zinc-700 text-white placeholder:text-zinc-600 rounded-2xl p-6 text-lg leading-relaxed focus:ring-cyan-500/30"
                 />
                 {selectedCallerIdentity && (
                   <div className="pt-2 flex items-center gap-3">
-                     <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                     <div className="w-1.5 h-1.5 rounded-full bg-cyan-500 animate-pulse" />
                      <p className="text-xs text-zinc-400 font-medium italic">
                         Agent Active: {selectedCallerIdentity.name} ({selectedCallerIdentity.position})
                      </p>
@@ -349,7 +349,7 @@ export function CallCenterTab({
               <Button 
                 onClick={startCalling}
                 disabled={loading || !isConfigured || (managedMode && !!selectedCallerIdentityId && !selectedCallerIdentity?.dedicatedNumber)}
-                className="w-full h-20 text-2xl font-bold bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-2xl shadow-2xl shadow-emerald-500/20 group"
+                className="w-full h-20 text-2xl font-bold bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 rounded-2xl shadow-2xl shadow-cyan-500/20 group"
               >
                 <Play className="w-8 h-8 mr-4 group-hover:scale-110 transition-transform" />
                 {scheduledAt ? 'Schedule Outreach' : 'Launch Outreach Campaign'}
@@ -378,8 +378,8 @@ export function CallCenterTab({
               <CardTitle className="text-lg flex items-center gap-2">
                 {isCalling ? (
                   <span className="relative flex h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 bg-cyan-500"></span>
                   </span>
                 ) : (
                   <Clock className="w-5 h-5 text-zinc-400" />
@@ -414,8 +414,8 @@ export function CallCenterTab({
                     </div>
                     
                     <div className="grid grid-cols-2 gap-4">
-                      <div className="p-5 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 text-center">
-                        <div className="text-3xl font-bold text-emerald-400">{stats.connected}</div>
+                      <div className="p-5 rounded-2xl bg-cyan-500/5 border border-cyan-500/10 text-center">
+                        <div className="text-3xl font-bold text-cyan-400">{stats.connected}</div>
                         <div className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">Connected</div>
                       </div>
                       <div className="p-5 rounded-2xl bg-red-500/5 border border-red-500/10 text-center">
@@ -442,10 +442,10 @@ export function CallCenterTab({
             </CardContent>
           </Card>
 
-          <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-emerald-500/5">
+          <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-cyan-500/5">
             <CardHeader className="pb-6">
               <CardTitle className="text-lg flex items-center gap-2">
-                 <Sparkles className="w-5 h-5 text-emerald-400" />
+                 <Sparkles className="w-5 h-5 text-cyan-400" />
                  Campaign Metrics
               </CardTitle>
             </CardHeader>
@@ -456,11 +456,11 @@ export function CallCenterTab({
               </div>
               <div className="flex justify-between items-center group">
                 <span className="text-zinc-500 group-hover:text-zinc-400 transition-colors">Active Recordings</span>
-                <span className="font-bold text-emerald-400">{recordings.length}</span>
+                <span className="font-bold text-cyan-400">{recordings.length}</span>
               </div>
               <div className="flex justify-between items-center group">
                 <span className="text-zinc-500 group-hover:text-zinc-400 transition-colors">Workspace Credits</span>
-                <span className="font-bold text-emerald-400">{credits}</span>
+                <span className="font-bold text-cyan-400">{credits}</span>
               </div>
               <div className="pt-4 border-t border-zinc-800">
                  <p className="text-xs text-zinc-500 italic leading-relaxed">
@@ -470,10 +470,10 @@ export function CallCenterTab({
             </CardContent>
           </Card>
 
-          <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-emerald-500/5">
+          <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-cyan-500/5">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg flex items-center gap-2">
-                <Bot className="w-5 h-5 text-emerald-400" />
+                <Bot className="w-5 h-5 text-cyan-400" />
                 Assistant-first Workflow
               </CardTitle>
             </CardHeader>

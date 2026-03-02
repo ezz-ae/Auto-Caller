@@ -39,12 +39,12 @@ const flow = [
 
 export default function HowItWorksPage() {
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,#172b22_0%,#0c1110_40%,#09090b_100%)] text-white">
+    <div className="cw-editor-marketing min-h-screen text-white">
       <MarketingHeader />
 
       <main className="mx-auto max-w-6xl px-4 py-20 md:py-28 space-y-16">
         <section className="space-y-4 text-center">
-          <p className="text-emerald-400 text-sm font-semibold tracking-widest uppercase">Process</p>
+          <p className="text-cyan-400 text-sm font-semibold tracking-widest uppercase">Process</p>
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight">How it works.</h1>
           <p className="text-zinc-400 max-w-2xl mx-auto text-xl leading-relaxed">
             Our intelligent voice platform simplifies outreach into a few simple steps, focusing on what matters most: connecting you with qualified leads.
@@ -53,14 +53,14 @@ export default function HowItWorksPage() {
 
         <section className="grid gap-4">
           {flow.map(item => (
-            <Card key={item.step} className="bg-zinc-900 border-zinc-800">
+            <Card key={item.step} className="bg-gradient-to-br from-zinc-900/90 via-zinc-900/70 to-zinc-950/80 border-cyan-500/15">
               <CardHeader>
                 <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-cyan-500/20 text-cyan-300 flex items-center justify-center shrink-0">
                     <item.icon className="w-5 h-5" />
                   </div>
                   <div className="space-y-1">
-                    <p className="text-xs text-emerald-400 font-semibold">STEP {item.step}</p>
+                    <p className="text-xs text-cyan-400 font-semibold">STEP {item.step}</p>
                     <CardTitle>{item.title}</CardTitle>
                   </div>
                 </div>
@@ -72,20 +72,20 @@ export default function HowItWorksPage() {
           ))}
         </section>
 
-        <section className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-5 md:p-6 space-y-3">
+        <section className="rounded-xl border border-cyan-500/30 bg-gradient-to-r from-cyan-500/10 via-violet-500/5 to-transparent p-5 md:p-6 space-y-3">
           <p className="text-lg font-semibold">Go-live standard</p>
           <p className="text-sm text-zinc-200">
             Before onboarding customers, verify call webhooks, billing capture, scheduled dispatch, and transcript processing.
           </p>
           <p className="text-sm text-zinc-300 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-300" />
+            <CheckCircle2 className="w-4 h-4 text-cyan-300" />
             Use `/docs` + `/faq` for exact setup and operations guidance.
           </p>
           <div className="flex flex-wrap gap-2 pt-1">
             <Button variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
               <Link href="/docs">Open Docs</Link>
             </Button>
-            <Button asChild className="bg-emerald-500 hover:bg-emerald-600 font-semibold">
+            <Button asChild className="bg-cyan-500 hover:bg-cyan-600 font-semibold">
               <Link href="/login">
                 Start free trial
                 <ArrowRight className="ml-2 w-4 h-4" />

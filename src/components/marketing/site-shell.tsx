@@ -74,7 +74,7 @@ export function MarketingFooter() {
           <p className="text-sm font-semibold text-white mb-3">Support</p>
           <div className="space-y-2 text-sm text-zinc-400">
             <p>Production support window: Mon-Fri</p>
-            <a href="mailto:support@callware.ai" className="block hover:text-emerald-300 transition">
+            <a href="mailto:support@callware.ai" className="block hover:text-cyan-300 transition">
               support@callware.ai
             </a>
             <p>Status: <span className="text-cyan-300">Operational</span></p>

@@ -69,7 +69,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,#172b22_0%,#0c1110_40%,#09090b_100%)] flex flex-col items-center justify-center px-4 py-12 text-white">
+    <div className="cw-editor-marketing min-h-screen flex flex-col items-center justify-center px-4 py-12 text-white">
 
       {/* Back link */}
       <div className="w-full max-w-sm mb-6">
@@ -86,7 +86,7 @@ export default function LoginPage() {
 
         {/* Logo + heading */}
         <div className="text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-emerald-700 ring-1 ring-emerald-400/20 flex items-center justify-center mx-auto shadow-xl shadow-emerald-500/20">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-cyan-700 ring-1 ring-cyan-400/20 flex items-center justify-center mx-auto shadow-xl shadow-cyan-500/20">
             <Phone className="w-6 h-6 text-white" />
           </div>
           <div>
@@ -100,7 +100,7 @@ export default function LoginPage() {
         </div>
 
         {/* Form card */}
-        <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-sm p-6 shadow-xl shadow-black/30">
+        <div className="rounded-2xl border border-cyan-500/20 bg-gradient-to-br from-zinc-900/90 via-zinc-900/75 to-zinc-950/85 backdrop-blur-sm p-6 shadow-xl shadow-black/30">
           <form className="space-y-4" onSubmit={onSubmit}>
             {accountMode && isRegister && (
               <div className="space-y-1.5">
@@ -135,7 +135,7 @@ export default function LoginPage() {
                 {accountMode && !isRegister && (
                   <Link
                     href="/forgot-password"
-                    className="text-xs text-zinc-500 hover:text-emerald-400 transition"
+                    className="text-xs text-zinc-500 hover:text-cyan-400 transition"
                   >
                     Forgot password?
                   </Link>
@@ -156,7 +156,7 @@ export default function LoginPage() {
                 type="checkbox"
                 checked={rememberDevice}
                 onChange={e => setRememberDevice(e.target.checked)}
-                className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 accent-emerald-500"
+                className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 accent-cyan-500"
               />
               Remember this device
             </label>
@@ -164,7 +164,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full h-11 rounded-xl font-semibold bg-emerald-500 hover:bg-emerald-600 shadow-lg shadow-emerald-500/20 text-white"
+              className="w-full h-11 rounded-xl font-semibold bg-cyan-500 hover:bg-cyan-600 shadow-lg shadow-cyan-500/20 text-white"
             >
               {loading
                 ? isRegister ? 'Creating account…' : 'Signing in…'
@@ -180,7 +180,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setIsRegister(prev => !prev)}
-              className="text-emerald-400 hover:text-emerald-300 font-medium transition"
+              className="text-cyan-400 hover:text-cyan-300 font-medium transition"
             >
               {isRegister ? 'Sign in' : 'Start free'}
             </button>

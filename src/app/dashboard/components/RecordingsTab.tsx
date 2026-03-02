@@ -50,7 +50,7 @@ export function RecordingsTab({
     <div className="space-y-8 animate-in fade-in-50 duration-200">
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-emerald-500/5">
+          <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-cyan-500/5">
             <CardContent className="pt-6">
               <div className="flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
                 <div className="relative flex-1">
@@ -58,7 +58,7 @@ export function RecordingsTab({
                     value={recordingSearch}
                     onChange={(e) => setRecordingSearch(e.target.value)}
                     placeholder="Search conversations, summaries, or keywords..."
-                    className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl pl-10 focus:ring-emerald-500/30"
+                    className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl pl-10 focus:ring-cyan-500/30"
                   />
                   <div className="absolute left-3.5 top-1/2 -translate-y-1/2">
                     <Mic className="w-4 h-4 text-zinc-500" />
@@ -94,7 +94,7 @@ export function RecordingsTab({
               filteredRecordings.map((recording) => (
                 <Card
                   key={recording.id}
-                  className={`bg-zinc-900 border-zinc-800 overflow-hidden transition-all duration-300 ${selectedRecording?.id === recording.id ? 'ring-2 ring-emerald-500/30 border-emerald-500/20' : 'hover:border-zinc-700'}`}
+                  className={`bg-zinc-900 border-zinc-800 overflow-hidden transition-all duration-300 ${selectedRecording?.id === recording.id ? 'ring-2 ring-cyan-500/30 border-cyan-500/20' : 'hover:border-zinc-700'}`}
                 >
                   <div className="flex flex-col md:flex-row md:items-stretch">
                     <button
@@ -103,7 +103,7 @@ export function RecordingsTab({
                       className="flex-1 text-left p-6 group"
                     >
                       <div className="flex items-start gap-4">
-                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${selectedRecording?.id === recording.id ? 'bg-emerald-500/20 text-emerald-400' : 'bg-zinc-800 text-zinc-500 group-hover:bg-zinc-700'}`}>
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center transition-colors ${selectedRecording?.id === recording.id ? 'bg-cyan-500/20 text-cyan-400' : 'bg-zinc-800 text-zinc-500 group-hover:bg-zinc-700'}`}>
                           <Mic className="w-6 h-6" />
                         </div>
                         <div className="space-y-1">
@@ -118,7 +118,7 @@ export function RecordingsTab({
                       
                       {recording.transcript?.summary && (
                          <div className="mt-4 pl-16">
-                            <p className="text-sm text-zinc-400 line-clamp-2 italic leading-relaxed border-l-2 border-emerald-500/20 pl-4">
+                            <p className="text-sm text-zinc-400 line-clamp-2 italic leading-relaxed border-l-2 border-cyan-500/20 pl-4">
                                "{recording.transcript.summary}"
                             </p>
                          </div>
@@ -130,12 +130,12 @@ export function RecordingsTab({
                         variant="ghost"
                         size="icon"
                         onClick={() => playRecording(recording.recordingUrl, recording.id)}
-                        className={`h-10 w-10 rounded-xl ${playingRecording === recording.id ? 'bg-emerald-500/10 text-emerald-400' : 'text-zinc-500 hover:text-emerald-400 hover:bg-emerald-500/5'}`}
+                        className={`h-10 w-10 rounded-xl ${playingRecording === recording.id ? 'bg-cyan-500/10 text-cyan-400' : 'text-zinc-500 hover:text-cyan-400 hover:bg-cyan-500/5'}`}
                       >
                         {playingRecording === recording.id ? (
-                          <Square className="w-4 h-4 fill-emerald-400" />
+                          <Square className="w-4 h-4 fill-cyan-400" />
                         ) : (
-                          <Play className="w-5 h-5 fill-zinc-500 group-hover:fill-emerald-400 transition-colors" />
+                          <Play className="w-5 h-5 fill-zinc-500 group-hover:fill-cyan-400 transition-colors" />
                         )}
                       </Button>
                       <Button
@@ -143,7 +143,7 @@ export function RecordingsTab({
                         size="icon"
                         onClick={() => transcribeRecording(recording.id)}
                         disabled={transcribing === recording.id || !!recording.transcript}
-                        className={`h-10 w-10 rounded-xl ${recording.transcript ? 'text-emerald-400 opacity-50' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
+                        className={`h-10 w-10 rounded-xl ${recording.transcript ? 'text-cyan-400 opacity-50' : 'text-zinc-500 hover:text-white hover:bg-zinc-800'}`}
                       >
                         {transcribing === recording.id ? (
                           <RefreshCw className="w-4 h-4 animate-spin" />
@@ -168,11 +168,11 @@ export function RecordingsTab({
                     <div className="p-8 bg-zinc-950/40 border-t border-zinc-800 space-y-8 animate-in slide-in-from-top-4 duration-300">
                       <div className="grid gap-6 md:grid-cols-2">
                         {recording.transcript.summary && (
-                          <div className="p-6 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 space-y-4">
+                          <div className="p-6 rounded-2xl bg-cyan-500/5 border border-cyan-500/10 space-y-4">
                             <div className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-emerald-400" />
-                                <span className="text-xs font-bold uppercase tracking-widest text-emerald-400">AI Summary</span>
+                                <FileText className="w-4 h-4 text-cyan-400" />
+                                <span className="text-xs font-bold uppercase tracking-widest text-cyan-400">AI Summary</span>
                               </div>
                               {recording.transcript.sentiment && (
                                 <Badge className={`${getSentimentColor(recording.transcript.sentiment)} text-[10px] uppercase font-bold tracking-tighter`}>
@@ -239,10 +239,10 @@ export function RecordingsTab({
         </div>
         
         <div className="space-y-8">
-          <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden border-emerald-500/5">
+          <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden border-cyan-500/5">
             <CardHeader className="pb-6 bg-zinc-950/50 border-b border-zinc-800/50">
               <CardTitle className="text-lg flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-emerald-400" />
+                <TrendingUp className="w-5 h-5 text-cyan-400" />
                 Intelligence Metrics
               </CardTitle>
             </CardHeader>
@@ -254,7 +254,7 @@ export function RecordingsTab({
                 </div>
                 <div className="flex justify-between items-baseline gap-2 mt-4">
                    <p className="text-3xl font-bold text-white">{recordings.filter(r => r.transcript).length}</p>
-                   <p className="text-xs font-bold text-emerald-400 uppercase">AI-Processed</p>
+                   <p className="text-xs font-bold text-cyan-400 uppercase">AI-Processed</p>
                 </div>
               </div>
 
@@ -265,7 +265,7 @@ export function RecordingsTab({
                  </div>
                  <div className="flex items-center justify-between">
                     <span className="text-sm text-zinc-500">Success Rate (Connected)</span>
-                    <span className="text-sm font-bold text-emerald-400">
+                    <span className="text-sm font-bold text-cyan-400">
                       {recordings.length > 0 ? Math.round((recordings.filter(r => r.duration > 5).length / recordings.length) * 100) : 0}%
                     </span>
                  </div>
@@ -274,10 +274,10 @@ export function RecordingsTab({
           </Card>
           
           {selectedRecording && (
-            <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden border-emerald-500/10 sticky top-24 animate-in fade-in zoom-in-95 duration-300">
-              <CardHeader className="pb-6 bg-emerald-500/5 border-b border-emerald-500/10">
+            <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden border-cyan-500/10 sticky top-24 animate-in fade-in zoom-in-95 duration-300">
+              <CardHeader className="pb-6 bg-cyan-500/5 border-b border-cyan-500/10">
                 <CardTitle className="text-lg flex items-center gap-2 text-white">
-                   <Sparkles className="w-5 h-5 text-emerald-400" />
+                   <Sparkles className="w-5 h-5 text-cyan-400" />
                    Call Details
                 </CardTitle>
               </CardHeader>
@@ -285,7 +285,7 @@ export function RecordingsTab({
                 <div className="space-y-4">
                   <div className="flex items-center justify-between group">
                     <span className="text-xs font-bold uppercase tracking-widest text-zinc-500">Target Line</span>
-                    <span className="text-sm font-bold text-zinc-100 group-hover:text-emerald-400 transition-colors">{selectedRecording.phoneNumber}</span>
+                    <span className="text-sm font-bold text-zinc-100 group-hover:text-cyan-400 transition-colors">{selectedRecording.phoneNumber}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold uppercase tracking-widest text-zinc-500">Duration</span>

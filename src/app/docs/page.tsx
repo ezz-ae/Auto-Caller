@@ -55,12 +55,12 @@ const setupSteps = [
 
 export default function DocsPage() {
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,#172b22_0%,#0c1110_40%,#09090b_100%)] text-white">
+    <div className="cw-editor-marketing min-h-screen text-white">
       <MarketingHeader />
 
       <main className="mx-auto max-w-6xl px-4 py-12 md:py-16 space-y-10">
         <section className="space-y-4">
-          <p className="text-emerald-400 text-sm font-semibold">Docs</p>
+          <p className="text-cyan-400 text-sm font-semibold">Docs</p>
           <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">Production Launch Guide</h1>
           <p className="text-zinc-400 max-w-3xl text-lg">
             Use this page as the quick runbook. For full variable list, keep `.env.example`,
@@ -70,9 +70,9 @@ export default function DocsPage() {
 
         <section className="grid gap-4 md:grid-cols-2">
           {setupSteps.map(step => (
-            <Card key={step.title} className="bg-zinc-900 border-zinc-800">
+            <Card key={step.title} className="bg-gradient-to-br from-zinc-900/90 via-zinc-900/70 to-zinc-950/80 border-cyan-500/15">
               <CardHeader>
-                <div className="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center mb-2">
+                <div className="w-10 h-10 rounded-lg bg-cyan-500/20 text-cyan-300 flex items-center justify-center mb-2">
                   <step.icon className="w-5 h-5" />
                 </div>
                 <CardTitle>{step.title}</CardTitle>
@@ -80,7 +80,7 @@ export default function DocsPage() {
               <CardContent className="space-y-2">
                 {step.points.map(point => (
                   <p key={point} className="text-sm text-zinc-300 flex gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-cyan-400 mt-0.5 shrink-0" />
                     {point}
                   </p>
                 ))}
@@ -89,22 +89,22 @@ export default function DocsPage() {
           ))}
         </section>
 
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-6 space-y-3">
+        <section className="rounded-xl border border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 via-violet-500/5 to-transparent p-6 space-y-3">
           <p className="text-lg font-semibold">Operational security baseline</p>
           <p className="text-sm text-zinc-300 flex gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+            <ShieldCheck className="w-4 h-4 text-cyan-400 mt-0.5 shrink-0" />
             Keep all provider secrets only in secure environment variables.
           </p>
           <p className="text-sm text-zinc-300 flex gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+            <ShieldCheck className="w-4 h-4 text-cyan-400 mt-0.5 shrink-0" />
             Never expose API keys in frontend code or customer settings screens.
           </p>
           <p className="text-sm text-zinc-300 flex gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+            <ShieldCheck className="w-4 h-4 text-cyan-400 mt-0.5 shrink-0" />
             Rotate provider and AI keys immediately if leaked.
           </p>
           <div className="pt-2 flex flex-wrap gap-2">
-            <Button asChild className="bg-emerald-500 hover:bg-emerald-600 font-semibold">
+            <Button asChild className="bg-cyan-500 hover:bg-cyan-600 font-semibold">
               <Link href="/login">
                 Start free trial
                 <Rocket className="w-4 h-4 ml-2" />

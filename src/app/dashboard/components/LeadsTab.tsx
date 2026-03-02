@@ -54,12 +54,12 @@ export function LeadsTab({
 }: LeadsTabProps) {
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-200">
-      <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-emerald-500/5 overflow-hidden">
+      <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-cyan-500/5 overflow-hidden">
         <CardContent className="p-0">
            <div className="p-8 bg-zinc-950/50 border-b border-zinc-800/50 flex flex-col md:flex-row gap-6 md:items-center justify-between">
               <div className="space-y-1">
                  <h2 className="text-2xl font-bold text-zinc-100 flex items-center gap-3">
-                    <ClipboardList className="w-7 h-7 text-emerald-400" />
+                    <ClipboardList className="w-7 h-7 text-cyan-400" />
                     Lead Intelligence
                  </h2>
                  <p className="text-zinc-400 text-sm">Unified timeline and history for every contact in your workspace.</p>
@@ -70,7 +70,7 @@ export function LeadsTab({
                     value={leadSearch}
                     onChange={(e) => setLeadSearch(e.target.value)}
                     placeholder="Search by phone, name, or note..."
-                    className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl pl-10 w-full sm:w-80 focus:ring-emerald-500/30"
+                    className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl pl-10 w-full sm:w-80 focus:ring-cyan-500/30"
                   />
                   <div className="absolute left-3.5 top-1/2 -translate-y-1/2">
                     <svg className="w-4 h-4 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -175,7 +175,7 @@ export function LeadsTab({
                <p className="text-xl font-bold text-zinc-400">No lead intelligence yet.</p>
                <p className="text-sm text-zinc-600 max-w-sm mx-auto leading-relaxed">As your agents connect with leads, their full timelines, feedback, and engagement quality will appear here.</p>
             </div>
-            <Button size="lg" className="rounded-2xl h-14 px-8 font-bold bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-500/10" onClick={() => setActiveTab('call')}>
+            <Button size="lg" className="rounded-2xl h-14 px-8 font-bold bg-cyan-500 hover:bg-cyan-600 shadow-xl shadow-cyan-500/10" onClick={() => setActiveTab('call')}>
                Launch First Campaign
             </Button>
           </div>
@@ -187,7 +187,7 @@ export function LeadsTab({
                   <div className="p-8 space-y-6">
                     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
                       <div className="space-y-2">
-                        <p className="text-2xl font-bold text-zinc-100 group-hover:text-emerald-400 transition-colors tracking-tight">{lead.phoneNumber}</p>
+                        <p className="text-2xl font-bold text-zinc-100 group-hover:text-cyan-400 transition-colors tracking-tight">{lead.phoneNumber}</p>
                         <div className="flex items-center gap-3">
                            <div className="flex items-center gap-1.5 text-zinc-500 text-xs font-medium uppercase tracking-tighter">
                               <span>First Seen:</span>
@@ -202,7 +202,7 @@ export function LeadsTab({
                       </div>
                       <div className="flex flex-wrap gap-2">
                         <Badge className="bg-zinc-800 text-zinc-300 border-zinc-700 text-[10px] uppercase font-bold py-1.5 px-3">Total Calls: {lead.totalCalls}</Badge>
-                        <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/20 text-[10px] uppercase font-bold py-1.5 px-3">Connected: {lead.connectedCalls}</Badge>
+                        <Badge className="bg-cyan-500/10 text-cyan-400 border-cyan-500/20 text-[10px] uppercase font-bold py-1.5 px-3">Connected: {lead.connectedCalls}</Badge>
                         <Badge className="bg-amber-500/10 text-amber-400 border-amber-500/20 text-[10px] uppercase font-bold py-1.5 px-3">No Answer: {lead.noAnswerCalls}</Badge>
                         <Badge className="bg-red-500/10 text-red-400 border-red-500/20 text-[10px] uppercase font-bold py-1.5 px-3">Failed: {lead.failedCalls}</Badge>
                       </div>
@@ -211,7 +211,7 @@ export function LeadsTab({
                     {(lead.latestUserComment || lead.latestTargetComment || lead.latestCallComment || lead.latestLeadSummary) && (
                       <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6 space-y-4">
                         <div className="flex items-center gap-2">
-                           <Info className="w-4 h-4 text-emerald-400" />
+                           <Info className="w-4 h-4 text-cyan-400" />
                            <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Latest intelligence</p>
                         </div>
                         <div className="grid gap-4 md:grid-cols-2">
@@ -241,11 +241,11 @@ export function LeadsTab({
                       <div className="mt-6 space-y-3 pl-7 border-l border-zinc-800 ml-2.5">
                         {lead.timeline.slice(0, 20).map((item: any, index: number) => (
                           <div key={`${item.campaignId}-${item.timestamp}-${index}`} className="relative">
-                            <div className="absolute -left-[33px] top-3 w-3 h-3 rounded-full bg-zinc-900 border-2 border-zinc-800 group-hover:border-emerald-500/50 transition-colors" />
+                            <div className="absolute -left-[33px] top-3 w-3 h-3 rounded-full bg-zinc-900 border-2 border-zinc-800 group-hover:border-cyan-500/50 transition-colors" />
                             <div className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 space-y-3 hover:bg-zinc-800/50 transition-colors">
                               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                                 <p className="text-sm font-bold text-zinc-200">
-                                  {item.campaignName} • <span className="text-emerald-400">{item.status}</span>
+                                  {item.campaignName} • <span className="text-cyan-400">{item.status}</span>
                                 </p>
                                 <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-tighter">{formatDateTime(item.timestamp)}</p>
                               </div>

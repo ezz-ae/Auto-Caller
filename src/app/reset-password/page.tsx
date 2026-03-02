@@ -60,18 +60,18 @@ export default function ResetPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#1a2b24_0%,#0b0e10_45%,#09090b_100%)] px-4 py-8">
+    <div className="cw-editor-marketing min-h-screen px-4 py-8">
       <div className="mx-auto max-w-xl">
         <div className="mb-6">
-          <Link href="/login" className="inline-flex items-center gap-2 text-zinc-400 hover:text-emerald-300 transition text-sm">
+          <Link href="/login" className="inline-flex items-center gap-2 text-zinc-400 hover:text-cyan-300 transition text-sm">
             <ArrowLeft className="w-4 h-4" />
             Back to login
           </Link>
         </div>
-        <Card className="bg-zinc-900/80 border-zinc-800 text-white">
+        <Card className="bg-gradient-to-br from-zinc-900/90 via-zinc-900/75 to-zinc-950/85 border-cyan-500/20 text-white">
           <CardHeader>
             <CardTitle className="text-2xl flex items-center gap-2">
-              <KeyRound className="w-5 h-5 text-emerald-400" />
+              <KeyRound className="w-5 h-5 text-cyan-400" />
               Reset Password
             </CardTitle>
             <CardDescription className="text-zinc-400 flex items-center gap-2">
@@ -112,7 +112,7 @@ export default function ResetPasswordPage() {
                 />
                 Remember this device
               </label>
-              <Button type="submit" className="w-full bg-emerald-500 hover:bg-emerald-600" disabled={loading}>
+              <Button type="submit" className="w-full bg-cyan-500 hover:bg-cyan-600" disabled={loading}>
                 {loading ? 'Updating password...' : 'Update password'}
               </Button>
               {!token && (

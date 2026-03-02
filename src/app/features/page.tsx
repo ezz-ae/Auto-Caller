@@ -54,12 +54,12 @@ const items = [
 
 export default function FeaturesPage() {
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,#172b22_0%,#0c1110_40%,#09090b_100%)] text-white">
+    <div className="cw-editor-marketing min-h-screen text-white">
       <MarketingHeader />
 
       <main className="mx-auto max-w-7xl px-4 py-12 md:py-16 space-y-10">
         <section className="space-y-4">
-          <div className="inline-flex items-center gap-2 rounded-full border border-emerald-500/40 bg-emerald-500/10 px-3 py-1 text-xs text-emerald-300">
+          <div className="inline-flex items-center gap-2 rounded-full border border-cyan-500/40 bg-cyan-500/10 px-3 py-1 text-xs text-cyan-300">
             <Sparkles className="w-3.5 h-3.5" />
             Full Platform Capability
           </div>
@@ -72,9 +72,9 @@ export default function FeaturesPage() {
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {items.map(item => (
-            <Card key={item.title} className="bg-zinc-900 border-zinc-800">
+            <Card key={item.title} className="bg-gradient-to-br from-zinc-900/90 via-zinc-900/70 to-zinc-950/80 border-cyan-500/15">
               <CardHeader>
-                <div className="w-10 h-10 rounded-lg bg-emerald-500/20 text-emerald-300 flex items-center justify-center mb-2">
+                <div className="w-10 h-10 rounded-lg bg-cyan-500/20 text-cyan-300 flex items-center justify-center mb-2">
                   <item.icon className="w-5 h-5" />
                 </div>
                 <CardTitle className="text-lg">{item.title}</CardTitle>
@@ -84,7 +84,7 @@ export default function FeaturesPage() {
           ))}
         </section>
 
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <section className="rounded-xl border border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 via-violet-500/5 to-transparent p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <p className="text-lg font-semibold">Want the full setup process?</p>
             <p className="text-sm text-zinc-400 mt-1">Use the launch docs for exact environment variables, DB setup, and webhook mapping.</p>
@@ -93,7 +93,7 @@ export default function FeaturesPage() {
             <Button variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
               <Link href="/docs">Open Docs</Link>
             </Button>
-            <Button asChild className="bg-emerald-500 hover:bg-emerald-600 font-semibold">
+            <Button asChild className="bg-cyan-500 hover:bg-cyan-600 font-semibold">
               <Link href="/login">Start free trial</Link>
             </Button>
           </div>

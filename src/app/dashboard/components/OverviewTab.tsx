@@ -86,7 +86,7 @@ export function OverviewTab({
             <div className="flex items-center justify-between">
               <div className="space-y-1">
                 <CardTitle className="text-2xl flex items-center gap-2">
-                  <Target className="w-7 h-7 text-emerald-400" />
+                  <Target className="w-7 h-7 text-cyan-400" />
                   Launch Checklist
                 </CardTitle>
                 <CardDescription className="text-base text-zinc-400">
@@ -94,7 +94,7 @@ export function OverviewTab({
                 </CardDescription>
               </div>
               <div className="text-right">
-                <p className="text-sm font-semibold text-emerald-400">{readinessScore}% Complete</p>
+                <p className="text-sm font-semibold text-cyan-400">{readinessScore}% Complete</p>
                 <Progress value={readinessScore} className="h-1.5 w-32 mt-2 bg-zinc-800" />
               </div>
             </div>
@@ -106,11 +106,11 @@ export function OverviewTab({
                   key={step.label}
                   type="button"
                   onClick={() => setActiveTab(step.tab)}
-                  className="group relative rounded-2xl border border-zinc-800 bg-zinc-950/40 p-5 text-left hover:border-emerald-500/30 hover:bg-zinc-900/50 transition-all duration-300"
+                  className="group relative rounded-2xl border border-zinc-800 bg-zinc-950/40 p-5 text-left hover:border-cyan-500/30 hover:bg-zinc-900/50 transition-all duration-300"
                 >
                   <p className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Step {index + 1}</p>
-                  <p className="text-base text-zinc-200 mt-2 font-semibold group-hover:text-emerald-400 transition-colors">{step.label}</p>
-                  <Badge className={`mt-4 ${step.done ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
+                  <p className="text-base text-zinc-200 mt-2 font-semibold group-hover:text-cyan-400 transition-colors">{step.label}</p>
+                  <Badge className={`mt-4 ${step.done ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' : 'bg-amber-500/10 text-amber-400 border-amber-500/20'}`}>
                     {step.done ? 'Completed' : 'Action Required'}
                   </Badge>
                 </button>
@@ -127,8 +127,8 @@ export function OverviewTab({
                 >
                   <span className="text-sm text-zinc-300 font-medium">{item.label}</span>
                   {item.ready ? (
-                    <div className="flex items-center gap-1.5 text-emerald-400">
-                      <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                    <div className="flex items-center gap-1.5 text-cyan-400">
+                      <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
                       <span className="text-xs font-bold uppercase tracking-tighter">Active</span>
                     </div>
                   ) : (
@@ -140,10 +140,10 @@ export function OverviewTab({
           </CardContent>
         </Card>
 
-        <Card className="bg-zinc-900 border-zinc-800 shadow-lg border-emerald-500/5">
+        <Card className="bg-zinc-900 border-zinc-800 shadow-lg border-cyan-500/5">
           <CardHeader className="pb-6">
             <CardTitle className="text-xl flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-emerald-400" />
+              <Sparkles className="w-6 h-6 text-cyan-400" />
               Quick Actions
             </CardTitle>
           </CardHeader>
@@ -153,7 +153,7 @@ export function OverviewTab({
               className="w-full justify-start bg-zinc-800/50 hover:bg-zinc-800 h-12 rounded-xl border border-zinc-700/50"
               onClick={() => setActiveTab('agents')}
             >
-              <MessageSquare className="w-4 h-4 mr-3 text-emerald-400" />
+              <MessageSquare className="w-4 h-4 mr-3 text-cyan-400" />
               Chat with Assistant
             </Button>
             <Button 
@@ -161,7 +161,7 @@ export function OverviewTab({
               className="w-full justify-start bg-zinc-800/50 hover:bg-zinc-800 h-12 rounded-xl border border-zinc-700/50" 
               onClick={() => setActiveTab('callers')}
             >
-              <Users className="w-4 h-4 mr-3 text-emerald-400" />
+              <Users className="w-4 h-4 mr-3 text-cyan-400" />
               Manage Voice Agents
             </Button>
             <Button 
@@ -169,7 +169,7 @@ export function OverviewTab({
               className="w-full justify-start bg-zinc-800/50 hover:bg-zinc-800 h-12 rounded-xl border border-zinc-700/50" 
               onClick={() => setActiveTab('billing')}
             >
-              <Wallet className="w-4 h-4 mr-3 text-emerald-400" />
+              <Wallet className="w-4 h-4 mr-3 text-cyan-400" />
               Recharge Credits
             </Button>
             <Button 
@@ -177,7 +177,7 @@ export function OverviewTab({
               className="w-full justify-start bg-zinc-800/50 hover:bg-zinc-800 h-12 rounded-xl border border-zinc-700/50" 
               onClick={() => setActiveTab('callbacks')}
             >
-              <CalendarClock className="w-4 h-4 mr-3 text-emerald-400" />
+              <CalendarClock className="w-4 h-4 mr-3 text-cyan-400" />
               Review Schedule
             </Button>
             <Button
@@ -186,11 +186,11 @@ export function OverviewTab({
               onClick={onStartTestCall}
               disabled={testCallLoading || !hasForwardingNumber}
             >
-              <Phone className="w-4 h-4 mr-3 text-emerald-400" />
+              <Phone className="w-4 h-4 mr-3 text-cyan-400" />
               {testCallLoading ? 'Starting Test Call...' : 'Test Call To My Number'}
             </Button>
             <Button 
-              className="w-full justify-start h-14 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 shadow-lg shadow-emerald-500/20" 
+              className="w-full justify-start h-14 rounded-xl bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700 shadow-lg shadow-cyan-500/20" 
               onClick={() => setActiveTab('call')}
             >
               <Phone className="w-5 h-5 mr-3" />
@@ -206,7 +206,7 @@ export function OverviewTab({
         <Card className="bg-zinc-900 border-zinc-800 shadow-xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg flex items-center gap-2">
-              <BarChart3 className="w-5 h-5 text-emerald-400" />
+              <BarChart3 className="w-5 h-5 text-cyan-400" />
               Performance
             </CardTitle>
           </CardHeader>
@@ -221,7 +221,7 @@ export function OverviewTab({
             </div>
             <div className="flex justify-between items-center text-sm">
               <span className="text-zinc-500">Success Rate</span>
-              <span className="text-xl font-bold text-emerald-400">{successRate}%</span>
+              <span className="text-xl font-bold text-cyan-400">{successRate}%</span>
             </div>
             <div className="pt-4 border-t border-zinc-800">
                <Progress value={successRate} className="h-1.5" />
@@ -234,7 +234,7 @@ export function OverviewTab({
         <Card className="bg-zinc-900 border-zinc-800 shadow-xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg flex items-center gap-2 text-white">
-              <Phone className="w-5 h-5 text-emerald-400" />
+              <Phone className="w-5 h-5 text-cyan-400" />
               Active Campaign
             </CardTitle>
           </CardHeader>
@@ -256,7 +256,7 @@ export function OverviewTab({
             ) : (
               <div className="text-center py-6">
                 <p className="text-sm text-zinc-500">No active campaign</p>
-                <Button variant="link" className="text-emerald-400 text-xs mt-2" onClick={() => setActiveTab('call')}>
+                <Button variant="link" className="text-cyan-400 text-xs mt-2" onClick={() => setActiveTab('call')}>
                   Launch one now
                 </Button>
               </div>
@@ -269,14 +269,14 @@ export function OverviewTab({
         <Card className="bg-zinc-900 border-zinc-800 shadow-xl">
           <CardHeader className="pb-4">
             <CardTitle className="text-lg flex items-center gap-2 text-white">
-              <Wallet className="w-5 h-5 text-emerald-400" />
+              <Wallet className="w-5 h-5 text-cyan-400" />
               Resource Balance
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-4 text-sm">
             <div className="flex justify-between items-center">
               <span className="text-zinc-500">Available Credits</span>
-              <span className="text-xl font-bold text-emerald-400">{credits}</span>
+              <span className="text-xl font-bold text-cyan-400">{credits}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-zinc-500">Active Lines</span>
@@ -295,10 +295,10 @@ export function OverviewTab({
 
       <div className={`grid gap-8 ${hasDailyData ? 'lg:grid-cols-2' : 'lg:grid-cols-1'}`}>
         {hasDailyData && (
-        <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-emerald-500/5">
+        <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-cyan-500/5">
           <CardHeader className="pb-8">
             <CardTitle className="text-xl flex items-center gap-2">
-              <Sparkles className="w-6 h-6 text-emerald-400" />
+              <Sparkles className="w-6 h-6 text-cyan-400" />
               How are we doing today?
             </CardTitle>
             <CardDescription className="text-zinc-400">
@@ -313,7 +313,7 @@ export function OverviewTab({
               </div>
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-5 space-y-2">
                 <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium">Connected</p>
-                <p className="text-2xl font-bold text-emerald-400">{dailyReport.connectedCalls}</p>
+                <p className="text-2xl font-bold text-cyan-400">{dailyReport.connectedCalls}</p>
               </div>
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-5 space-y-2">
                 <p className="text-xs text-zinc-500 uppercase tracking-widest font-medium">Follow-ups</p>
@@ -335,10 +335,10 @@ export function OverviewTab({
         </Card>
         )}
 
-        <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-emerald-500/10">
+        <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-cyan-500/10">
           <CardHeader className="pb-8">
             <CardTitle className="text-xl flex items-center gap-2">
-              <Bot className="w-6 h-6 text-emerald-400" />
+              <Bot className="w-6 h-6 text-cyan-400" />
               Smart Insights
             </CardTitle>
             <CardDescription className="text-zinc-400">
@@ -356,7 +356,7 @@ export function OverviewTab({
               </Badge>
             </div>
 
-            <p className="text-sm text-zinc-300 leading-relaxed italic border-l-2 border-emerald-500/50 pl-4">
+            <p className="text-sm text-zinc-300 leading-relaxed italic border-l-2 border-cyan-500/50 pl-4">
               "{workspaceIntelligence.summary}"
             </p>
 
@@ -368,10 +368,10 @@ export function OverviewTab({
                     key={action.id}
                     type="button"
                     onClick={() => setActiveTab(action.tab)}
-                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950/40 p-4 text-left hover:border-emerald-500/30 transition-all group"
+                    className="w-full rounded-xl border border-zinc-800 bg-zinc-950/40 p-4 text-left hover:border-cyan-500/30 transition-all group"
                   >
                     <div className="flex items-center justify-between gap-2">
-                      <p className="text-sm font-semibold text-zinc-100 group-hover:text-emerald-400 transition-colors">{action.title}</p>
+                      <p className="text-sm font-semibold text-zinc-100 group-hover:text-cyan-400 transition-colors">{action.title}</p>
                       <Badge className={`${getPriorityTone(action.priority)} text-[10px] uppercase`}>{action.priority}</Badge>
                     </div>
                     <p className="mt-1 text-xs text-zinc-500 line-clamp-1">{action.detail}</p>

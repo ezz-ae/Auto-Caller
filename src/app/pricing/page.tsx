@@ -60,12 +60,12 @@ export default function PricingPage() {
   )
 
   return (
-    <div className="min-h-screen bg-[radial-gradient(ellipse_at_top,#172b22_0%,#0c1110_40%,#09090b_100%)] text-white">
+    <div className="cw-editor-marketing min-h-screen text-white">
       <MarketingHeader />
 
       <main className="mx-auto max-w-7xl px-4 py-12 md:py-16 space-y-12">
         <section className="text-center space-y-4 max-w-4xl mx-auto">
-          <Badge className="bg-emerald-500/20 text-emerald-300 border-emerald-500/30">
+          <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30">
             <Sparkles className="w-3.5 h-3.5 mr-1" />
             Managed Platform Billing
           </Badge>
@@ -81,15 +81,15 @@ export default function PricingPage() {
             const title = `${(product.credits || 0).toLocaleString()} Credits`
 
             return (
-              <Card key={product.id} className={`relative bg-zinc-900 border-zinc-800 ${isPopular ? 'border-emerald-500/60 shadow-lg shadow-emerald-500/10' : ''}`}>
+              <Card key={product.id} className={`relative bg-gradient-to-br from-zinc-900/90 via-zinc-900/70 to-zinc-950/80 border-cyan-500/15 ${isPopular ? 'border-cyan-500/60 shadow-lg shadow-cyan-500/10' : ''}`}>
                 {isPopular && (
                   <div className="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <Badge className="bg-emerald-500 text-white">Best Value</Badge>
+                    <Badge className="bg-cyan-500 text-white">Best Value</Badge>
                   </div>
                 )}
                 <CardHeader className="text-center pb-4">
                   <div className={`w-14 h-14 rounded-xl mx-auto mb-3 flex items-center justify-center ${
-                    isPopular ? 'bg-emerald-500/20 text-emerald-300' : 'bg-zinc-800 text-zinc-400'
+                    isPopular ? 'bg-cyan-500/20 text-cyan-300' : 'bg-zinc-800 text-zinc-400'
                   }`}>
                     {getProductIcon(product)}
                   </div>
@@ -104,7 +104,7 @@ export default function PricingPage() {
                   <ul className="space-y-3">
                     {getProductFeatures(product).map(feature => (
                       <li key={feature} className="flex items-start gap-3">
-                        <Check className="w-5 h-5 text-emerald-400 shrink-0 mt-0.5" />
+                        <Check className="w-5 h-5 text-cyan-400 shrink-0 mt-0.5" />
                         <span className="text-zinc-300 text-sm">{feature}</span>
                       </li>
                     ))}
@@ -113,7 +113,7 @@ export default function PricingPage() {
                     onClick={() => setSelectedProduct(product)}
                     className={`w-full h-12 text-base ${
                       isPopular
-                        ? 'bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700'
+                        ? 'bg-gradient-to-r from-cyan-500 to-cyan-600 hover:from-cyan-600 hover:to-cyan-700'
                         : 'bg-zinc-700 hover:bg-zinc-600'
                     }`}
                   >
@@ -152,7 +152,7 @@ export default function PricingPage() {
           </Card>
         </section>
 
-        <section className="rounded-xl border border-zinc-800 bg-zinc-900/70 p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <section className="rounded-xl border border-cyan-500/20 bg-gradient-to-r from-cyan-500/10 via-violet-500/5 to-transparent p-5 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <p className="text-sm text-zinc-300">Need setup guidance before launch?</p>
           <div className="flex gap-2">
             <Button variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">

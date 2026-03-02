@@ -68,12 +68,12 @@ function SuccessContent() {
   }, [searchParams])
   
   return (
-    <div className="min-h-screen bg-[radial-gradient(circle_at_top,#142a24_0%,#0a0f10_50%,#09090b_100%)] text-white flex items-center justify-center p-4">
-      <Card className="bg-zinc-900 border-zinc-800 max-w-md w-full">
+    <div className="cw-editor-marketing min-h-screen text-white flex items-center justify-center p-4">
+      <Card className="bg-gradient-to-br from-zinc-900/90 via-zinc-900/75 to-zinc-950/85 border-cyan-500/20 max-w-md w-full">
         <CardHeader className="text-center">
           {status === 'loading' && (
             <>
-              <Loader2 className="w-16 h-16 mx-auto mb-4 text-emerald-400 animate-spin" />
+              <Loader2 className="w-16 h-16 mx-auto mb-4 text-cyan-400 animate-spin" />
               <CardTitle>Processing Payment</CardTitle>
               <CardDescription>Please wait while we confirm your payment...</CardDescription>
             </>
@@ -81,8 +81,8 @@ function SuccessContent() {
           
           {status === 'success' && (
             <>
-              <CheckCircle className="w-16 h-16 mx-auto mb-4 text-emerald-400" />
-              <CardTitle className="text-emerald-400">Payment Successful!</CardTitle>
+              <CheckCircle className="w-16 h-16 mx-auto mb-4 text-cyan-400" />
+              <CardTitle className="text-cyan-400">Payment Successful!</CardTitle>
               <CardDescription>
                 {assignedPhoneNumber
                   ? `Your dedicated number is ready: ${assignedPhoneNumber}`
@@ -106,7 +106,7 @@ function SuccessContent() {
           {status !== 'loading' && (
             <div className="space-y-2">
               <Link href="/dashboard">
-                <Button className="w-full bg-emerald-500 hover:bg-emerald-600">
+                <Button className="w-full bg-cyan-500 hover:bg-cyan-600">
                   Open Workspace
                 </Button>
               </Link>
@@ -127,7 +127,7 @@ export default function SuccessPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-emerald-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-cyan-400" />
       </div>
     }>
       <SuccessContent />
