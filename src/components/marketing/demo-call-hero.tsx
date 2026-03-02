@@ -66,12 +66,12 @@ export function DemoCallHero() {
 
   if (result?.type === 'success') {
     return (
-      <div className="rounded-2xl border border-cyan-500/30 bg-cyan-500/10 p-8 text-center space-y-4">
-        <div className="w-14 h-14 rounded-full bg-cyan-500/20 flex items-center justify-center mx-auto">
-          <PhoneCall className="w-7 h-7 text-cyan-400" />
+      <div className="rounded-2xl border border-orange-500/30 bg-orange-500/10 p-8 text-center space-y-4">
+        <div className="w-14 h-14 rounded-full bg-orange-500/20 flex items-center justify-center mx-auto">
+          <PhoneCall className="w-7 h-7 text-orange-400" />
         </div>
         <div>
-          <p className="font-semibold text-cyan-200 text-lg">Call incoming</p>
+          <p className="font-semibold text-orange-200 text-lg">Call incoming</p>
           <p className="text-sm text-zinc-400 mt-1">{result.message}</p>
         </div>
         <button
@@ -89,8 +89,8 @@ export function DemoCallHero() {
     <div className="rounded-2xl border border-zinc-800/80 bg-zinc-900/60 backdrop-blur-sm overflow-hidden">
       <div className="p-6 space-y-5">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-cyan-500/15 flex items-center justify-center shrink-0">
-            <Phone className="w-5 h-5 text-cyan-400" />
+          <div className="w-10 h-10 rounded-xl bg-orange-500/15 flex items-center justify-center shrink-0">
+            <Phone className="w-5 h-5 text-orange-400" />
           </div>
           <div>
             <p className="font-semibold text-white">Call me now</p>
@@ -121,7 +121,7 @@ export function DemoCallHero() {
             <Button
               type="submit"
               disabled={loading || isSpam || !phoneNumber.trim()}
-              className="h-12 px-5 rounded-xl bg-cyan-500 hover:bg-cyan-600 font-semibold shadow-lg shadow-cyan-500/20 shrink-0"
+              className="h-12 px-5 rounded-xl bg-orange-500 hover:bg-orange-600 font-semibold shadow-lg shadow-orange-500/20 shrink-0"
             >
               {loading ? (
                 <span className="flex items-center gap-2">
@@ -146,7 +146,7 @@ export function DemoCallHero() {
               <div className="flex gap-2">
                 <Button
                   type="submit"
-                  className="flex-1 h-10 rounded-xl bg-cyan-500 hover:bg-cyan-600 font-semibold"
+                  className="flex-1 h-10 rounded-xl bg-orange-500 hover:bg-orange-600 font-semibold"
                   disabled={loading}
                 >
                   {loading ? 'Starting...' : 'Confirm call'}

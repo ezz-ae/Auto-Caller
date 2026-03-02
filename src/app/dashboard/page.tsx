@@ -1780,18 +1780,18 @@ export default function Dashboard() {
   const getIntelligenceStatusTone = (status: WorkspaceIntelligence['status']) => {
     if (status === 'critical') return 'text-red-300 bg-red-500/15 border-red-500/30'
     if (status === 'needs_attention') return 'text-amber-300 bg-amber-500/15 border-amber-500/30'
-    if (status === 'ready') return 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30'
+    if (status === 'ready') return 'text-orange-300 bg-orange-500/15 border-orange-500/30'
     return 'text-blue-300 bg-blue-500/15 border-blue-500/30'
   }
 
   const getPriorityTone = (priority: 'high' | 'medium' | 'low') => {
     if (priority === 'high') return 'text-red-300 bg-red-500/15 border-red-500/30'
     if (priority === 'medium') return 'text-amber-300 bg-amber-500/15 border-amber-500/30'
-    return 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30'
+    return 'text-orange-300 bg-orange-500/15 border-orange-500/30'
   }
 
   const getIntegrationStatusTone = (status: IntegrationActivityEvent['status']) => {
-    if (status === 'success') return 'text-cyan-300 bg-cyan-500/15 border-cyan-500/30'
+    if (status === 'success') return 'text-orange-300 bg-orange-500/15 border-orange-500/30'
     if (status === 'error') return 'text-red-300 bg-red-500/15 border-red-500/30'
     return 'text-amber-300 bg-amber-500/15 border-amber-500/30'
   }
@@ -2636,7 +2636,7 @@ export default function Dashboard() {
   // Get sentiment color
   const getSentimentColor = (sentiment?: string) => {
     switch (sentiment) {
-      case 'positive': return 'text-cyan-400 bg-cyan-500/20'
+      case 'positive': return 'text-orange-400 bg-orange-500/20'
       case 'negative': return 'text-red-400 bg-red-500/20'
       default: return 'text-zinc-400 bg-zinc-500/20'
     }
@@ -2745,7 +2745,7 @@ export default function Dashboard() {
           value: `${successRate}%`,
           description: 'Calls that resulted in engagement',
           trend: successRate > 50 ? 'Healthy' : 'Needs Review',
-          trendColor: successRate > 50 ? 'text-cyan-400' : 'text-amber-400',
+          trendColor: successRate > 50 ? 'text-orange-400' : 'text-amber-400',
           icon: TrendingUp,
         }
       : null,
@@ -2929,11 +2929,11 @@ export default function Dashboard() {
       <audio ref={agentVoiceAudioRef} onEnded={handleAgentVoicePlaybackEnded} onPause={handleAgentVoicePlaybackEnded} />
 
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-screen w-60 border-r border-cyan-400/15 bg-zinc-950/75 backdrop-blur-xl flex flex-col z-30 overflow-hidden shadow-[0_0_30px_rgba(56,189,248,0.08)]">
+      <aside className="fixed left-0 top-0 h-screen w-60 border-r border-orange-400/15 bg-zinc-950/75 backdrop-blur-xl flex flex-col z-30 overflow-hidden shadow-[0_0_30px_rgba(56,189,248,0.08)]">
         {/* Logo */}
         <div className="px-5 py-5 border-b border-zinc-800/60 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-cyan-500 to-cyan-700 ring-1 ring-cyan-400/20 flex items-center justify-center shadow-lg shadow-cyan-500/20 shrink-0">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-orange-500 to-orange-700 ring-1 ring-orange-400/20 flex items-center justify-center shadow-lg shadow-orange-500/20 shrink-0">
               <Phone className="w-4 h-4 text-white" />
             </div>
             <div className="min-w-0">
@@ -2960,11 +2960,11 @@ export default function Dashboard() {
               onClick={() => handleTabChange(item.tab)}
               className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
                 activeTab === item.tab
-                  ? 'bg-cyan-500/15 text-cyan-400'
+                  ? 'bg-orange-500/15 text-orange-400'
                   : 'text-zinc-400 hover:text-zinc-100 hover:bg-zinc-800/60'
               }`}
             >
-              <item.icon className={`w-4 h-4 shrink-0 ${activeTab === item.tab ? 'text-cyan-400' : 'text-zinc-500'}`} />
+              <item.icon className={`w-4 h-4 shrink-0 ${activeTab === item.tab ? 'text-orange-400' : 'text-zinc-500'}`} />
               <span className="truncate">{item.label}</span>
               {item.badge ? (
                 <span className="ml-auto shrink-0 px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-400 border border-red-500/20">
@@ -2980,12 +2980,12 @@ export default function Dashboard() {
           {managedMode && (
             <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-zinc-800/40 border border-zinc-700/40">
               <span className="text-[11px] text-zinc-500">Numbers</span>
-              <span className="text-xs font-semibold text-cyan-400">{callerNumbersActive}/{callerIdentities.length}</span>
+              <span className="text-xs font-semibold text-orange-400">{callerNumbersActive}/{callerIdentities.length}</span>
             </div>
           )}
           <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-zinc-800/40 border border-zinc-700/40">
             <span className="text-[11px] text-zinc-500">Credits</span>
-            <span className="text-sm font-bold text-cyan-400">{credits}</span>
+            <span className="text-sm font-bold text-orange-400">{credits}</span>
           </div>
           <button
             type="button"
@@ -3001,7 +3001,7 @@ export default function Dashboard() {
       {/* Main wrapper (offset by sidebar width) */}
       <div className="pl-60 flex-1 flex flex-col min-h-screen min-w-0">
         {/* Top bar */}
-        <header className="sticky top-0 z-20 border-b border-cyan-400/15 bg-zinc-950/70 backdrop-blur-xl shrink-0">
+        <header className="sticky top-0 z-20 border-b border-orange-400/15 bg-zinc-950/70 backdrop-blur-xl shrink-0">
           <div className="px-6 md:px-8 py-4 flex items-center justify-between gap-4">
             <div className="min-w-0">
               <p className="text-[11px] text-zinc-500 uppercase tracking-widest font-medium">Workspace</p>
@@ -3009,16 +3009,16 @@ export default function Dashboard() {
             </div>
             <div className="flex items-center gap-2 flex-wrap justify-end shrink-0">
               {isCalling && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-500/10 border border-cyan-500/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse" />
-                  <span className="text-xs font-medium text-cyan-400">Running</span>
+                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/10 border border-orange-500/20">
+                  <span className="w-1.5 h-1.5 rounded-full bg-orange-400 animate-pulse" />
+                  <span className="text-xs font-medium text-orange-400">Running</span>
                 </div>
               )}
               {managedMode && (
                 <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">Managed</Badge>
               )}
               {isConfigured ? (
-                <Badge className="bg-cyan-500/20 text-cyan-400 border-cyan-500/30">
+                <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">
                   <CheckCircle className="w-3 h-3 mr-1" />
                   Configured
                 </Badge>
@@ -3057,10 +3057,10 @@ export default function Dashboard() {
                 <CardHeader className="space-y-2 pb-3">
                   <div className="flex items-center justify-between">
                     <CardTitle className="text-base flex items-center gap-2">
-                      <Bot className="w-4 h-4 text-cyan-400" />
+                      <Bot className="w-4 h-4 text-orange-400" />
                       Agent Chat
                     </CardTitle>
-                    <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30 max-w-[180px] truncate">
+                    <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30 max-w-[180px] truncate">
                       {activeAgentName}
                     </Badge>
                   </div>
@@ -3090,16 +3090,16 @@ export default function Dashboard() {
                       agentMessages.map(msg => (
                         <div
                           key={msg.id}
-                          className={`rounded-lg p-3 ${msg.role === 'user' ? 'bg-zinc-800/80' : 'bg-cyan-500/10 border border-cyan-500/20'}`}
+                          className={`rounded-lg p-3 ${msg.role === 'user' ? 'bg-zinc-800/80' : 'bg-orange-500/10 border border-orange-500/20'}`}
                         >
                           <p className="text-xs uppercase tracking-wide text-zinc-400 mb-1">{msg.role === 'user' ? 'You' : activeAgentName}</p>
                           <p className="text-sm text-zinc-200 whitespace-pre-wrap">{msg.content}</p>
                           {msg.formDraft && (
-                            <div className="mt-3 rounded-md border border-cyan-500/20 bg-cyan-500/10 p-2 space-y-2">
+                            <div className="mt-3 rounded-md border border-orange-500/20 bg-orange-500/10 p-2 space-y-2">
                               <Button
                                 type="button"
                                 size="sm"
-                                className="h-8 px-3 text-xs bg-cyan-600 hover:bg-cyan-500"
+                                className="h-8 px-3 text-xs bg-orange-600 hover:bg-orange-500"
                                 onClick={() => approveAndApplyDraft(msg.formDraft, msg.verificationQuestion)}
                               >
                                 Approve & Apply
@@ -3115,7 +3115,7 @@ export default function Dashboard() {
                       <Button
                         type="button"
                         variant="secondary"
-                        className={agentListening ? 'bg-cyan-600 hover:bg-cyan-500' : 'bg-zinc-800 hover:bg-zinc-700'}
+                        className={agentListening ? 'bg-orange-600 hover:bg-orange-500' : 'bg-zinc-800 hover:bg-zinc-700'}
                         onClick={agentListening ? stopAgentListening : startAgentListening}
                         disabled={!activeAgentId || agentLoading || liveVoiceCallEnabled}
                       >
@@ -3125,7 +3125,7 @@ export default function Dashboard() {
                       <Button
                         type="button"
                         variant={liveVoiceCallEnabled ? 'default' : 'secondary'}
-                        className={liveVoiceCallEnabled ? 'bg-cyan-600 hover:bg-cyan-500' : 'bg-zinc-800 hover:bg-zinc-700'}
+                        className={liveVoiceCallEnabled ? 'bg-orange-600 hover:bg-orange-500' : 'bg-zinc-800 hover:bg-zinc-700'}
                         onClick={toggleLiveVoiceCall}
                         disabled={!activeAgentId || agentLoading}
                       >
@@ -3163,12 +3163,12 @@ export default function Dashboard() {
           <div className="space-y-6 min-w-0">
               <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
                 {activeTab === 'overview' && nextStep && (
-                  <div className="rounded-xl border border-cyan-500/20 bg-cyan-500/5 px-4 py-3 flex items-center justify-between gap-4">
+                  <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-3 flex items-center justify-between gap-4">
                     <p className="text-sm text-zinc-400">{activeTabHint}</p>
                     <button
                       type="button"
                       onClick={() => setActiveTab(nextStep.tab)}
-                      className="text-xs text-cyan-300 hover:text-cyan-200 underline underline-offset-2 shrink-0"
+                      className="text-xs text-orange-300 hover:text-orange-200 underline underline-offset-2 shrink-0"
                     >
                       Next: {nextStep.label}
                     </button>
@@ -3209,7 +3209,7 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between gap-4">
                   <div>
                     <CardTitle className="text-2xl flex items-center gap-2">
-                      <Bot className="w-6 h-6 text-cyan-400" />
+                      <Bot className="w-6 h-6 text-orange-400" />
                       Start with your calling agent
                     </CardTitle>
                     <CardDescription className="mt-1">
@@ -3217,7 +3217,7 @@ export default function Dashboard() {
                     </CardDescription>
                   </div>
                   {activeAgentId && (
-                    <Badge className="bg-cyan-500/20 text-cyan-300 border-cyan-500/30">
+                    <Badge className="bg-orange-500/20 text-orange-300 border-orange-500/30">
                       {activeAgentName}
                     </Badge>
                   )}
@@ -3231,7 +3231,7 @@ export default function Dashboard() {
                         key={profile.id}
                         type="button"
                         onClick={() => startAgentSession(profile.id)}
-                        className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4 text-left hover:border-cyan-500/40 transition"
+                        className="rounded-xl border border-zinc-800 bg-zinc-950/40 p-4 text-left hover:border-orange-500/40 transition"
                       >
                         <p className="text-base font-semibold text-zinc-100">{profile.name}</p>
                         <p className="text-xs text-zinc-400 mt-1">{profile.language} • {profile.style}</p>
@@ -3250,7 +3250,7 @@ export default function Dashboard() {
                           onClick={() => setActiveAgentId(agent.id)}
                           className={`px-3 py-1.5 rounded-full text-xs border transition ${
                             agent.id === activeAgentId
-                              ? 'border-cyan-500/40 bg-cyan-500/15 text-cyan-300'
+                              ? 'border-orange-500/40 bg-orange-500/15 text-orange-300'
                               : 'border-zinc-700 bg-zinc-900/60 text-zinc-400 hover:text-zinc-200'
                           }`}
                         >
@@ -3287,7 +3287,7 @@ export default function Dashboard() {
                         agentMessages.map(msg => (
                           <div
                             key={msg.id}
-                            className={`rounded-lg p-3 ${msg.role === 'user' ? 'bg-zinc-800/80' : 'bg-cyan-500/10 border border-cyan-500/20'}`}
+                            className={`rounded-lg p-3 ${msg.role === 'user' ? 'bg-zinc-800/80' : 'bg-orange-500/10 border border-orange-500/20'}`}
                           >
                             <div className="flex items-center justify-between mb-1">
                               <p className="text-xs uppercase tracking-wide text-zinc-400">{msg.role === 'user' ? 'You' : activeAgentName}</p>
@@ -3312,15 +3312,15 @@ export default function Dashboard() {
                               </ul>
                             )}
                             {msg.formDraft && (
-                              <div className="mt-3 rounded-md border border-cyan-500/20 bg-cyan-500/10 p-2 space-y-2">
-                                <p className="text-xs text-cyan-300 font-medium">
+                              <div className="mt-3 rounded-md border border-orange-500/20 bg-orange-500/10 p-2 space-y-2">
+                                <p className="text-xs text-orange-300 font-medium">
                                   Draft ready for inputs. Approve to write values into your forms.
                                 </p>
                                 <div className="flex flex-wrap gap-2">
                                   <Button
                                     type="button"
                                     size="sm"
-                                    className="h-7 px-2 text-xs bg-cyan-600 hover:bg-cyan-500"
+                                    className="h-7 px-2 text-xs bg-orange-600 hover:bg-orange-500"
                                     onClick={() => approveAndApplyDraft(msg.formDraft, msg.verificationQuestion)}
                                   >
                                     Approve & Apply
@@ -3392,7 +3392,7 @@ export default function Dashboard() {
                       <Button
                         type="button"
                         variant="secondary"
-                        className={agentListening ? 'bg-cyan-600 hover:bg-cyan-500' : 'bg-zinc-800 hover:bg-zinc-700'}
+                        className={agentListening ? 'bg-orange-600 hover:bg-orange-500' : 'bg-zinc-800 hover:bg-zinc-700'}
                         onClick={agentListening ? stopAgentListening : startAgentListening}
                         disabled={agentLoading || liveVoiceCallEnabled}
                       >
@@ -3402,7 +3402,7 @@ export default function Dashboard() {
                       <Button
                         type="button"
                         variant={liveVoiceCallEnabled ? 'default' : 'secondary'}
-                        className={liveVoiceCallEnabled ? 'bg-cyan-600 hover:bg-cyan-500' : 'bg-zinc-800 hover:bg-zinc-700'}
+                        className={liveVoiceCallEnabled ? 'bg-orange-600 hover:bg-orange-500' : 'bg-zinc-800 hover:bg-zinc-700'}
                         onClick={toggleLiveVoiceCall}
                         disabled={agentLoading}
                       >
@@ -3652,7 +3652,7 @@ export default function Dashboard() {
               <Button 
                 onClick={saveSettings}
                 disabled={loading}
-                className="w-full h-14 rounded-2xl text-lg font-bold bg-cyan-500 hover:bg-cyan-600 shadow-xl shadow-cyan-500/10"
+                className="w-full h-14 rounded-2xl text-lg font-bold bg-orange-500 hover:bg-orange-600 shadow-xl shadow-orange-500/10"
               >
                 {loading ? 'Saving Workspace...' : 'Save Global Settings'}
               </Button>

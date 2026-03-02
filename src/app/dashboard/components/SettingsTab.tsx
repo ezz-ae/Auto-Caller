@@ -48,8 +48,8 @@ export function SettingsTab({
       <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
         <CardHeader className="pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
            <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 flex items-center justify-center">
-                 <Settings className="w-6 h-6 text-cyan-400" />
+              <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center">
+                 <Settings className="w-6 h-6 text-orange-400" />
               </div>
               <div>
                  <CardTitle className="text-2xl font-bold">Workspace Configuration</CardTitle>
@@ -58,12 +58,12 @@ export function SettingsTab({
            </div>
         </CardHeader>
         <CardContent className="p-8 space-y-12">
-          <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/5 p-6 flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center shrink-0">
-               <ShieldCheck className="w-5 h-5 text-cyan-400" />
+          <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-6 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
+               <ShieldCheck className="w-5 h-5 text-orange-400" />
             </div>
             <div>
-              <p className="text-base font-semibold text-cyan-300">Managed Intelligence Mode</p>
+              <p className="text-base font-semibold text-orange-300">Managed Intelligence Mode</p>
               <p className="text-sm text-zinc-400 mt-1 leading-relaxed">
                 Infrastructure keys (Voice Engine, Telephony, and AI Models) are managed by the platform. Focus on your business profile and campaign strategy.
               </p>
@@ -72,7 +72,7 @@ export function SettingsTab({
 
           <div className="space-y-8">
             <div className="flex items-center gap-3 px-2">
-               <Briefcase className="w-5 h-5 text-cyan-400" />
+               <Briefcase className="w-5 h-5 text-orange-400" />
                <h3 className="text-lg font-bold text-zinc-100">Business Profile</h3>
             </div>
             <div className="grid gap-8 md:grid-cols-2">
@@ -108,12 +108,12 @@ export function SettingsTab({
 
           <div className="space-y-8 pt-8 border-t border-zinc-800/50">
              <div className="flex items-center gap-3 px-2">
-               <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+               <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
                <h3 className="text-lg font-bold text-zinc-100">Global Behavior Guards</h3>
             </div>
             <div className="grid gap-8 md:grid-cols-2">
               <div className="space-y-3">
-                <Label className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest text-cyan-400">Standard "Say This" Rules</Label>
+                <Label className="text-zinc-500 text-[10px] uppercase font-bold tracking-widest text-orange-400">Standard "Say This" Rules</Label>
                 <Textarea
                   placeholder="Mandatory mentions: company name, purpose of call, next step..."
                   value={settings.sayThisRules || ''}
@@ -147,7 +147,7 @@ export function SettingsTab({
 
           <div className="space-y-8 pt-8 border-t border-zinc-800/50">
              <div className="flex items-center gap-3 px-2">
-               <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+               <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
                <h3 className="text-lg font-bold text-zinc-100">Routing & Recording</h3>
             </div>
             <div className="space-y-4">
@@ -185,7 +185,7 @@ export function SettingsTab({
             </div>
           </div>
 
-          <div className="p-8 rounded-[32px] border border-zinc-800 bg-zinc-950/20 flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:border-cyan-500/20 transition-all duration-500">
+          <div className="p-8 rounded-[32px] border border-zinc-800 bg-zinc-950/20 flex flex-col md:flex-row md:items-center justify-between gap-6 group hover:border-orange-500/20 transition-all duration-500">
             <div className="space-y-1">
               <p className="text-base font-bold text-zinc-100 tracking-tight">Design & Manage Voice Agents</p>
               <p className="text-sm text-zinc-500">Create, edit, and train your outreach outreach team.</p>
@@ -197,7 +197,7 @@ export function SettingsTab({
 
           <div className="space-y-6 pt-8 border-t border-zinc-800/50">
             <div className="flex items-center gap-3 px-2">
-              <ShieldCheck className="w-5 h-5 text-cyan-400" />
+              <ShieldCheck className="w-5 h-5 text-orange-400" />
               <h3 className="text-lg font-bold text-zinc-100">Compliance Center</h3>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -235,7 +235,7 @@ export function SettingsTab({
 
           <div className="space-y-8 pt-8 border-t border-zinc-800/50">
              <div className="flex items-center gap-3 px-2">
-               <UserPlus className="w-5 h-5 text-cyan-400" />
+               <UserPlus className="w-5 h-5 text-orange-400" />
                <h3 className="text-lg font-bold text-zinc-100">Team Collaboration</h3>
             </div>
             <div className="grid gap-4 md:grid-cols-4">
@@ -261,7 +261,7 @@ export function SettingsTab({
                 type="button"
                 onClick={addTeamMember}
                 disabled={teamLoading}
-                className="bg-cyan-500 hover:bg-cyan-600 h-12 rounded-xl font-bold shadow-lg shadow-cyan-500/10"
+                className="bg-orange-500 hover:bg-orange-600 h-12 rounded-xl font-bold shadow-lg shadow-orange-500/10"
               >
                 Invite Member
               </Button>
@@ -289,7 +289,7 @@ export function SettingsTab({
                         type="button"
                         size="sm"
                         variant="ghost"
-                        className={`h-9 px-4 rounded-lg text-[10px] font-bold uppercase tracking-widest ${member.active ? 'text-cyan-400 hover:bg-cyan-500/5' : 'text-zinc-500'}`}
+                        className={`h-9 px-4 rounded-lg text-[10px] font-bold uppercase tracking-widest ${member.active ? 'text-orange-400 hover:bg-orange-500/5' : 'text-zinc-500'}`}
                         onClick={() => toggleTeamMember(member)}
                         disabled={teamLoading}
                       >

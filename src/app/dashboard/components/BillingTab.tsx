@@ -72,8 +72,8 @@ export function BillingTab({
         <Card className="xl:col-span-2 bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
           <CardHeader className="pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 flex items-center justify-center">
-                <Wallet className="w-6 h-6 text-cyan-400" />
+              <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center">
+                <Wallet className="w-6 h-6 text-orange-400" />
               </div>
               <div>
                 <CardTitle className="text-2xl font-bold">Recharge & Balance</CardTitle>
@@ -103,7 +103,7 @@ export function BillingTab({
                   </div>
                   <div className="space-y-1 text-right">
                     <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Active Lines</p>
-                    <p className="text-2xl font-bold text-cyan-400">{callerNumbersActive}</p>
+                    <p className="text-2xl font-bold text-orange-400">{callerNumbersActive}</p>
                   </div>
                 </div>
                 <Button
@@ -114,10 +114,10 @@ export function BillingTab({
                 </Button>
               </div>
 
-              <div className="rounded-[32px] border border-zinc-800 bg-zinc-950/40 p-8 space-y-4 group hover:border-cyan-500/20 transition-all duration-500">
+              <div className="rounded-[32px] border border-zinc-800 bg-zinc-950/40 p-8 space-y-4 group hover:border-orange-500/20 transition-all duration-500">
                  <div className="flex items-center justify-between">
                     <p className="text-sm font-bold text-zinc-300">Credit Balance</p>
-                    <Sparkles className="w-5 h-5 text-cyan-400 group-hover:rotate-12 transition-transform" />
+                    <Sparkles className="w-5 h-5 text-orange-400 group-hover:rotate-12 transition-transform" />
                  </div>
                  <div className="space-y-1 py-2">
                     <p className="text-5xl font-black text-white tracking-tighter">{credits.toLocaleString()}</p>
@@ -133,7 +133,7 @@ export function BillingTab({
 
             <div className="space-y-6">
               <div className="flex items-center gap-3 px-2">
-                 <div className="w-1.5 h-1.5 rounded-full bg-cyan-400" />
+                 <div className="w-1.5 h-1.5 rounded-full bg-orange-400" />
                  <h3 className="text-sm font-bold text-zinc-200 uppercase tracking-widest">Select Credit Package</h3>
               </div>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -142,23 +142,23 @@ export function BillingTab({
                     key={product.id}
                     type="button"
                     onClick={() => setSelectedProduct(product)}
-                    className="group relative rounded-3xl border border-zinc-800 bg-zinc-900/50 p-8 text-left hover:border-cyan-500/40 hover:bg-zinc-900 transition-all duration-300 overflow-hidden"
+                    className="group relative rounded-3xl border border-zinc-800 bg-zinc-900/50 p-8 text-left hover:border-orange-500/40 hover:bg-zinc-900 transition-all duration-300 overflow-hidden"
                   >
                     <div className="space-y-1 relative z-10">
-                       <p className="text-3xl font-black text-white group-hover:text-cyan-400 transition-colors">{(product.credits || 0).toLocaleString()}</p>
+                       <p className="text-3xl font-black text-white group-hover:text-orange-400 transition-colors">{(product.credits || 0).toLocaleString()}</p>
                        <p className="text-sm text-zinc-500 font-medium">Credits</p>
                     </div>
                     <div className="mt-8 relative z-10">
                        <p className="text-xl font-bold text-zinc-100">${product.price.toFixed(2)}</p>
                        <div className="flex items-center justify-between mt-3">
                           <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-tighter">PayPal Secure</p>
-                          <ArrowRightIcon className="w-4 h-4 text-zinc-700 group-hover:translate-x-1 group-hover:text-cyan-500 transition-all" />
+                          <ArrowRightIcon className="w-4 h-4 text-zinc-700 group-hover:translate-x-1 group-hover:text-orange-500 transition-all" />
                        </div>
                     </div>
 
                     {index === 1 && (
                        <div className="absolute top-0 right-0 p-2">
-                          <Badge className="bg-cyan-500 text-zinc-950 font-black text-[9px] uppercase tracking-tighter border-none rounded-lg">Popular</Badge>
+                          <Badge className="bg-orange-500 text-zinc-950 font-black text-[9px] uppercase tracking-tighter border-none rounded-lg">Popular</Badge>
                        </div>
                     )}
                   </button>
@@ -190,7 +190,7 @@ export function BillingTab({
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className={`text-sm font-semibold ${event.amount < 0 ? 'text-amber-400' : 'text-cyan-400'}`}>
+                        <p className={`text-sm font-semibold ${event.amount < 0 ? 'text-amber-400' : 'text-orange-400'}`}>
                           {event.amount > 0 ? '+' : ''}{event.amount}
                         </p>
                         <p className="text-[10px] uppercase tracking-wider text-zinc-500">{event.status}</p>
@@ -203,15 +203,15 @@ export function BillingTab({
           </CardContent>
         </Card>
 
-        <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden border-cyan-500/5">
+        <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden border-orange-500/5">
           <CardHeader className="pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
             <CardTitle className="text-lg font-bold">Workspace Standard</CardTitle>
           </CardHeader>
           <CardContent className="p-8 space-y-8">
             <div className="space-y-6">
                <div className="flex items-start gap-4">
-                  <div className="w-6 h-6 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                     <CheckCircle className="w-3.5 h-3.5 text-cyan-400" />
+                  <div className="w-6 h-6 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                     <CheckCircle className="w-3.5 h-3.5 text-orange-400" />
                   </div>
                   <div className="space-y-1">
                      <p className="text-sm font-bold text-zinc-200">Priority Processing</p>
@@ -219,8 +219,8 @@ export function BillingTab({
                   </div>
                </div>
                <div className="flex items-start gap-4">
-                  <div className="w-6 h-6 rounded-full bg-cyan-500/10 flex items-center justify-center shrink-0 mt-0.5">
-                     <CheckCircle className="w-3.5 h-3.5 text-cyan-400" />
+                  <div className="w-6 h-6 rounded-full bg-orange-500/10 flex items-center justify-center shrink-0 mt-0.5">
+                     <CheckCircle className="w-3.5 h-3.5 text-orange-400" />
                   </div>
                   <div className="space-y-1">
                      <p className="text-sm font-bold text-zinc-200">Active Monitoring</p>

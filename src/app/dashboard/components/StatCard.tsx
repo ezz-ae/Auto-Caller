@@ -21,7 +21,7 @@ export function StatCard({ label, value, icon: Icon, trend, trendColor, descript
         <div className="flex items-baseline gap-2">
           <p className="text-3xl font-bold tracking-tight text-white">{value}</p>
           {trend && (
-            <span className={`text-xs font-semibold ${trendColor || 'text-cyan-400'}`}>
+            <span className={`text-xs font-semibold ${trendColor || 'text-orange-400'}`}>
               {trend}
             </span>
           )}

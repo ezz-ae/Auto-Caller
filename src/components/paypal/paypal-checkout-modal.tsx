@@ -88,24 +88,24 @@ function CheckoutContent({
   if (state === 'success' && result) {
     return (
       <div className="flex flex-col items-center gap-5 py-4 text-center">
-        <div className="w-16 h-16 rounded-full bg-cyan-500/15 flex items-center justify-center">
-          <CheckCircle2 className="w-8 h-8 text-cyan-400" />
+        <div className="w-16 h-16 rounded-full bg-orange-500/15 flex items-center justify-center">
+          <CheckCircle2 className="w-8 h-8 text-orange-400" />
         </div>
         <div className="space-y-1.5">
           <p className="text-lg font-semibold text-white">Payment successful</p>
           {result.assignedPhoneNumber ? (
             <p className="text-sm text-zinc-400">
-              Your number <span className="text-cyan-400 font-mono">{result.assignedPhoneNumber}</span> is now active.
+              Your number <span className="text-orange-400 font-mono">{result.assignedPhoneNumber}</span> is now active.
             </p>
           ) : (
             <p className="text-sm text-zinc-400">
-              <span className="text-cyan-400 font-bold">{result.credits?.toLocaleString()}</span> credits added to your balance.
+              <span className="text-orange-400 font-bold">{result.credits?.toLocaleString()}</span> credits added to your balance.
             </p>
           )}
         </div>
         <Button
           onClick={onClose}
-          className="w-full max-w-xs h-11 rounded-xl bg-cyan-500 hover:bg-cyan-600 font-semibold"
+          className="w-full max-w-xs h-11 rounded-xl bg-orange-500 hover:bg-orange-600 font-semibold"
         >
           Done
         </Button>
@@ -146,11 +146,11 @@ function CheckoutContent({
     <div className="space-y-5">
       {/* Product summary */}
       <div className="rounded-xl border border-zinc-700/60 bg-zinc-800/50 p-4 flex items-center gap-4">
-        <div className="w-10 h-10 rounded-xl bg-cyan-500/15 flex items-center justify-center shrink-0">
+        <div className="w-10 h-10 rounded-xl bg-orange-500/15 flex items-center justify-center shrink-0">
           {isNumber ? (
-            <Phone className="w-5 h-5 text-cyan-400" />
+            <Phone className="w-5 h-5 text-orange-400" />
           ) : (
-            <CreditCard className="w-5 h-5 text-cyan-400" />
+            <CreditCard className="w-5 h-5 text-orange-400" />
           )}
         </div>
         <div className="flex-1 min-w-0">

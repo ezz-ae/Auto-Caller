@@ -11,10 +11,10 @@ const navItems = [
 
 export function MarketingHeader() {
   return (
-    <header className="sticky top-0 z-30 border-b border-cyan-400/20 bg-zinc-950/70 backdrop-blur-xl">
+    <header className="sticky top-0 z-30 border-b border-orange-400/20 bg-zinc-950/70 backdrop-blur-xl">
       <div className="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-violet-500 ring-1 ring-cyan-300/30 flex items-center justify-center shadow-lg shadow-cyan-500/30">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-emerald-500 ring-1 ring-orange-300/30 flex items-center justify-center shadow-lg shadow-orange-500/30">
             <Phone className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -25,7 +25,7 @@ export function MarketingHeader() {
 
         <nav className="hidden lg:flex items-center gap-6 text-sm text-zinc-300">
           {navItems.map(item => (
-            <Link key={item.href} href={item.href} className="hover:text-cyan-300 transition">
+            <Link key={item.href} href={item.href} className="hover:text-orange-300 transition">
               {item.label}
             </Link>
           ))}
@@ -35,7 +35,7 @@ export function MarketingHeader() {
           <Button variant="ghost" asChild className="text-zinc-300 hover:text-white">
             <Link href="/login">Sign in</Link>
           </Button>
-          <Button asChild className="bg-gradient-to-r from-cyan-500 to-violet-500 hover:from-cyan-400 hover:to-violet-400 font-semibold">
+          <Button asChild className="bg-gradient-to-r from-orange-500 to-emerald-500 hover:from-orange-400 hover:to-emerald-400 font-semibold">
             <Link href="/login">Start free trial</Link>
           </Button>
         </div>
@@ -46,7 +46,7 @@ export function MarketingHeader() {
 
 export function MarketingFooter() {
   return (
-    <footer className="border-t border-cyan-400/15 bg-zinc-950/60">
+    <footer className="border-t border-orange-400/15 bg-zinc-950/60">
       <div className="mx-auto max-w-7xl px-4 py-10 grid gap-8 md:grid-cols-4">
         <div className="space-y-2">
           <p className="text-sm font-semibold text-white">Callware</p>
@@ -57,27 +57,27 @@ export function MarketingFooter() {
         <div>
           <p className="text-sm font-semibold text-white mb-3">Platform</p>
           <div className="space-y-2 text-sm text-zinc-400">
-            <Link href="/features" className="block hover:text-cyan-300 transition">Features</Link>
-            <Link href="/how-it-works" className="block hover:text-cyan-300 transition">How It Works</Link>
-            <Link href="/login" className="block hover:text-cyan-300 transition">Start Free</Link>
+            <Link href="/features" className="block hover:text-orange-300 transition">Features</Link>
+            <Link href="/how-it-works" className="block hover:text-orange-300 transition">How It Works</Link>
+            <Link href="/login" className="block hover:text-orange-300 transition">Start Free</Link>
           </div>
         </div>
         <div>
           <p className="text-sm font-semibold text-white mb-3">Resources</p>
           <div className="space-y-2 text-sm text-zinc-400">
-            <Link href="/docs" className="block hover:text-cyan-300 transition">Docs</Link>
-            <Link href="/faq" className="block hover:text-cyan-300 transition">FAQ</Link>
-            <Link href="/login" className="block hover:text-cyan-300 transition">Workspace Login</Link>
+            <Link href="/docs" className="block hover:text-orange-300 transition">Docs</Link>
+            <Link href="/faq" className="block hover:text-orange-300 transition">FAQ</Link>
+            <Link href="/login" className="block hover:text-orange-300 transition">Workspace Login</Link>
           </div>
         </div>
         <div>
           <p className="text-sm font-semibold text-white mb-3">Support</p>
           <div className="space-y-2 text-sm text-zinc-400">
             <p>Production support window: Mon-Fri</p>
-            <a href="mailto:support@callware.ai" className="block hover:text-cyan-300 transition">
+            <a href="mailto:support@callware.ai" className="block hover:text-orange-300 transition">
               support@callware.ai
             </a>
-            <p>Status: <span className="text-cyan-300">Operational</span></p>
+            <p>Status: <span className="text-orange-300">Operational</span></p>
           </div>
         </div>
       </div>
