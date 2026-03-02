@@ -2830,6 +2830,18 @@ export default function Dashboard() {
   const activeAgentName = activeWorkspaceAgent?.name || activeAgentProfile?.name || 'Sara'
   const agentMessages = activeAgentId ? (agentMessagesByAgent[activeAgentId] || []) : []
   const showSideAssistant = agentSessionStarted && activeTab !== 'agents'
+  const navItems = [
+    { tab: 'agents', icon: Bot, label: 'Assistant', badge: null as string | null },
+    { tab: 'call', icon: Phone, label: 'Call Center', badge: null as string | null },
+    { tab: 'leads', icon: ClipboardList, label: 'Leads', badge: null as string | null },
+    { tab: 'callbacks', icon: CalendarClock, label: 'Callbacks', badge: callbacksDueNow > 0 ? String(callbacksDueNow) : null },
+    { tab: 'history', icon: History, label: 'History', badge: null as string | null },
+    { tab: 'billing', icon: Wallet, label: 'Billing', badge: null as string | null },
+    { tab: 'settings', icon: Settings, label: 'Settings', badge: null as string | null },
+  ]
+  const mobilePrimaryTabs = navItems.filter(item =>
+    ['agents', 'call', 'leads', 'billing', 'settings'].includes(item.tab)
+  )
   const leadLists = useMemo(() => {
     const names = Object.keys(leadListContexts)
     if (!names.includes(selectedLeadList)) {
@@ -2936,7 +2948,7 @@ export default function Dashboard() {
       <audio ref={agentVoiceAudioRef} onEnded={handleAgentVoicePlaybackEnded} onPause={handleAgentVoicePlaybackEnded} />
 
       {/* Sidebar */}
-      <aside className="fixed left-0 top-0 h-screen w-60 border-r border-orange-300/15 bg-zinc-950/75 backdrop-blur-xl flex flex-col z-30 overflow-hidden shadow-[0_0_30px_rgba(56,189,248,0.08)]">
+      <aside className="hidden md:flex fixed left-0 top-0 h-screen w-60 border-r border-orange-300/15 bg-zinc-950/75 backdrop-blur-xl flex-col z-30 overflow-hidden shadow-[0_0_30px_rgba(56,189,248,0.08)]">
         {/* Logo */}
         <div className="px-5 py-5 border-b border-zinc-800/60 shrink-0">
           <div className="flex items-center gap-3">
@@ -2952,15 +2964,7 @@ export default function Dashboard() {
 
         {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
-          {([
-            { tab: 'agents', icon: Bot, label: 'Assistant', badge: null },
-            { tab: 'call', icon: Phone, label: 'Call Center', badge: null },
-            { tab: 'leads', icon: ClipboardList, label: 'Leads', badge: null },
-            { tab: 'callbacks', icon: CalendarClock, label: 'Callbacks', badge: callbacksDueNow > 0 ? String(callbacksDueNow) : null },
-            { tab: 'history', icon: History, label: 'History', badge: null },
-            { tab: 'billing', icon: Wallet, label: 'Billing', badge: null },
-            { tab: 'settings', icon: Settings, label: 'Settings', badge: null },
-          ]).map((item) => (
+          {navItems.map((item) => (
             <button
               key={item.tab}
               type="button"
@@ -3006,43 +3010,76 @@ export default function Dashboard() {
       </aside>
 
       {/* Main wrapper (offset by sidebar width) */}
-      <div className="pl-60 flex-1 flex flex-col min-h-screen min-w-0">
+      <div className="pl-0 md:pl-60 flex-1 flex flex-col min-h-screen min-w-0">
         {/* Top bar */}
         <header className="sticky top-0 z-20 border-b border-orange-300/15 bg-zinc-950/70 backdrop-blur-xl shrink-0">
-          <div className="px-6 md:px-8 py-4 flex items-center justify-between gap-4">
-            <div className="min-w-0">
-              <p className="text-[11px] text-zinc-500 uppercase tracking-widest font-medium">Workspace</p>
-              <h1 className="text-xl font-semibold tracking-tight truncate">{activeTabTitle}</h1>
+          <div className="px-4 md:px-8 py-3 md:py-4 flex items-center justify-between gap-3 md:gap-4">
+            <div className="min-w-0 flex items-center gap-2">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="secondary"
+                    className="md:hidden h-8 px-3 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700"
+                  >
+                    Menu
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="start" className="bg-zinc-900 border-zinc-700 min-w-[220px]">
+                  {navItems.map(item => (
+                    <DropdownMenuItem
+                      key={`mobile-nav-${item.tab}`}
+                      className="text-zinc-200 hover:bg-zinc-800 flex items-center justify-between"
+                      onClick={() => handleTabChange(item.tab)}
+                    >
+                      <span className="flex items-center gap-2">
+                        <item.icon className="w-4 h-4 text-zinc-400" />
+                        {item.label}
+                      </span>
+                      {item.badge ? (
+                        <span className="px-1.5 py-0.5 rounded-full text-[10px] font-bold bg-red-500/20 text-red-300 border border-red-500/30">
+                          {item.badge}
+                        </span>
+                      ) : null}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <div className="min-w-0">
+                <p className="text-[10px] md:text-[11px] text-zinc-500 uppercase tracking-widest font-medium">Workspace</p>
+                <h1 className="text-lg md:text-xl font-semibold tracking-tight truncate">{activeTabTitle}</h1>
+              </div>
             </div>
-            <div className="flex items-center gap-2 flex-wrap justify-end shrink-0">
+            <div className="flex items-center gap-1.5 md:gap-2 flex-wrap justify-end shrink-0">
+              {managedMode && (
+                <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30 text-[10px] md:text-xs">Managed</Badge>
+              )}
+              {isConfigured ? (
+                <Badge className="bg-orange-400/20 text-orange-300 border-orange-400/30 text-[10px] md:text-xs">
+                  <CheckCircle className="w-3 h-3 mr-1" />
+                  Ready
+                </Badge>
+              ) : (
+                <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-[10px] md:text-xs">
+                  <Settings className="w-3 h-3 mr-1" />
+                  Setup
+                </Badge>
+              )}
               {isCalling && (
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-400/10 border border-orange-400/20">
+                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-400/10 border border-orange-400/20">
                   <span className="w-1.5 h-1.5 rounded-full bg-orange-300 animate-pulse" />
                   <span className="text-xs font-medium text-orange-300">Running</span>
                 </div>
-              )}
-              {managedMode && (
-                <Badge className="bg-blue-500/20 text-blue-300 border-blue-500/30">Managed</Badge>
-              )}
-              {isConfigured ? (
-                <Badge className="bg-orange-400/20 text-orange-300 border-orange-400/30">
-                  <CheckCircle className="w-3 h-3 mr-1" />
-                  Configured
-                </Badge>
-              ) : (
-                <Badge className="bg-red-500/20 text-red-400 border-red-500/30">
-                  <Settings className="w-3 h-3 mr-1" />
-                  Setup Required
-                </Badge>
               )}
             </div>
           </div>
         </header>
 
         {/* Main Content */}
-        <main className="flex-1 px-6 md:px-10 py-8 space-y-8">
+        <main className="flex-1 px-4 md:px-10 py-5 md:py-8 pb-24 md:pb-8 space-y-6 md:space-y-8">
         {topStats.length > 0 && (
-          <section className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          <section className="grid gap-4 md:gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-4">
             {topStats.map((stat) => (
               <StatCard
                 key={stat.label}
@@ -3057,9 +3094,9 @@ export default function Dashboard() {
           </section>
         )}
 
-        <div className={`grid gap-10 ${showSideAssistant ? 'xl:grid-cols-[420px_minmax(0,1fr)]' : ''}`}>
+        <div className={`grid gap-6 md:gap-10 ${showSideAssistant ? 'xl:grid-cols-[420px_minmax(0,1fr)]' : ''}`}>
           {showSideAssistant && (
-            <aside className="xl:sticky xl:top-24 xl:h-[calc(100vh-7rem)]">
+            <aside className="hidden xl:block xl:sticky xl:top-24 xl:h-[calc(100vh-7rem)]">
               <Card className="h-full bg-zinc-900/90 border-zinc-800 shadow-lg shadow-black/30">
                 <CardHeader className="space-y-2 pb-3">
                   <div className="flex items-center justify-between">
@@ -3170,7 +3207,7 @@ export default function Dashboard() {
           <div className="space-y-6 min-w-0">
               <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-6">
                 {activeTab === 'overview' && nextStep && (
-                  <div className="rounded-xl border border-orange-400/20 bg-orange-400/5 px-4 py-3 flex items-center justify-between gap-4">
+                  <div className="rounded-xl border border-orange-400/20 bg-orange-400/5 px-4 py-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-4">
                     <p className="text-sm text-zinc-400">{activeTabHint}</p>
                     <button
                       type="button"
@@ -3212,13 +3249,13 @@ export default function Dashboard() {
 
           <TabsContent value="agents" className="space-y-6 animate-in fade-in-50 duration-200">
             <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden">
-              <CardHeader className="pb-4">
+              <CardHeader className="pb-3 md:pb-4">
                 <div>
-                  <CardTitle className="text-2xl flex items-center gap-2">
-                    <Bot className="w-6 h-6 text-orange-300" />
+                  <CardTitle className="text-xl md:text-2xl flex items-center gap-2">
+                    <Bot className="w-5 h-5 md:w-6 md:h-6 text-orange-300" />
                     Start with your calling agent
                   </CardTitle>
-                  <CardDescription className="mt-1">
+                  <CardDescription className="mt-1 text-sm">
                     Pick an agent from the list below to start.
                   </CardDescription>
                 </div>
@@ -3242,7 +3279,7 @@ export default function Dashboard() {
                   </div>
                 ) : (
                   <>
-                    <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 h-[58vh] overflow-y-auto p-4 space-y-3">
+                    <div className="rounded-xl border border-zinc-800 bg-zinc-950/40 h-[52vh] md:h-[58vh] overflow-y-auto p-3 md:p-4 space-y-3">
                       {agentMessages.length === 0 ? (
                         <div className="text-sm text-zinc-500">
                           Start by describing your business and goal. I will create and verify all setup inputs with you.
@@ -3316,17 +3353,17 @@ export default function Dashboard() {
                             void askAgent()
                           }
                         }}
-                        placeholder={`Tell ${activeAgentName} what you need. Press Cmd/Ctrl + Enter to send.`}
-                        className="min-h-[120px] bg-zinc-800 border-zinc-700 text-base"
+                        placeholder={`Tell ${activeAgentName} what you need.`}
+                        className="min-h-[112px] md:min-h-[120px] bg-zinc-800 border-zinc-700 text-base"
                       />
-                      <div className="rounded-xl border border-zinc-800 bg-zinc-950/35 p-2 flex flex-wrap items-center gap-2">
+                      <div className="rounded-xl border border-zinc-800 bg-zinc-950/35 p-2.5 flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
                             <Button
                               type="button"
                               size="sm"
                               variant="secondary"
-                              className="h-9 px-3 bg-zinc-800 hover:bg-zinc-700"
+                              className="h-10 sm:h-9 w-full sm:w-auto px-3 bg-zinc-800 hover:bg-zinc-700"
                               disabled={agentLoading}
                             >
                               <Plus className="w-4 h-4" />
@@ -3371,7 +3408,7 @@ export default function Dashboard() {
                         </DropdownMenu>
 
                         <Select value={activeAgentId} onValueChange={setActiveAgentId}>
-                          <SelectTrigger className="h-9 min-w-[180px] bg-zinc-900 border-zinc-700 text-zinc-200">
+                          <SelectTrigger className="h-10 sm:h-9 w-full sm:min-w-[180px] bg-zinc-900 border-zinc-700 text-zinc-200">
                             <SelectValue placeholder="Select model" />
                           </SelectTrigger>
                           <SelectContent className="bg-zinc-900 border-zinc-700">
@@ -3384,7 +3421,7 @@ export default function Dashboard() {
                         </Select>
 
                         <Select value={selectedLanguage} onValueChange={setSelectedLanguage}>
-                          <SelectTrigger className="h-9 min-w-[160px] bg-zinc-900 border-zinc-700 text-zinc-200">
+                          <SelectTrigger className="h-10 sm:h-9 w-full sm:min-w-[160px] bg-zinc-900 border-zinc-700 text-zinc-200">
                             <SelectValue placeholder="Language" />
                           </SelectTrigger>
                           <SelectContent className="bg-zinc-900 border-zinc-700">
@@ -3399,7 +3436,7 @@ export default function Dashboard() {
                         <Button
                           type="button"
                           variant={liveVoiceCallEnabled ? 'default' : 'secondary'}
-                          className={liveVoiceCallEnabled ? 'h-9 bg-zinc-200 text-zinc-900 hover:bg-zinc-100' : 'h-9 bg-zinc-800 hover:bg-zinc-700'}
+                          className={liveVoiceCallEnabled ? 'h-10 sm:h-9 w-full sm:w-auto bg-zinc-200 text-zinc-900 hover:bg-zinc-100' : 'h-10 sm:h-9 w-full sm:w-auto bg-zinc-800 hover:bg-zinc-700'}
                           onClick={toggleLiveVoiceCall}
                           disabled={agentLoading}
                         >
@@ -3407,14 +3444,14 @@ export default function Dashboard() {
                           {liveVoiceCallEnabled ? 'End Voice Call' : 'Voice Call'}
                         </Button>
                       </div>
-                      <div className="flex items-center justify-between">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                         <p className="text-[11px] text-zinc-500">
                           {liveVoiceCallEnabled
                             ? 'Voice call mode active. The assistant keeps listening after each reply.'
                             : 'You can type, upload files, or talk by voice.'}
                           {agentSpeaking ? ' Replying now…' : agentListening ? ' Listening…' : ''}
                         </p>
-                        <Button onClick={() => void askAgent()} disabled={agentLoading || !agentInput.trim()}>
+                        <Button className="h-10 w-full sm:w-auto" onClick={() => void askAgent()} disabled={agentLoading || !agentInput.trim()}>
                           {agentLoading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4 mr-2" />}
                           Send
                         </Button>
@@ -3634,6 +3671,33 @@ export default function Dashboard() {
           </div>
         </div>
         </main>
+      </div>
+
+      <div className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-zinc-800/80 bg-zinc-950/95 backdrop-blur-xl px-2 pt-2 pb-[max(0.5rem,env(safe-area-inset-bottom))]">
+        <div className="grid grid-cols-5 gap-1">
+          {mobilePrimaryTabs.map(item => (
+            <button
+              key={`mobile-bottom-${item.tab}`}
+              type="button"
+              onClick={() => handleTabChange(item.tab)}
+              className={`relative rounded-xl px-2 py-2.5 text-[10px] font-medium transition ${
+                activeTab === item.tab
+                  ? 'bg-orange-400/15 text-orange-300 border border-orange-400/30'
+                  : 'text-zinc-400 bg-zinc-900/70 border border-zinc-800'
+              }`}
+            >
+              <span className="flex flex-col items-center gap-1">
+                <item.icon className={`w-4 h-4 ${activeTab === item.tab ? 'text-orange-300' : 'text-zinc-500'}`} />
+                <span className="truncate max-w-full">{item.label}</span>
+              </span>
+              {item.badge ? (
+                <span className="absolute -top-1 -right-1 px-1 py-0.5 rounded-full text-[9px] font-bold bg-red-500 text-white">
+                  {item.badge}
+                </span>
+              ) : null}
+            </button>
+          ))}
+        </div>
       </div>
 
       {numberPurchaseModal && (
