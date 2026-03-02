@@ -52,10 +52,10 @@ export default function ForgotPasswordPage() {
             Back to login
           </Link>
         </div>
-        <Card className="bg-gradient-to-br from-zinc-900/90 via-zinc-900/75 to-zinc-950/85 border-orange-500/20 text-white">
+        <Card className="bg-gradient-to-br from-zinc-900/90 via-zinc-900/75 to-zinc-950/85 border-orange-400/20 text-white">
           <CardHeader>
             <CardTitle className="text-2xl flex items-center gap-2">
-              <Mail className="w-5 h-5 text-orange-400" />
+              <Mail className="w-5 h-5 text-orange-300" />
               Forgot Password
             </CardTitle>
             <CardDescription className="text-zinc-400 flex items-center gap-2">
@@ -76,7 +76,7 @@ export default function ForgotPasswordPage() {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600" disabled={loading}>
+              <Button type="submit" className="w-full bg-orange-400 hover:bg-orange-500" disabled={loading}>
                 {loading ? 'Sending...' : 'Send reset link'}
               </Button>
               {sent && (

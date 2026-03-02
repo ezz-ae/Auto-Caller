@@ -42,7 +42,7 @@ export function CookieConsent() {
         <Button
           type="button"
           size="sm"
-          className="bg-orange-500 hover:bg-orange-600"
+          className="bg-orange-400 hover:bg-orange-500"
           onClick={() => setConsent('accepted')}
         >
           Accept

@@ -38,12 +38,12 @@ export function CallbacksTab({
     <div className="space-y-8 animate-in fade-in-50 duration-200">
       <div className="grid gap-8 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
-          <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-orange-500/5">
+          <Card className="bg-zinc-900 border-zinc-800 shadow-xl border-orange-400/5">
             <CardHeader className="pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                 <div className="space-y-1">
                   <CardTitle className="text-2xl font-bold flex items-center gap-3">
-                    <CalendarClock className="w-7 h-7 text-orange-400" />
+                    <CalendarClock className="w-7 h-7 text-orange-300" />
                     Callback Queue
                   </CardTitle>
                   <CardDescription className="text-sm">
@@ -73,13 +73,13 @@ export function CallbacksTab({
               </div>
             </CardHeader>
             <CardContent className="pt-8 px-8 pb-8 space-y-6">
-              <div className="flex items-center justify-between p-6 rounded-2xl bg-orange-500/5 border border-orange-500/10">
+              <div className="flex items-center justify-between p-6 rounded-2xl bg-orange-400/5 border border-orange-400/10">
                  <div className="space-y-1">
                     <p className="text-base font-semibold text-zinc-100">Load Scheduled to Call Center</p>
                     <p className="text-xs text-zinc-500">Automatically move all "Due Now" and "Scheduled" tasks into a campaign.</p>
                  </div>
                  <Button
-                    className="bg-orange-500 hover:bg-orange-600 h-12 rounded-xl px-8 font-bold shadow-lg shadow-orange-500/10"
+                    className="bg-orange-400 hover:bg-orange-500 h-12 rounded-xl px-8 font-bold shadow-lg shadow-orange-400/10"
                     onClick={loadScheduledCallbacksToComposer}
                   >
                     Load Outreach Queue
@@ -115,7 +115,7 @@ export function CallbacksTab({
                               </div>
                               <div className="flex items-center gap-4">
                                  <div className="flex items-center gap-2 px-3 py-1 rounded-lg bg-zinc-900 border border-zinc-800">
-                                    <CalendarClock className="w-3 h-3 text-orange-400" />
+                                    <CalendarClock className="w-3 h-3 text-orange-300" />
                                     <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-tighter">Due {formatDateTime(task.callbackAt)}</span>
                                  </div>
                               </div>
@@ -124,7 +124,7 @@ export function CallbacksTab({
                               <Badge
                                 className={`h-8 px-4 rounded-lg text-[10px] uppercase font-bold tracking-widest ${
                                   task.status === 'completed'
-                                    ? 'bg-orange-500/10 text-orange-400 border-orange-500/20'
+                                    ? 'bg-orange-400/10 text-orange-300 border-orange-400/20'
                                     : task.status === 'cancelled'
                                       ? 'bg-red-500/10 text-red-400 border-red-500/20'
                                       : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
@@ -175,7 +175,7 @@ export function CallbacksTab({
         </div>
 
         <div className="space-y-8">
-          <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden border-orange-500/5">
+          <Card className="bg-zinc-900 border-zinc-800 shadow-xl overflow-hidden border-orange-400/5">
             <CardHeader className="pb-8 bg-zinc-950/50 border-b border-zinc-800/50">
               <CardTitle className="text-lg font-bold">Queue Snapshot</CardTitle>
             </CardHeader>
@@ -192,7 +192,7 @@ export function CallbacksTab({
                  <div className="pt-4 border-t border-zinc-800 space-y-4">
                     <div className="flex justify-between items-center">
                        <span className="text-xs text-zinc-600 uppercase font-bold tracking-widest">Completed Today</span>
-                       <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20">{dailyReport.followUpsCompleted}</Badge>
+                       <Badge className="bg-orange-400/10 text-orange-300 border-orange-400/20">{dailyReport.followUpsCompleted}</Badge>
                     </div>
                     <div className="flex justify-between items-center">
                        <span className="text-xs text-zinc-600 uppercase font-bold tracking-widest">Cancelled Today</span>
@@ -210,8 +210,8 @@ export function CallbacksTab({
             </CardContent>
           </Card>
 
-          <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-6 flex items-start gap-4">
-             <Info className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
+          <div className="rounded-2xl border border-orange-400/20 bg-orange-400/5 p-6 flex items-start gap-4">
+             <Info className="w-5 h-5 text-orange-300 shrink-0 mt-0.5" />
              <p className="text-xs text-zinc-400 leading-relaxed font-medium">
                 Callbacks are automatically identified by our AI during live calls. If a lead asks to be called back later, it appears here instantly.
              </p>

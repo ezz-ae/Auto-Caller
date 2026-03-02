@@ -69,11 +69,11 @@ function SuccessContent() {
   
   return (
     <div className="cw-editor-marketing min-h-screen text-white flex items-center justify-center p-4">
-      <Card className="bg-gradient-to-br from-zinc-900/90 via-zinc-900/75 to-zinc-950/85 border-orange-500/20 max-w-md w-full">
+      <Card className="bg-gradient-to-br from-zinc-900/90 via-zinc-900/75 to-zinc-950/85 border-orange-400/20 max-w-md w-full">
         <CardHeader className="text-center">
           {status === 'loading' && (
             <>
-              <Loader2 className="w-16 h-16 mx-auto mb-4 text-orange-400 animate-spin" />
+              <Loader2 className="w-16 h-16 mx-auto mb-4 text-orange-300 animate-spin" />
               <CardTitle>Processing Payment</CardTitle>
               <CardDescription>Please wait while we confirm your payment...</CardDescription>
             </>
@@ -81,8 +81,8 @@ function SuccessContent() {
           
           {status === 'success' && (
             <>
-              <CheckCircle className="w-16 h-16 mx-auto mb-4 text-orange-400" />
-              <CardTitle className="text-orange-400">Payment Successful!</CardTitle>
+              <CheckCircle className="w-16 h-16 mx-auto mb-4 text-orange-300" />
+              <CardTitle className="text-orange-300">Payment Successful!</CardTitle>
               <CardDescription>
                 {assignedPhoneNumber
                   ? `Your dedicated number is ready: ${assignedPhoneNumber}`
@@ -106,7 +106,7 @@ function SuccessContent() {
           {status !== 'loading' && (
             <div className="space-y-2">
               <Link href="/dashboard">
-                <Button className="w-full bg-orange-500 hover:bg-orange-600">
+                <Button className="w-full bg-orange-400 hover:bg-orange-500">
                   Open Workspace
                 </Button>
               </Link>
@@ -127,7 +127,7 @@ export default function SuccessPage() {
   return (
     <Suspense fallback={
       <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center">
-        <Loader2 className="w-8 h-8 animate-spin text-orange-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-orange-300" />
       </div>
     }>
       <SuccessContent />

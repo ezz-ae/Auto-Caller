@@ -59,7 +59,7 @@ export default function VerifyNumberPage() {
               placeholder="+971501234567"
               className="bg-zinc-800 border-zinc-700"
             />
-            <Button onClick={onVerify} disabled={loading || !number.trim()} className="bg-orange-500 hover:bg-orange-600">
+            <Button onClick={onVerify} disabled={loading || !number.trim()} className="bg-orange-400 hover:bg-orange-500">
               {loading ? 'Verifying...' : 'Verify Number'}
             </Button>
           </CardContent>
@@ -89,7 +89,7 @@ export default function VerifyNumberPage() {
           This page does not expose personal owner details. It only confirms if a number is managed by Callware for outbound operations.
         </p>
 
-        <Link href="/" className="text-sm text-orange-400 hover:text-orange-300">Back to homepage</Link>
+        <Link href="/" className="text-sm text-orange-300 hover:text-orange-300">Back to homepage</Link>
       </div>
     </div>
   )

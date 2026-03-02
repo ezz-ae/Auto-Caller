@@ -54,7 +54,7 @@ export function AssistantTab({
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <CardTitle className="text-2xl flex items-center gap-2">
-                <Bot className="w-7 h-7 text-orange-400" />
+                <Bot className="w-7 h-7 text-orange-300" />
                 AI Assistant
               </CardTitle>
               <p className="text-base text-zinc-400">
@@ -62,7 +62,7 @@ export function AssistantTab({
               </p>
             </div>
             {activeAgentId && (
-              <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 px-4 py-1.5 rounded-full text-sm font-bold">
+              <Badge className="bg-orange-400/10 text-orange-300 border-orange-400/20 px-4 py-1.5 rounded-full text-sm font-bold">
                 {activeAgentName} Active
               </Badge>
             )}
@@ -84,8 +84,8 @@ export function AssistantTab({
                 </div>
               ) : agentMessages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center space-y-4 max-w-md mx-auto">
-                  <div className="w-16 h-16 rounded-2xl bg-orange-500/10 flex items-center justify-center mb-2">
-                    <Bot className="w-8 h-8 text-orange-400" />
+                  <div className="w-16 h-16 rounded-2xl bg-orange-400/10 flex items-center justify-center mb-2">
+                    <Bot className="w-8 h-8 text-orange-300" />
                   </div>
                   <h3 className="text-lg font-bold text-zinc-200">Hello! I&apos;m {activeAgentName}.</h3>
                   <p className="text-sm text-zinc-400">
@@ -109,7 +109,7 @@ export function AssistantTab({
                     <div className={`max-w-[80%] rounded-2xl p-5 shadow-sm ${
                       msg.role === 'user' 
                         ? 'bg-zinc-800 text-zinc-100 rounded-tr-none' 
-                        : 'bg-orange-500/10 border border-orange-500/20 text-zinc-200 rounded-tl-none'
+                        : 'bg-orange-400/10 border border-orange-400/20 text-zinc-200 rounded-tl-none'
                     }`}>
                       <div className="flex items-center justify-between mb-2">
                         <p className="text-[10px] uppercase tracking-widest font-bold opacity-50">
@@ -120,7 +120,7 @@ export function AssistantTab({
                             type="button"
                             size="sm"
                             variant="ghost"
-                            className="h-6 px-2 text-orange-400 hover:text-orange-300 hover:bg-orange-500/10 text-[10px] uppercase font-bold"
+                            className="h-6 px-2 text-orange-300 hover:text-orange-300 hover:bg-orange-400/10 text-[10px] uppercase font-bold"
                             onClick={() => speakAgentMessage(msg.content)}
                           >
                             Listen
@@ -130,12 +130,12 @@ export function AssistantTab({
                       <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                       
                       {msg.checklist && msg.checklist.length > 0 && (
-                        <div className="mt-4 pt-4 border-t border-orange-500/10 space-y-2">
-                          <p className="text-[10px] uppercase font-bold text-orange-400 tracking-widest">Recommended Steps</p>
+                        <div className="mt-4 pt-4 border-t border-orange-400/10 space-y-2">
+                          <p className="text-[10px] uppercase font-bold text-orange-300 tracking-widest">Recommended Steps</p>
                           <ul className="space-y-1.5">
                             {msg.checklist.map((item: string, idx: number) => (
                               <li key={idx} className="flex items-start gap-2 text-xs text-zinc-400">
-                                <div className="w-1 h-1 rounded-full bg-orange-500 mt-1.5 shrink-0" />
+                                <div className="w-1 h-1 rounded-full bg-orange-400 mt-1.5 shrink-0" />
                                 {item}
                               </li>
                             ))}
@@ -147,7 +147,7 @@ export function AssistantTab({
                         <div className="mt-4 flex items-center justify-between gap-4 p-3 rounded-xl bg-zinc-950/40 border border-zinc-800">
                           <div className="space-y-0.5">
                              <p className="text-[9px] uppercase font-bold text-zinc-500 tracking-tighter">Workspace Shortcut</p>
-                             <p className="text-xs font-semibold text-orange-400">{getActionLabel(msg.action)}</p>
+                             <p className="text-xs font-semibold text-orange-300">{getActionLabel(msg.action)}</p>
                           </div>
                           <Button size="sm" variant="secondary" className="h-8 bg-zinc-800 hover:bg-zinc-700 text-xs" onClick={() => setActiveTab(msg.action)}>
                              Go Now
@@ -172,13 +172,13 @@ export function AssistantTab({
                     }
                   }}
                   placeholder={`Ask ${activeAgentName} anything...`}
-                  className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl text-zinc-100 placeholder:text-zinc-600 px-6 focus-visible:ring-orange-500/50"
+                  className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl text-zinc-100 placeholder:text-zinc-600 px-6 focus-visible:ring-orange-400/50"
                   disabled={!activeAgentId}
                 />
                 <Button 
                   onClick={askAgent} 
                   disabled={agentLoading || !agentInput.trim() || !activeAgentId}
-                  className="h-12 w-12 rounded-xl bg-orange-500 hover:bg-orange-600 shadow-lg shadow-orange-500/20 flex items-center justify-center shrink-0"
+                  className="h-12 w-12 rounded-xl bg-orange-400 hover:bg-orange-500 shadow-lg shadow-orange-400/20 flex items-center justify-center shrink-0"
                 >
                   {agentLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                 </Button>
@@ -206,12 +206,12 @@ export function AssistantTab({
                     onClick={() => setActiveAgentId(agent.id)}
                     className={`relative rounded-2xl border p-5 text-left transition-all duration-300 group ${
                       isActive
-                        ? 'border-orange-500/50 bg-orange-500/5 shadow-lg shadow-orange-500/5'
+                        ? 'border-orange-400/50 bg-orange-400/5 shadow-lg shadow-orange-400/5'
                         : 'border-zinc-800 bg-zinc-950/40 hover:border-zinc-700 hover:bg-zinc-900/50'
                     }`}
                   >
                     <div className="flex items-center justify-between mb-3">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isActive ? 'bg-orange-500/20 text-orange-400' : 'bg-zinc-900 text-zinc-600 group-hover:text-zinc-400'}`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${isActive ? 'bg-orange-400/20 text-orange-300' : 'bg-zinc-900 text-zinc-600 group-hover:text-zinc-400'}`}>
                         <Bot className="w-6 h-6" />
                       </div>
                       <Badge variant="outline" className="text-[10px] uppercase border-zinc-800 text-zinc-500">{historyCount} messages</Badge>
@@ -221,7 +221,7 @@ export function AssistantTab({
                       {profile?.language} • {profile?.expertise}
                     </p>
                     {isActive && (
-                      <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+                      <div className="absolute top-4 right-4 w-2 h-2 rounded-full bg-orange-400 animate-pulse" />
                     )}
                   </button>
                 )

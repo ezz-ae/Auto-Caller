@@ -116,10 +116,10 @@ export function OnboardingChat({ onDemoRequested }: Props) {
       {/* Header */}
       <div className="px-5 py-4 border-b border-zinc-800/60 flex items-center gap-3 bg-zinc-900/90 shrink-0">
         <div className="relative shrink-0">
-          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-500 to-orange-700 flex items-center justify-center shadow-md shadow-orange-500/20">
+          <div className="w-9 h-9 rounded-full bg-gradient-to-br from-orange-400 to-orange-600 flex items-center justify-center shadow-md shadow-orange-400/20">
             <Bot className="w-4 h-4 text-white" />
           </div>
-          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-orange-400 border-2 border-zinc-900" />
+          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-orange-300 border-2 border-zinc-900" />
         </div>
         <div>
           <p className="text-sm font-semibold text-white">Maya @ Callware</p>
@@ -137,7 +137,7 @@ export function OnboardingChat({ onDemoRequested }: Props) {
             <div
               className={`max-w-[82%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap ${
                 msg.role === 'user'
-                  ? 'bg-orange-500/20 text-orange-50 border border-orange-500/25 rounded-tr-sm'
+                  ? 'bg-orange-400/20 text-orange-50 border border-orange-400/25 rounded-tr-sm'
                   : 'bg-zinc-800/70 text-zinc-200 border border-zinc-700/50 rounded-tl-sm'
               }`}
             >
@@ -165,7 +165,7 @@ export function OnboardingChat({ onDemoRequested }: Props) {
           <div className="flex flex-col gap-2">
             <Button
               asChild
-              className="w-full h-11 rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 font-semibold shadow-lg shadow-orange-500/20 text-white"
+              className="w-full h-11 rounded-xl bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 font-semibold shadow-lg shadow-orange-400/20 text-white"
             >
               <Link href="/login">
                 Start free workspace
@@ -174,7 +174,7 @@ export function OnboardingChat({ onDemoRequested }: Props) {
             </Button>
             <button
               type="button"
-              className="text-[11px] text-zinc-500 hover:text-orange-400 transition text-center py-1 flex items-center justify-center gap-1.5"
+              className="text-[11px] text-zinc-500 hover:text-orange-300 transition text-center py-1 flex items-center justify-center gap-1.5"
               onClick={onDemoRequested}
             >
               <Phone className="w-3 h-3" />
@@ -191,7 +191,7 @@ export function OnboardingChat({ onDemoRequested }: Props) {
                   onClick={() =>
                     phase === 'goal' ? handleGoal(chip) : handleIndustry(chip)
                   }
-                  className="px-3 py-1.5 rounded-full border border-zinc-700/80 bg-zinc-800/50 text-xs font-medium text-zinc-300 hover:border-orange-500/60 hover:text-orange-300 hover:bg-orange-500/8 transition-all duration-150"
+                  className="px-3 py-1.5 rounded-full border border-zinc-700/80 bg-zinc-800/50 text-xs font-medium text-zinc-300 hover:border-orange-400/60 hover:text-orange-300 hover:bg-orange-400/8 transition-all duration-150"
                 >
                   {chip}
                 </button>

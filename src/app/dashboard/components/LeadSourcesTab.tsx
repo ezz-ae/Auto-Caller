@@ -115,9 +115,9 @@ export function LeadSourcesTab({
           </CardHeader>
           <CardContent className="space-y-8 flex-1 flex flex-col justify-between">
             <div className="grid grid-cols-2 gap-4">
-              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6 text-center space-y-2 group hover:border-orange-500/20 transition-all">
-                <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest group-hover:text-orange-400 transition-colors">New Leads</p>
-                <p className="text-4xl font-bold text-orange-400">{leadSourceSettings.inboxNewCount}</p>
+              <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6 text-center space-y-2 group hover:border-orange-400/20 transition-all">
+                <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest group-hover:text-orange-300 transition-colors">New Leads</p>
+                <p className="text-4xl font-bold text-orange-300">{leadSourceSettings.inboxNewCount}</p>
               </div>
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950/40 p-6 text-center space-y-2 group hover:border-zinc-700 transition-all">
                 <p className="text-[10px] text-zinc-500 uppercase font-bold tracking-widest">Imported</p>
@@ -128,7 +128,7 @@ export function LeadSourcesTab({
             <div className="space-y-4">
               <Button
                 type="button"
-                className="w-full h-16 text-lg font-bold rounded-2xl bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 shadow-xl shadow-orange-500/10"
+                className="w-full h-16 text-lg font-bold rounded-2xl bg-gradient-to-r from-orange-400 to-orange-500 hover:from-orange-500 hover:to-orange-600 shadow-xl shadow-orange-400/10"
                 onClick={pullLeadInboxToComposer}
                 disabled={loadingLeadInbox || leadSourceSettings.inboxNewCount === 0}
               >

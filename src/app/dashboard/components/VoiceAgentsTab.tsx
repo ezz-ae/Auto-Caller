@@ -71,24 +71,24 @@ export function VoiceAgentsTab({
           <div className="flex items-center justify-between">
             <div className="space-y-1">
               <CardTitle className="text-2xl flex items-center gap-2">
-                <Users className="w-7 h-7 text-orange-400" />
+                <Users className="w-7 h-7 text-orange-300" />
                 Hire Agents
               </CardTitle>
               <CardDescription className="text-base text-zinc-400">
                 Hire pre-built outbound agents by role, language, and objective.
               </CardDescription>
             </div>
-            <div className="rounded-xl border border-orange-500/20 bg-orange-500/5 px-4 py-2">
-              <p className="text-xs text-orange-400 font-bold uppercase tracking-widest">Active Agents</p>
+            <div className="rounded-xl border border-orange-400/20 bg-orange-400/5 px-4 py-2">
+              <p className="text-xs text-orange-300 font-bold uppercase tracking-widest">Active Agents</p>
               <p className="text-xl font-bold text-zinc-100">{callerIdentities.length}</p>
             </div>
           </div>
         </CardHeader>
         
         <CardContent className="space-y-10 pt-8 px-8">
-          <div className="rounded-2xl border border-orange-500/20 bg-orange-500/5 p-6 flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-orange-500/20 flex items-center justify-center shrink-0">
-              <Sparkles className="w-5 h-5 text-orange-400" />
+          <div className="rounded-2xl border border-orange-400/20 bg-orange-400/5 p-6 flex items-start gap-4">
+            <div className="w-10 h-10 rounded-xl bg-orange-400/20 flex items-center justify-center shrink-0">
+              <Sparkles className="w-5 h-5 text-orange-300" />
             </div>
             <div>
               <p className="text-base font-semibold text-zinc-100">Conversation-first mode active.</p>
@@ -114,7 +114,7 @@ export function VoiceAgentsTab({
               <Badge
                 className={
                   ttsHealth?.status === 'ready'
-                    ? 'bg-orange-500/15 text-orange-300 border-orange-500/30'
+                    ? 'bg-orange-400/15 text-orange-300 border-orange-400/30'
                     : 'bg-amber-500/15 text-amber-300 border-amber-500/30'
                 }
               >
@@ -130,7 +130,7 @@ export function VoiceAgentsTab({
                 placeholder="e.g., Sara"
                 value={identityForm.name}
                 onChange={e => setIdentityForm(prev => ({ ...prev, name: e.target.value }))}
-                className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl focus:ring-orange-500/50"
+                className="bg-zinc-800/50 border-zinc-700 h-12 rounded-xl focus:ring-orange-400/50"
               />
             </div>
             <div className="space-y-2">
@@ -220,7 +220,7 @@ export function VoiceAgentsTab({
 
               <div className="rounded-2xl border border-zinc-800 bg-zinc-950/60 p-6 space-y-6">
                 <div className="flex items-center gap-2">
-                  <Volume2 className="w-5 h-5 text-orange-400" />
+                  <Volume2 className="w-5 h-5 text-orange-300" />
                   <p className="text-base font-semibold text-zinc-100">Voice Quality Test</p>
                 </div>
                 <Textarea
@@ -236,7 +236,7 @@ export function VoiceAgentsTab({
                   <div className="flex items-center gap-3">
                     <Button
                       type="button"
-                      className="bg-orange-500 hover:bg-orange-600 h-11 px-8 rounded-xl shadow-lg shadow-orange-500/20"
+                      className="bg-orange-400 hover:bg-orange-500 h-11 px-8 rounded-xl shadow-lg shadow-orange-400/20"
                       onClick={() => previewIdentityVoice(identityForm.voiceId, identityForm.language)}
                       disabled={!identityForm.voiceId || !!previewingVoice}
                     >
@@ -295,7 +295,7 @@ export function VoiceAgentsTab({
               type="button"
               onClick={saveCallerIdentity}
               disabled={identityLoading}
-              className="bg-orange-500 hover:bg-orange-600 h-14 px-10 text-lg font-bold rounded-2xl shadow-xl shadow-orange-500/20"
+              className="bg-orange-400 hover:bg-orange-500 h-14 px-10 text-lg font-bold rounded-2xl shadow-xl shadow-orange-400/20"
             >
               {identityLoading ? 'Saving...' : (editingCallerIdentityId ? 'Update Agent' : 'Hire Agent')}
             </Button>
@@ -327,11 +327,11 @@ export function VoiceAgentsTab({
                     : 0
                   const isActive = selectedCallerIdentityId === identity.id
                   return (
-                    <div key={identity.id} className={`group rounded-2xl border p-6 transition-all duration-300 ${isActive ? 'border-orange-500/50 bg-orange-500/10 shadow-lg shadow-orange-500/5' : 'border-zinc-800 bg-zinc-950/40 hover:border-zinc-700'}`}>
+                    <div key={identity.id} className={`group rounded-2xl border p-6 transition-all duration-300 ${isActive ? 'border-orange-400/50 bg-orange-400/10 shadow-lg shadow-orange-400/5' : 'border-zinc-800 bg-zinc-950/40 hover:border-zinc-700'}`}>
                       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6">
                         <div className="space-y-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center font-bold text-orange-400">
+                            <div className="w-12 h-12 rounded-xl bg-zinc-900 border border-zinc-800 flex items-center justify-center font-bold text-orange-300">
                               {identity.name.charAt(0)}
                             </div>
                             <div>
@@ -357,11 +357,11 @@ export function VoiceAgentsTab({
                                 </div>
                                 <div className="space-y-0.5">
                                    <p className="text-[10px] uppercase text-zinc-500 font-bold tracking-widest">Connected</p>
-                                   <p className="text-sm font-bold text-orange-400">{identity.connectedCalls}</p>
+                                   <p className="text-sm font-bold text-orange-300">{identity.connectedCalls}</p>
                                 </div>
                                 <div className="space-y-0.5">
                                    <p className="text-[10px] uppercase text-zinc-500 font-bold tracking-widest">Success</p>
-                                   <p className="text-sm font-bold text-orange-400">{successRate}%</p>
+                                   <p className="text-sm font-bold text-orange-300">{successRate}%</p>
                                 </div>
                              </div>
                           </div>
@@ -377,7 +377,7 @@ export function VoiceAgentsTab({
                             </Button>
                           )}
                           {identity.dedicatedNumber && (
-                            <Badge className="bg-orange-500/10 text-orange-400 border-orange-500/20 px-3 py-1">
+                            <Badge className="bg-orange-400/10 text-orange-300 border-orange-400/20 px-3 py-1">
                               Line Active
                             </Badge>
                           )}
@@ -423,9 +423,9 @@ export function VoiceAgentsTab({
       </Card>
 
       <div className="flex items-start gap-3 p-6 bg-zinc-900/50 rounded-2xl border border-zinc-800/50">
-        <Info className="w-5 h-5 text-orange-400 shrink-0 mt-0.5" />
+        <Info className="w-5 h-5 text-orange-300 shrink-0 mt-0.5" />
         <p className="text-sm font-medium text-zinc-400 leading-relaxed">
-          Your agents are specialized to handle different markets and goals. Assign them to campaigns in the <span className="text-orange-400 font-bold">Call Center</span> to start reaching your leads.
+          Your agents are specialized to handle different markets and goals. Assign them to campaigns in the <span className="text-orange-300 font-bold">Call Center</span> to start reaching your leads.
         </p>
       </div>
     </div>
