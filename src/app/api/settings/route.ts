@@ -5,12 +5,27 @@ import { resetClient } from '@/lib/twilio';
 import { requireUserIdFromRequest } from '@/lib/request-user';
 import { isUnauthorizedError } from '@/lib/route-errors';
 
+function isManagedModeEnvEnabled(): boolean {
+  return ['1', 'true', 'yes', 'on'].includes(String(process.env.MANAGED_MODE || '').trim().toLowerCase());
+}
+
+function shouldAssignManagedNumberOnRegistration(): boolean {
+  return ['1', 'true', 'yes', 'on'].includes(
+    String(process.env.MANAGED_ASSIGN_NUMBER_ON_REGISTRATION || '').trim().toLowerCase()
+  );
+}
+
 export async function GET(request: NextRequest) {
   try {
     const userId = requireUserIdFromRequest(request);
-    const settings = await getSettings(userId);
+    let settings = await getSettings(userId);
     const credits = await getCredits(userId);
-    const managedMode = settings.managedMode;
+    const managedMode = isManagedModeEnvEnabled() || settings.managedMode;
+
+    if (managedMode && shouldAssignManagedNumberOnRegistration() && !settings.assignedPhoneNumber) {
+      await assignManagedNumber(userId);
+      settings = await getSettings(userId);
+    }
     
     return NextResponse.json({
       settings: {
@@ -36,9 +51,12 @@ export async function GET(request: NextRequest) {
         includeAutomatedDisclosure: settings.includeAutomatedDisclosure ?? true,
       },
       credits,
-      isConfigured: managedMode
-        ? !!(settings.twilioAccountSid && settings.twilioAuthToken && settings.twilioPhoneNumber && settings.forwardToNumber)
-        : !!(settings.twilioAccountSid && settings.twilioAuthToken && settings.twilioPhoneNumber && settings.forwardToNumber),
+      isConfigured: !!(
+        settings.twilioAccountSid &&
+        settings.twilioAuthToken &&
+        settings.twilioPhoneNumber &&
+        settings.forwardToNumber
+      ),
     });
   } catch (error) {
     if (isUnauthorizedError(error)) {
@@ -53,9 +71,8 @@ export async function POST(request: NextRequest) {
     const userId = requireUserIdFromRequest(request);
     const body = await request.json();
     const current = await getSettings(userId);
-    const managedMode = current.managedMode;
-    const assignOnRegistration =
-      (process.env.MANAGED_ASSIGN_NUMBER_ON_REGISTRATION || 'false').toLowerCase() === 'true';
+    const managedMode = isManagedModeEnvEnabled() || current.managedMode;
+    const assignOnRegistration = shouldAssignManagedNumberOnRegistration();
     
     const toSave: Record<string, string | number | boolean> = {};
     
@@ -92,26 +109,26 @@ export async function POST(request: NextRequest) {
     if (!managedMode && body.twilioPhoneNumber) {
       toSave.twilioPhoneNumber = body.twilioPhoneNumber;
     }
-    if (body.forwardToNumber) {
-      toSave.forwardToNumber = body.forwardToNumber;
+    if (typeof body.forwardToNumber === 'string') {
+      toSave.forwardToNumber = body.forwardToNumber.trim();
     }
-    if (body.assignedPhoneNumber) {
-      toSave.assignedPhoneNumber = body.assignedPhoneNumber;
+    if (typeof body.assignedPhoneNumber === 'string') {
+      toSave.assignedPhoneNumber = body.assignedPhoneNumber.trim();
     }
-    if (body.businessName) {
-      toSave.businessName = body.businessName;
+    if (typeof body.businessName === 'string') {
+      toSave.businessName = body.businessName.trim();
     }
     if (typeof body.industry === 'string') {
-      toSave.industry = body.industry;
+      toSave.industry = body.industry.trim();
     }
     if (typeof body.companyDetails === 'string') {
-      toSave.companyDetails = body.companyDetails;
+      toSave.companyDetails = body.companyDetails.trim();
     }
     if (typeof body.sayThisRules === 'string') {
-      toSave.sayThisRules = body.sayThisRules;
+      toSave.sayThisRules = body.sayThisRules.trim();
     }
     if (typeof body.avoidThisRules === 'string') {
-      toSave.avoidThisRules = body.avoidThisRules;
+      toSave.avoidThisRules = body.avoidThisRules.trim();
     }
     if (typeof body.includeAutomatedDisclosure === 'boolean') {
       toSave.includeAutomatedDisclosure = body.includeAutomatedDisclosure;
@@ -132,12 +149,15 @@ export async function POST(request: NextRequest) {
       assignedPhoneNumber = await assignManagedNumber(userId);
     }
 
+    const latest = await getSettings(userId);
+
     resetClient();
     
     return NextResponse.json({
       success: true,
       credits: await getCredits(userId),
-      assignedPhoneNumber,
+      assignedPhoneNumber: latest.assignedPhoneNumber || assignedPhoneNumber,
+      managedMode: isManagedModeEnvEnabled() || latest.managedMode,
     });
   } catch (error) {
     if (isUnauthorizedError(error)) {
