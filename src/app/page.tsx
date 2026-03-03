@@ -56,7 +56,7 @@ const features = [
   },
   {
     title: 'Managed human-like voices',
-    description: 'Callware assigns production-ready voice profiles automatically per hired agent.',
+    description: 'trren assigns production-ready voice profiles automatically per hired agent.',
     icon: TrendingUp,
   },
   {
@@ -77,7 +77,7 @@ const pricing = [
 const faqs = [
   {
     q: 'Will it sound robotic?',
-    a: 'No. Each hired agent uses a tuned voice profile selected by Callware for natural delivery. You can run a live test call before launch.',
+    a: 'No. Each hired agent uses a tuned voice profile selected by trren for natural delivery. You can run a live test call before launch.',
   },
   {
     q: 'Can I use my own number?',

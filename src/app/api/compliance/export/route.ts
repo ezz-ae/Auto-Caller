@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     return new NextResponse(JSON.stringify(payload, null, 2), {
       headers: {
         'Content-Type': 'application/json',
-        'Content-Disposition': `attachment; filename="callware-compliance-export-${Date.now()}.json"`,
+        'Content-Disposition': `attachment; filename="trren-compliance-export-${Date.now()}.json"`,
       },
     });
   } catch (error) {

@@ -41,9 +41,9 @@ export default function VerifyNumberPage() {
     <div className="min-h-screen bg-zinc-950 text-white px-4 py-12">
       <div className="max-w-2xl mx-auto space-y-6">
         <div className="space-y-2">
-          <h1 className="text-3xl font-bold tracking-tight">Callware Number Verification</h1>
+          <h1 className="text-3xl font-bold tracking-tight">trren Number Verification</h1>
           <p className="text-zinc-400 text-sm">
-            Verify whether a number is a Callware-managed outbound line.
+            Verify whether a number is a trren-managed outbound line.
           </p>
         </div>
 
@@ -86,7 +86,7 @@ export default function VerifyNumberPage() {
         )}
 
         <p className="text-xs text-zinc-500">
-          This page does not expose personal owner details. It only confirms if a number is managed by Callware for outbound operations.
+          This page does not expose personal owner details. It only confirms if a number is managed by trren for outbound operations.
         </p>
 
         <Link href="/" className="text-sm text-orange-300 hover:text-orange-300">Back to homepage</Link>

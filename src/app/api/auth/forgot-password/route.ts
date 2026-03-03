@@ -22,10 +22,10 @@ async function sendPasswordResetEmail(payload: {
       from,
       to: [payload.to],
       reply_to: replyTo || undefined,
-      subject: 'Reset your Callware password',
+      subject: 'Reset your trren password',
       html: `
         <div style="font-family:Arial,sans-serif;line-height:1.5">
-          <p>You requested a password reset for your Callware account.</p>
+          <p>You requested a password reset for your trren account.</p>
           <p><a href="${payload.resetUrl}" style="background:#10b981;color:#04140f;padding:10px 14px;border-radius:8px;text-decoration:none;font-weight:600">Reset Password</a></p>
           <p>This link expires in 30 minutes.</p>
           <p>If you did not request this, you can safely ignore this email.</p>

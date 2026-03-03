@@ -39,7 +39,7 @@ export function getDemoAgentName(): string {
 }
 
 export function getDemoBusinessName(): string {
-  return String(process.env.DEMO_CALL_BUSINESS_NAME || 'Callware').trim() || 'Callware';
+  return String(process.env.DEMO_CALL_BUSINESS_NAME || 'trren').trim() || 'trren';
 }
 
 export function getDemoMaxTurns(): number {

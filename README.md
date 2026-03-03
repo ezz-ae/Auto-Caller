@@ -1,4 +1,4 @@
-# Callware Platform
+# trren Platform
 
 Production-ready outbound calling platform with:
 - campaign orchestration
@@ -80,7 +80,6 @@ cp .env.example .env.local
 
 Edit `.env.local` and set at least:
 - `NEXT_PUBLIC_APP_URL`
-- `NEXT_PUBLIC_BOOK_DEMO_URL` (WhatsApp/Calendly for manual sales)
 - `STORE_DRIVER`
 - `DATABASE_URL` (if `STORE_DRIVER=postgres`)
 - Twilio / Google AI / ElevenLabs / PayPal vars for your mode

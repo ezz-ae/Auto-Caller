@@ -29,26 +29,26 @@ const GOAL_RESPONSES: Record<string, string> = {
   'Qualify new leads':
     "Perfect — your hired agent runs structured qualification flows 24/7 and flags hot leads the moment intent is confirmed.",
   'Follow up on cold lists':
-    "Smart call. Most pipelines fail in the follow-up gap. Callware handles persistence without fatigue or drop-off.",
+    "Smart call. Most pipelines fail in the follow-up gap. trren handles persistence without fatigue or drop-off.",
   'Book more appointments':
-    "Booking campaigns are a high-ROI use case. Callware confirms intent and offers time slots automatically.",
+    "Booking campaigns are a high-ROI use case. trren confirms intent and offers time slots automatically.",
   'Re-engage past clients':
-    "Reactivation often converts best — the lead already knows you. Callware warms them back up without manual effort.",
+    "Reactivation often converts best — the lead already knows you. trren warms them back up without manual effort.",
 }
 
 const INDUSTRY_RESPONSES: Record<string, string> = {
   'Real Estate':
-    "Real estate teams on Callware reach 3–5× more leads per hour, with transcripts that surface buyer budget and timeline automatically.",
+    "Real estate teams on trren reach 3–5× more leads per hour, with transcripts that surface buyer budget and timeline automatically.",
   'Insurance':
-    "Insurance agents use Callware to follow up on quote requests and reactivate lapsed policies — all while they focus on closing.",
+    "Insurance agents use trren to follow up on quote requests and reactivate lapsed policies — all while they focus on closing.",
   'SaaS / Tech':
     "SaaS teams qualify inbound signups, re-engage trial drop-offs, and convert demo requests into booked meetings — automatically.",
   'Healthcare':
-    "Healthcare practices use Callware for appointment follow-ups, missed-visit outreach, and patient reactivation campaigns.",
+    "Healthcare practices use trren for appointment follow-ups, missed-visit outreach, and patient reactivation campaigns.",
   'Finance':
     "Finance teams qualify pre-approved leads and reach out on rate alerts while intent is at its peak.",
   'E-commerce':
-    "E-commerce brands use Callware for cart recovery, VIP winbacks, and post-purchase upsells with voices that match brand tone.",
+    "E-commerce brands use trren for cart recovery, VIP winbacks, and post-purchase upsells with voices that match brand tone.",
 }
 
 interface Props {
@@ -84,7 +84,7 @@ export function OnboardingChat({ onDemoRequested }: Props) {
       setIsTyping(false)
       const response =
         GOAL_RESPONSES[goal] ??
-        'Got it — Callware handles that at scale without manual effort.'
+        'Got it — trren handles that at scale without manual effort.'
       addMessage(
         'assistant',
         `${response}\n\nWhat industry are you in?`,
@@ -100,7 +100,7 @@ export function OnboardingChat({ onDemoRequested }: Props) {
       setIsTyping(false)
       const response =
         INDUSTRY_RESPONSES[industry] ??
-        'Teams like yours use Callware to run consistent outreach without growing headcount.'
+        'Teams like yours use trren to run consistent outreach without growing headcount.'
       addMessage(
         'assistant',
         `${response}\n\nYou can set up your workspace for free — no credit card needed until you launch your first campaign.`,
@@ -122,7 +122,7 @@ export function OnboardingChat({ onDemoRequested }: Props) {
           <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-orange-300 border-2 border-zinc-900" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-white">Maya @ Callware</p>
+          <p className="text-sm font-semibold text-white">Maya @ trren</p>
           <p className="text-[10px] text-zinc-400 tracking-wide">Online · Responds instantly</p>
         </div>
       </div>
