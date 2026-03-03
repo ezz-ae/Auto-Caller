@@ -42,3 +42,4 @@ Auto Caller.worktrees/
 # Package files (for distribution)
 *.zip
 *.tar.gz
+.vercel
