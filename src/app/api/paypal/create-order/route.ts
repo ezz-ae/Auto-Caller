@@ -17,12 +17,22 @@ type Product = {
   price: number
   kind: 'credits' | 'number'
   credits?: number
+  aedAmount?: number
 }
 
 const CREDIT_PACKS = [30, 60, 90, 140, 200]
+const AED_PER_USD = Number(process.env.AED_PER_USD || '3.6725')
+const MIN_CUSTOM_AED = 100
+const MAX_CUSTOM_AED = 1000
 
 function roundUsd(value: number): number {
   return Math.max(1, Math.round(value * 100) / 100)
+}
+
+function getCreditUnitPriceUsd(): number {
+  const twilioEstimatedCost = Number(process.env.TWILIO_ESTIMATED_COST_PER_CALL_USD || '0.02')
+  const creditMarginMultiplier = Number(process.env.CREDIT_MARGIN_MULTIPLIER || '2')
+  return Math.max(0.001, twilioEstimatedCost * creditMarginMultiplier)
 }
 
 function buildProductCatalog(): Record<string, Product> {
@@ -95,8 +105,29 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Product ID required' }, { status: 400 })
     }
 
-    const catalog = buildProductCatalog()
-    const product = catalog[productId] || null
+    let product: Product | null = null
+    if (productId === 'credits_custom') {
+      const rawAed = Number(body?.customAedAmount)
+      if (!Number.isFinite(rawAed)) {
+        return NextResponse.json({ error: 'customAedAmount is required for credits_custom' }, { status: 400 })
+      }
+      const normalizedAed = Math.max(MIN_CUSTOM_AED, Math.min(MAX_CUSTOM_AED, Math.round(rawAed / 10) * 10))
+      const usd = roundUsd(normalizedAed / AED_PER_USD)
+      const unitPriceUsd = getCreditUnitPriceUsd()
+      const credits = Math.max(1, Math.floor(usd / unitPriceUsd))
+      product = {
+        id: 'credits_custom',
+        name: `${normalizedAed} AED Credit Recharge`,
+        price: usd,
+        kind: 'credits',
+        credits,
+        aedAmount: normalizedAed,
+      }
+    } else {
+      const catalog = buildProductCatalog()
+      product = catalog[productId] || null
+    }
+
     if (!product) {
       return NextResponse.json({ error: 'Invalid product' }, { status: 400 })
     }
@@ -136,6 +167,7 @@ export async function POST(request: NextRequest) {
             kind: product.kind,
             credits: product.credits || 0,
             price: product.price,
+            aedAmount: product.aedAmount || undefined,
             userId,
             callerIdentityId: normalizedCallerIdentityId || undefined,
           }),

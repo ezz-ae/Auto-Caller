@@ -4,6 +4,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Wallet, Info, Sparkles, Phone, CheckCircle, AlertTriangle } from "lucide-react"
 import { PayPalCheckoutModal, type PurchaseResult } from '@/components/paypal/paypal-checkout-modal'
+import { Slider } from '@/components/ui/slider'
 
 interface BillingTabProps {
   managedMode: boolean
@@ -31,6 +32,18 @@ export function BillingTab({
   onPurchaseSuccess,
 }: BillingTabProps) {
   const [selectedProduct, setSelectedProduct] = useState<any | null>(null)
+  const [customAedAmount, setCustomAedAmount] = useState(300)
+  const usdPerCredit = React.useMemo(() => {
+    if (typeof estimatedCostPer100 === 'number' && Number.isFinite(estimatedCostPer100) && estimatedCostPer100 > 0) {
+      return estimatedCostPer100 / 100
+    }
+    const valid = creditProducts
+      .filter((product: any) => Number(product?.credits) > 0 && Number(product?.price) > 0)
+      .map((product: any) => Number(product.price) / Number(product.credits))
+      .filter((value: number) => Number.isFinite(value) && value > 0)
+    if (valid.length === 0) return 0.04
+    return valid.reduce((sum: number, value: number) => sum + value, 0) / valid.length
+  }, [creditProducts, estimatedCostPer100])
 
   if (!managedMode) {
     return (
@@ -103,7 +116,7 @@ export function BillingTab({
                   </div>
                   <div className="space-y-1 text-right">
                     <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">Active Lines</p>
-                    <p className="text-2xl font-bold text-orange-300">{callerNumbersActive}</p>
+                    <p className="text-2xl font-bold text-sky-300">{callerNumbersActive}</p>
                   </div>
                 </div>
                 <Button
@@ -117,7 +130,7 @@ export function BillingTab({
               <div className="rounded-3xl border border-zinc-800 bg-zinc-950/40 p-5 md:p-8 space-y-4 group hover:border-orange-400/20 transition-all duration-500">
                  <div className="flex items-center justify-between">
                     <p className="text-sm font-bold text-zinc-300">Credit Balance</p>
-                    <Sparkles className="w-5 h-5 text-orange-300 group-hover:rotate-12 transition-transform" />
+                    <Sparkles className="w-5 h-5 text-sky-300 group-hover:rotate-12 transition-transform" />
                  </div>
                  <div className="space-y-1 py-2">
                     <p className="text-4xl md:text-5xl font-black text-white tracking-tighter">{credits.toLocaleString()}</p>
@@ -133,36 +146,61 @@ export function BillingTab({
 
             <div className="space-y-6">
               <div className="flex items-center gap-3 px-2">
-                 <div className="w-1.5 h-1.5 rounded-full bg-orange-300" />
-                 <h3 className="text-sm font-bold text-zinc-200 uppercase tracking-widest">Select Credit Package</h3>
+                 <div className="w-1.5 h-1.5 rounded-full bg-sky-300" />
+                 <h3 className="text-sm font-bold text-zinc-200 uppercase tracking-widest">Recharge Budget</h3>
               </div>
-              <div className="grid gap-3 md:gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {creditProducts.map((product, index) => (
-                  <button
-                    key={product.id}
-                    type="button"
-                    onClick={() => setSelectedProduct(product)}
-                    className="group relative rounded-3xl border border-zinc-800 bg-zinc-900/50 p-5 md:p-8 text-left hover:border-orange-400/40 hover:bg-zinc-900 transition-all duration-300 overflow-hidden"
-                  >
-                    <div className="space-y-1 relative z-10">
-                       <p className="text-2xl md:text-3xl font-black text-white group-hover:text-orange-300 transition-colors">{(product.credits || 0).toLocaleString()}</p>
-                       <p className="text-sm text-zinc-500 font-medium">Credits</p>
-                    </div>
-                    <div className="mt-8 relative z-10">
-                       <p className="text-xl font-bold text-zinc-100">${product.price.toFixed(2)}</p>
-                       <div className="flex items-center justify-between mt-3">
-                          <p className="text-[10px] text-zinc-600 font-bold uppercase tracking-tighter">PayPal Secure</p>
-                          <ArrowRightIcon className="w-4 h-4 text-zinc-700 group-hover:translate-x-1 group-hover:text-orange-400 transition-all" />
-                       </div>
-                    </div>
-
-                    {index === 1 && (
-                       <div className="absolute top-0 right-0 p-2">
-                          <Badge className="bg-orange-400 text-zinc-950 font-black text-[9px] uppercase tracking-tighter border-none rounded-lg">Popular</Badge>
-                       </div>
-                    )}
-                  </button>
-                ))}
+              <div className="rounded-3xl border border-zinc-800 bg-zinc-900/50 p-5 md:p-8 space-y-6">
+                <div className="flex items-end justify-between gap-4">
+                  <div>
+                    <p className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Budget (AED)</p>
+                    <p className="text-4xl font-black text-sky-300 leading-none">{customAedAmount}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-xs text-zinc-500 uppercase tracking-widest font-bold">Approx USD</p>
+                    <p className="text-xl font-bold text-zinc-100">${(customAedAmount / 3.6725).toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="space-y-3">
+                  <Slider
+                    value={[customAedAmount]}
+                    onValueChange={(value) => setCustomAedAmount(value[0] ?? 300)}
+                    min={100}
+                    max={1000}
+                    step={10}
+                    className="w-full"
+                  />
+                  <div className="flex items-center justify-between text-[11px] text-zinc-500">
+                    <span>100 AED</span>
+                    <span>1000 AED</span>
+                  </div>
+                </div>
+                <div className="rounded-xl border border-zinc-800 bg-zinc-950/35 p-3">
+                    <p className="text-sm text-zinc-300">
+                      Estimated credits:
+                      <span className="ml-2 font-bold text-sky-300">
+                      {Math.max(1, Math.floor((customAedAmount / 3.6725) / Math.max(0.001, usdPerCredit))).toLocaleString()}
+                      </span>
+                    </p>
+                  <p className="text-xs text-zinc-500 mt-1">
+                    Final credits are calculated server-side from your live pricing configuration.
+                  </p>
+                </div>
+                <Button
+                  onClick={() => {
+                    const estimatedCredits = Math.max(1, Math.floor((customAedAmount / 3.6725) / Math.max(0.001, usdPerCredit)))
+                    setSelectedProduct({
+                      id: 'credits_custom',
+                      name: `${customAedAmount} AED Recharge`,
+                      price: customAedAmount / 3.6725,
+                      credits: estimatedCredits,
+                      kind: 'credits',
+                      customAedAmount,
+                    })
+                  }}
+                  className="w-full h-12 rounded-xl bg-sky-500 hover:bg-sky-400 font-bold"
+                >
+                  Recharge {customAedAmount} AED
+                </Button>
               </div>
               <div className="flex items-center gap-3 p-4 rounded-xl bg-zinc-900 border border-zinc-800">
                  <Info className="w-4 h-4 text-zinc-500" />
@@ -190,7 +228,7 @@ export function BillingTab({
                         </p>
                       </div>
                       <div className="text-right">
-                        <p className={`text-sm font-semibold ${event.amount < 0 ? 'text-amber-400' : 'text-orange-300'}`}>
+                        <p className={`text-sm font-semibold ${event.amount < 0 ? 'text-amber-400' : 'text-sky-300'}`}>
                           {event.amount > 0 ? '+' : ''}{event.amount}
                         </p>
                         <p className="text-[10px] uppercase tracking-wider text-zinc-500">{event.status}</p>
@@ -211,7 +249,7 @@ export function BillingTab({
             <div className="space-y-6">
                <div className="flex items-start gap-4">
                   <div className="w-6 h-6 rounded-full bg-orange-400/10 flex items-center justify-center shrink-0 mt-0.5">
-                     <CheckCircle className="w-3.5 h-3.5 text-orange-300" />
+                     <CheckCircle className="w-3.5 h-3.5 text-sky-300" />
                   </div>
                   <div className="space-y-1">
                      <p className="text-sm font-bold text-zinc-200">Priority Processing</p>
@@ -220,7 +258,7 @@ export function BillingTab({
                </div>
                <div className="flex items-start gap-4">
                   <div className="w-6 h-6 rounded-full bg-orange-400/10 flex items-center justify-center shrink-0 mt-0.5">
-                     <CheckCircle className="w-3.5 h-3.5 text-orange-300" />
+                     <CheckCircle className="w-3.5 h-3.5 text-sky-300" />
                   </div>
                   <div className="space-y-1">
                      <p className="text-sm font-bold text-zinc-200">Active Monitoring</p>
@@ -260,6 +298,7 @@ export function BillingTab({
           productName={selectedProduct.name}
           price={selectedProduct.price}
           credits={selectedProduct.credits}
+          customAedAmount={selectedProduct.customAedAmount}
           onSuccess={result => {
             setSelectedProduct(null)
             onPurchaseSuccess?.(result)
@@ -267,25 +306,5 @@ export function BillingTab({
         />
       )}
     </div>
-  )
-}
-
-function ArrowRightIcon(props: React.SVGProps<SVGSVGElement>) {
-  return (
-    <svg
-      {...props}
-      xmlns="http://www.w3.org/2000/svg"
-      width="24"
-      height="24"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    >
-      <path d="M5 12h14" />
-      <path d="m12 5 7 7-7 7" />
-    </svg>
   )
 }

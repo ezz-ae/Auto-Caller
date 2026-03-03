@@ -19,6 +19,7 @@ interface PayPalCheckoutModalProps {
   productName: string
   price: number
   credits?: number
+  customAedAmount?: number
   callerIdentityId?: string
   onSuccess?: (result: PurchaseResult) => void
 }
@@ -30,6 +31,7 @@ function CheckoutContent({
   productName,
   price,
   credits,
+  customAedAmount,
   callerIdentityId,
   onSuccess,
   onClose,
@@ -45,7 +47,7 @@ function CheckoutContent({
       const res = await fetch('/api/paypal/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ productId, callerIdentityId }),
+        body: JSON.stringify({ productId, callerIdentityId, customAedAmount }),
       })
       const data = await res.json()
       if (!res.ok || !data.orderId) {
@@ -156,7 +158,10 @@ function CheckoutContent({
         <div className="flex-1 min-w-0">
           <p className="font-semibold text-white text-sm truncate">{productName}</p>
           {credits ? (
-            <p className="text-xs text-zinc-500">{credits.toLocaleString()} outbound call credits</p>
+            <p className="text-xs text-zinc-500">
+              {credits.toLocaleString()} outbound call credits
+              {customAedAmount ? ` • ${customAedAmount.toLocaleString()} AED` : ''}
+            </p>
           ) : (
             <p className="text-xs text-zinc-500">Dedicated caller number</p>
           )}
@@ -206,6 +211,7 @@ export function PayPalCheckoutModal({
   productName,
   price,
   credits,
+  customAedAmount,
   callerIdentityId,
   onSuccess,
 }: PayPalCheckoutModalProps) {
@@ -250,6 +256,7 @@ export function PayPalCheckoutModal({
               productName={productName}
               price={price}
               credits={credits}
+              customAedAmount={customAedAmount}
               callerIdentityId={callerIdentityId}
               onSuccess={onSuccess}
               onClose={onClose}
