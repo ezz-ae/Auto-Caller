@@ -338,7 +338,7 @@ const DEFAULT_BILLING_PRODUCTS: Record<string, BillingProduct> = {
   number_activation: { id: 'number_activation', name: 'Dedicated Phone Number', price: 39, kind: 'number' },
 }
 
-const DEFAULT_FEMALE_VOICE_FALLBACK = '21m00Tcm4TlvDq8ikWAM' // Rachel
+const DEFAULT_FEMALE_VOICE_FALLBACK = 'SAz9YHcvj6GT2YYXdXww' // River
 const DEFAULT_MALE_VOICE_FALLBACK = 'ErXwobaYiN019PkySvjV' // Antoni
 
 const PREFERRED_ELEVENLABS_VOICES: Record<'female' | 'male', string[]> = {
@@ -1255,7 +1255,7 @@ export default function Dashboard() {
           ])
         } else {
           setVoices([
-            { id: DEFAULT_FEMALE_VOICE_FALLBACK, name: 'Rachel', category: 'premade', labels: { gender: 'female', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },
+            { id: DEFAULT_FEMALE_VOICE_FALLBACK, name: 'River', category: 'premade', labels: { gender: 'female', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },
             { id: 'AZnzlk1XvdvUeBnXmlld', name: 'Domi', category: 'premade', labels: { gender: 'female', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },
             { id: DEFAULT_MALE_VOICE_FALLBACK, name: 'Antoni', category: 'premade', labels: { gender: 'male', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },
             { id: 'TxGEqnHWrfWFT1GWmBXj', name: 'Josh', category: 'premade', labels: { gender: 'male', language: 'en-US' }, source: 'elevenlabs', language: 'en-US' },

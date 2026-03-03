@@ -3,7 +3,7 @@
 import { getSettings } from './store';
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
-const DEFAULT_VOICE_ID = process.env.ELEVENLABS_DEFAULT_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
+const DEFAULT_VOICE_ID = process.env.ELEVENLABS_DEFAULT_VOICE_ID || 'SAz9YHcvj6GT2YYXdXww';
 
 interface ElevenLabsVoice {
   voice_id: string;

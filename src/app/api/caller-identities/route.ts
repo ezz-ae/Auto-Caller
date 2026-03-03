@@ -3,7 +3,7 @@ import { deleteCallerIdentity, listCallerIdentities, saveCallerIdentity } from '
 import { getSettings } from '@/lib/store';
 import { requireUserIdFromRequest } from '@/lib/request-user';
 
-const DEFAULT_FEMALE_VOICE_ID = process.env.ELEVENLABS_DEFAULT_VOICE_ID || '21m00Tcm4TlvDq8ikWAM';
+const DEFAULT_FEMALE_VOICE_ID = process.env.ELEVENLABS_DEFAULT_VOICE_ID || 'SAz9YHcvj6GT2YYXdXww';
 
 function resolveDefaultVoiceId(input: { ttsProvider?: string; csmSpeaker?: number }): string {
   if (input.ttsProvider === 'csm') {
