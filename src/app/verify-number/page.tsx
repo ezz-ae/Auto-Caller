@@ -59,7 +59,7 @@ export default function VerifyNumberPage() {
               placeholder="+971501234567"
               className="bg-zinc-800 border-zinc-700"
             />
-            <Button onClick={onVerify} disabled={loading || !number.trim()} className="bg-orange-400 hover:bg-orange-500">
+            <Button onClick={onVerify} disabled={loading || !number.trim()} className="bg-sky-500 hover:bg-sky-400">
               {loading ? 'Verifying...' : 'Verify Number'}
             </Button>
           </CardContent>
@@ -72,7 +72,7 @@ export default function VerifyNumberPage() {
                 <p className="text-red-300">{result.error}</p>
               ) : result.verified ? (
                 <>
-                  <p className="text-orange-300 font-semibold">Verified managed number</p>
+                  <p className="text-sky-300 font-semibold">Verified managed number</p>
                   <p><span className="text-zinc-500">Company:</span> {result.companyName || 'Verified customer'}</p>
                   <p><span className="text-zinc-500">Support:</span> {result.supportNumber || 'Not provided'}</p>
                   <p className="text-zinc-400">{result.notice}</p>
@@ -89,7 +89,7 @@ export default function VerifyNumberPage() {
           This page does not expose personal owner details. It only confirms if a number is managed by trren for outbound operations.
         </p>
 
-        <Link href="/" className="text-sm text-orange-300 hover:text-orange-300">Back to homepage</Link>
+        <Link href="/" className="text-sm text-sky-300 hover:text-sky-200">Back to homepage</Link>
       </div>
     </div>
   )

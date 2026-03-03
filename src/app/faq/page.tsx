@@ -5,9 +5,9 @@ import { MarketingFooter, MarketingHeader } from '@/components/marketing/site-sh
 
 const faqs = [
   {
-    question: 'Do customers need separate telephony, voice, billing, or AI accounts?',
+    question: 'Do customers need to bring provider API keys?',
     answer:
-      'No. In managed mode, all infrastructure credentials are controlled by the platform owner and kept in server environment variables.',
+      'No. In managed mode, infrastructure is operated by trren. Customers only manage agents, leads, credits, and outcomes.',
   },
   {
     question: 'What does a customer do inside the dashboard?',
@@ -40,9 +40,9 @@ const faqs = [
       'Set APP_ACCESS_USERNAME and APP_ACCESS_PASSWORD. Users must sign in at /login before accessing the dashboard.',
   },
   {
-    question: 'What AI provider is used?',
+    question: 'Can one workspace run multiple agents?',
     answer:
-      'The platform uses a managed AI layer for script copilot, conversation guidance, and transcript analysis.',
+      'Yes. Each agent has its own role, language, dedicated number, and KPI stream under one shared wallet.',
   },
   {
     question: 'Can I deploy to production and go live today?',
@@ -58,14 +58,14 @@ export default function FaqPage() {
 
       <main className="mx-auto max-w-3xl px-4 py-20 md:py-28 space-y-12">
         <section className="text-center space-y-4">
-          <p className="text-orange-300 text-xs font-bold uppercase tracking-widest">FAQ</p>
+          <p className="text-sky-300 text-xs font-bold uppercase tracking-widest">FAQ</p>
           <h1 className="text-4xl md:text-5xl font-bold tracking-tight">Frequently asked questions</h1>
           <p className="text-zinc-400 text-lg max-w-xl mx-auto">
             Common questions about launch, billing, integrations, and operations.
           </p>
         </section>
 
-        <div className="rounded-2xl border border-orange-400/15 bg-gradient-to-br from-zinc-900/90 via-zinc-900/70 to-zinc-950/80 overflow-hidden">
+        <div className="rounded-2xl border border-sky-400/15 bg-gradient-to-br from-zinc-900/90 via-zinc-900/70 to-zinc-950/80 overflow-hidden">
           <Accordion type="single" collapsible className="w-full">
             {faqs.map((item, index) => (
               <AccordionItem
@@ -73,7 +73,7 @@ export default function FaqPage() {
                 value={`item-${index + 1}`}
                 className="border-b border-zinc-800/60 last:border-0 px-6"
               >
-                <AccordionTrigger className="text-left text-zinc-100 hover:text-orange-300 py-5 text-base font-medium">
+                <AccordionTrigger className="text-left text-zinc-100 hover:text-sky-300 py-5 text-base font-medium">
                   {item.question}
                 </AccordionTrigger>
                 <AccordionContent className="text-zinc-400 leading-relaxed pb-5">
@@ -84,7 +84,7 @@ export default function FaqPage() {
           </Accordion>
         </div>
 
-        <div className="rounded-2xl border border-orange-400/20 bg-orange-400/5 p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="rounded-2xl border border-sky-400/20 bg-sky-500/5 p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <p className="font-semibold text-zinc-100">Still have questions?</p>
             <p className="text-sm text-zinc-400 mt-1">The docs have step-by-step setup guidance for every config.</p>
@@ -93,8 +93,8 @@ export default function FaqPage() {
             <Button variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
               <Link href="/docs">Read the docs</Link>
             </Button>
-            <Button asChild className="bg-orange-400 hover:bg-orange-500 font-semibold">
-              <Link href="/login">Start free trial</Link>
+            <Button asChild className="bg-sky-500 hover:bg-sky-400 font-semibold">
+              <Link href="/login">Get started</Link>
             </Button>
           </div>
         </div>

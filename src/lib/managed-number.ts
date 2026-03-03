@@ -46,7 +46,7 @@ export async function tryProvisionManagedNumber(): Promise<string | null> {
     if (availableLocal.length > 0) {
       const purchased = await client.incomingPhoneNumbers.create({
         phoneNumber: availableLocal[0].phoneNumber,
-        friendlyName: 'Auto Caller Managed Number',
+        friendlyName: 'trren Managed Number',
       });
       return purchased.phoneNumber;
     }
@@ -63,7 +63,7 @@ export async function tryProvisionManagedNumber(): Promise<string | null> {
     if (availableTollFree.length > 0) {
       const purchased = await client.incomingPhoneNumbers.create({
         phoneNumber: availableTollFree[0].phoneNumber,
-        friendlyName: 'Auto Caller Managed Number (Toll Free)',
+        friendlyName: 'trren Managed Number (Toll Free)',
       });
       return purchased.phoneNumber;
     }

@@ -40,7 +40,9 @@ interface StoredSettings {
 }
 
 function isManagedModeEnabled(): boolean {
-  return ['1', 'true', 'yes', 'on'].includes(String(process.env.MANAGED_MODE || '').trim().toLowerCase());
+  const raw = String(process.env.MANAGED_MODE || '').trim().toLowerCase();
+  if (!raw) return true;
+  return ['1', 'true', 'yes', 'on'].includes(raw);
 }
 
 function normalizeUserId(userId?: string): string {

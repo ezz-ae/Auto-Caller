@@ -110,7 +110,7 @@ export default function MarketingHomePage() {
       <main className="mx-auto max-w-7xl px-4">
         <section className="py-20 md:py-24 grid gap-10 lg:grid-cols-[1fr_460px] items-start">
           <div className="space-y-7">
-            <Badge className="bg-orange-400/15 text-orange-300 border-orange-400/30 text-xs font-semibold tracking-widest uppercase px-3 py-1">
+            <Badge className="bg-sky-500/15 text-sky-300 border-sky-400/30 text-xs font-semibold tracking-widest uppercase px-3 py-1">
               <Sparkles className="w-3 h-3 mr-1.5" />
               Outbound Follow-up For UAE Teams
             </Badge>
@@ -119,14 +119,14 @@ export default function MarketingHomePage() {
                 Reactivate 200 old leads in 30 minutes.
               </h1>
               <p className="text-zinc-400 text-base md:text-lg leading-relaxed max-w-xl">
-                Launch automated follow-up, qualify leads, and transfer hot prospects to your team.
+                Hire a calling agent, upload leads, and launch. Your team gets qualified conversations instead of manual chasing.
               </p>
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <Button asChild size="lg" className="h-13 px-7 rounded-2xl text-base font-bold bg-gradient-to-r from-orange-400 to-emerald-500 hover:from-orange-300 hover:to-emerald-400 shadow-xl shadow-orange-400/20">
+              <Button asChild size="lg" className="h-13 px-7 rounded-2xl text-base font-bold bg-gradient-to-r from-sky-500 to-blue-600 hover:from-sky-400 hover:to-blue-500 shadow-xl shadow-sky-500/20">
                 <Link href="/login">
-                  Start free / Create account
+                  Get started
                   <ArrowRight className="ml-2 w-4 h-4" />
                 </Link>
               </Button>
@@ -137,10 +137,10 @@ export default function MarketingHomePage() {
               </Button>
             </div>
 
-            <div className="grid gap-2 sm:grid-cols-2">
+            <div className="hidden md:grid gap-2 sm:grid-cols-2">
               {icpCards.map(card => (
                 <div key={card.title} className="rounded-xl border border-zinc-700/70 bg-zinc-900/45 px-4 py-3 text-sm text-zinc-200 flex items-center gap-2">
-                  <card.icon className="w-4 h-4 text-orange-300" />
+                  <card.icon className="w-4 h-4 text-sky-300" />
                   {card.title}
                 </div>
               ))}
@@ -149,7 +149,7 @@ export default function MarketingHomePage() {
             <div className="flex flex-wrap gap-5 pt-1">
               {trustItems.map(item => (
                 <div key={item} className="flex items-center gap-2 text-xs text-zinc-400">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-orange-300 shrink-0" />
+                  <CheckCircle2 className="w-3.5 h-3.5 text-sky-300 shrink-0" />
                   {item}
                 </div>
               ))}
@@ -166,7 +166,7 @@ export default function MarketingHomePage() {
 
         <section className="py-16 border-t border-zinc-800/60 space-y-8">
           <div className="text-center space-y-2">
-            <p className="text-orange-300 text-xs font-bold uppercase tracking-widest">How It Works</p>
+            <p className="text-sky-300 text-xs font-bold uppercase tracking-widest">How It Works</p>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">From old list to live campaign in minutes</h2>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
@@ -182,13 +182,13 @@ export default function MarketingHomePage() {
 
         <section className="py-16 border-t border-zinc-800/60 space-y-8">
           <div className="text-center space-y-2">
-            <p className="text-orange-300 text-xs font-bold uppercase tracking-widest">Features</p>
+            <p className="text-sky-300 text-xs font-bold uppercase tracking-widest">Features</p>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Everything needed to get first revenue fast</h2>
           </div>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {features.map(item => (
               <div key={item.title} className="rounded-2xl border border-zinc-800/80 bg-zinc-900/40 p-6">
-                <div className="w-10 h-10 rounded-xl bg-orange-400/15 text-orange-300 flex items-center justify-center mb-4">
+                <div className="w-10 h-10 rounded-xl bg-sky-500/15 text-sky-300 flex items-center justify-center mb-4">
                   <item.icon className="w-5 h-5" />
                 </div>
                 <h3 className="font-semibold text-zinc-100 mb-2">{item.title}</h3>
@@ -200,7 +200,7 @@ export default function MarketingHomePage() {
 
         <section className="py-16 border-t border-zinc-800/60 space-y-8">
           <div className="text-center space-y-2">
-            <p className="text-orange-300 text-xs font-bold uppercase tracking-widest">Pricing</p>
+            <p className="text-sky-300 text-xs font-bold uppercase tracking-widest">Pricing</p>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Start free, scale with credits</h2>
             <p className="text-zinc-500 text-sm">Simple packs. Transparent pricing. No setup fees.</p>
           </div>
@@ -209,12 +209,12 @@ export default function MarketingHomePage() {
               <div key={pack.calls} className="rounded-2xl border border-zinc-800 bg-zinc-900/40 p-5 text-center">
                 <p className="text-3xl font-black text-zinc-100">{pack.calls}</p>
                 <p className="text-xs uppercase tracking-widest text-zinc-500">Credits</p>
-                <p className="text-lg font-semibold text-orange-300 mt-4">{pack.price}</p>
+                <p className="text-lg font-semibold text-sky-300 mt-4">{pack.price}</p>
               </div>
             ))}
           </div>
           <div className="text-center">
-            <Button asChild size="lg" className="h-12 px-8 rounded-xl bg-orange-400 hover:bg-orange-500">
+            <Button asChild size="lg" className="h-12 px-8 rounded-xl bg-sky-500 hover:bg-sky-400">
               <Link href="/login">Create account</Link>
             </Button>
           </div>
@@ -224,7 +224,7 @@ export default function MarketingHomePage() {
           <div className="grid gap-12 lg:grid-cols-2 items-center">
             <div className="space-y-5">
               <div className="space-y-1">
-                <p className="text-orange-300 text-xs font-bold uppercase tracking-widest">Live Demo</p>
+                <p className="text-sky-300 text-xs font-bold uppercase tracking-widest">Live Demo</p>
                 <h2 className="text-3xl md:text-4xl font-bold tracking-tight">Try it now on your own phone</h2>
               </div>
               <p className="text-zinc-400 text-lg leading-relaxed">
@@ -237,7 +237,7 @@ export default function MarketingHomePage() {
                   'Dashboard logs outcome immediately',
                 ].map(point => (
                   <div key={point} className="flex items-center gap-2 text-sm text-zinc-300">
-                    <CheckCircle2 className="w-4 h-4 text-orange-300 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-sky-300 shrink-0" />
                     {point}
                   </div>
                 ))}
@@ -249,7 +249,7 @@ export default function MarketingHomePage() {
 
         <section className="py-16 border-t border-zinc-800/60 space-y-8">
           <div className="text-center space-y-2">
-            <p className="text-orange-300 text-xs font-bold uppercase tracking-widest">FAQ</p>
+            <p className="text-sky-300 text-xs font-bold uppercase tracking-widest">FAQ</p>
             <h2 className="text-3xl md:text-4xl font-bold tracking-tight">What teams ask before launching</h2>
           </div>
           <div className="grid gap-4 md:grid-cols-3">
@@ -263,7 +263,7 @@ export default function MarketingHomePage() {
         </section>
 
         <section className="py-16 border-t border-zinc-800/60">
-          <div className="rounded-2xl border border-orange-400/25 bg-gradient-to-br from-orange-400/10 via-orange-400/5 to-transparent p-8 md:p-12 text-center space-y-6">
+          <div className="rounded-2xl border border-sky-400/25 bg-gradient-to-br from-sky-500/10 via-sky-500/5 to-transparent p-8 md:p-12 text-center space-y-6">
             <div className="space-y-3">
               <h2 className="text-3xl md:text-5xl font-bold tracking-tight">Ready to recover your old pipeline?</h2>
               <p className="text-zinc-400 text-lg max-w-xl mx-auto">
@@ -271,9 +271,9 @@ export default function MarketingHomePage() {
               </p>
             </div>
             <div className="flex flex-wrap gap-3 justify-center">
-              <Button asChild size="lg" className="h-14 px-8 rounded-2xl text-base font-bold bg-orange-400 hover:bg-orange-500 shadow-xl shadow-orange-400/20">
+              <Button asChild size="lg" className="h-14 px-8 rounded-2xl text-base font-bold bg-sky-500 hover:bg-sky-400 shadow-xl shadow-sky-500/20">
                 <Link href="/login">
-                  Start free / Create account
+                  Get started
                   <ArrowRight className="ml-2 w-5 h-5" />
                 </Link>
               </Button>

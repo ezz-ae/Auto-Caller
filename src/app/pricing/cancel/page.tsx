@@ -8,7 +8,7 @@ import { XCircle } from 'lucide-react'
 export default function CancelPage() {
   return (
     <div className="cw-editor-marketing min-h-screen text-white flex items-center justify-center p-4">
-      <Card className="bg-gradient-to-br from-zinc-900/90 via-zinc-900/75 to-zinc-950/85 border-orange-400/20 max-w-md w-full">
+      <Card className="bg-gradient-to-br from-zinc-900/90 via-zinc-900/75 to-zinc-950/85 border-sky-400/20 max-w-md w-full">
         <CardHeader className="text-center">
           <XCircle className="w-16 h-16 mx-auto mb-4 text-zinc-400" />
           <CardTitle>Payment Cancelled</CardTitle>
@@ -19,7 +19,7 @@ export default function CancelPage() {
         
         <CardContent className="space-y-4">
           <Link href="/dashboard">
-            <Button className="w-full bg-orange-400 hover:bg-orange-500">
+            <Button className="w-full bg-sky-500 hover:bg-sky-400">
               Back to Billing
             </Button>
           </Link>

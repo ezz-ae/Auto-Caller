@@ -59,7 +59,7 @@ export default function FeaturesPage() {
 
       <main className="mx-auto max-w-7xl px-4 py-12 md:py-16 space-y-10">
         <section className="space-y-4">
-          <div className="inline-flex items-center gap-2 rounded-full border border-orange-400/40 bg-orange-400/10 px-3 py-1 text-xs text-orange-300">
+          <div className="inline-flex items-center gap-2 rounded-full border border-sky-400/40 bg-sky-500/10 px-3 py-1 text-xs text-sky-300">
             <Sparkles className="w-3.5 h-3.5" />
             Full Platform Capability
           </div>
@@ -72,9 +72,9 @@ export default function FeaturesPage() {
 
         <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           {items.map(item => (
-            <Card key={item.title} className="bg-gradient-to-br from-zinc-900/90 via-zinc-900/70 to-zinc-950/80 border-orange-400/15">
+            <Card key={item.title} className="bg-gradient-to-br from-zinc-900/90 via-zinc-900/70 to-zinc-950/80 border-sky-400/15">
               <CardHeader>
-                <div className="w-10 h-10 rounded-lg bg-orange-400/20 text-orange-300 flex items-center justify-center mb-2">
+                <div className="w-10 h-10 rounded-lg bg-sky-500/20 text-sky-300 flex items-center justify-center mb-2">
                   <item.icon className="w-5 h-5" />
                 </div>
                 <CardTitle className="text-lg">{item.title}</CardTitle>
@@ -84,7 +84,7 @@ export default function FeaturesPage() {
           ))}
         </section>
 
-        <section className="rounded-xl border border-orange-400/20 bg-gradient-to-r from-orange-400/10 via-emerald-500/5 to-transparent p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <section className="rounded-xl border border-sky-400/20 bg-gradient-to-r from-sky-500/10 via-blue-500/5 to-transparent p-6 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
           <div>
             <p className="text-lg font-semibold">Want the full setup process?</p>
             <p className="text-sm text-zinc-400 mt-1">Use the launch docs for exact environment variables, DB setup, and webhook mapping.</p>
@@ -93,8 +93,8 @@ export default function FeaturesPage() {
             <Button variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
               <Link href="/docs">Open Docs</Link>
             </Button>
-            <Button asChild className="bg-orange-400 hover:bg-orange-500 font-semibold">
-              <Link href="/login">Start free trial</Link>
+            <Button asChild className="bg-sky-500 hover:bg-sky-400 font-semibold">
+              <Link href="/login">Get started</Link>
             </Button>
           </div>
         </section>

@@ -47,15 +47,15 @@ export default function ForgotPasswordPage() {
     <div className="cw-editor-marketing min-h-screen px-4 py-8">
       <div className="mx-auto max-w-xl">
         <div className="mb-6">
-          <Link href="/login" className="inline-flex items-center gap-2 text-zinc-400 hover:text-orange-300 transition text-sm">
+          <Link href="/login" className="inline-flex items-center gap-2 text-zinc-400 hover:text-sky-300 transition text-sm">
             <ArrowLeft className="w-4 h-4" />
             Back to login
           </Link>
         </div>
-        <Card className="bg-gradient-to-br from-zinc-900/90 via-zinc-900/75 to-zinc-950/85 border-orange-400/20 text-white">
+        <Card className="bg-gradient-to-br from-zinc-900/90 via-zinc-900/75 to-zinc-950/85 border-sky-400/20 text-white">
           <CardHeader>
             <CardTitle className="text-2xl flex items-center gap-2">
-              <Mail className="w-5 h-5 text-orange-300" />
+              <Mail className="w-5 h-5 text-sky-300" />
               Forgot Password
             </CardTitle>
             <CardDescription className="text-zinc-400 flex items-center gap-2">
@@ -76,7 +76,7 @@ export default function ForgotPasswordPage() {
                   required
                 />
               </div>
-              <Button type="submit" className="w-full bg-orange-400 hover:bg-orange-500" disabled={loading}>
+              <Button type="submit" className="w-full bg-sky-500 hover:bg-sky-400" disabled={loading}>
                 {loading ? 'Sending...' : 'Send reset link'}
               </Button>
               {sent && (
