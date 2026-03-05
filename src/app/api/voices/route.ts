@@ -93,7 +93,7 @@ export async function GET(request: NextRequest) {
       .sort((a, b) => qualityScore(b) - qualityScore(a));
     
     return NextResponse.json({ 
-      voices: [...telephonyVoices, ...highQualityVoices],
+      voices: [...highQualityVoices, ...telephonyVoices],
       provider: 'elevenlabs',
     });
   } catch (error: any) {

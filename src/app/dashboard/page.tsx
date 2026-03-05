@@ -338,7 +338,7 @@ const DEFAULT_BILLING_PRODUCTS: Record<string, BillingProduct> = {
   number_activation: { id: 'number_activation', name: 'Dedicated Phone Number', price: 39, kind: 'number' },
 }
 
-const DEFAULT_FEMALE_VOICE_FALLBACK = 'SAz9YHcvj6GT2YYXdXww' // River
+const DEFAULT_FEMALE_VOICE_FALLBACK = '21m00Tcm4TlvDq8ikWAM' // Rachel
 const DEFAULT_MALE_VOICE_FALLBACK = 'ErXwobaYiN019PkySvjV' // Antoni
 
 const PREFERRED_ELEVENLABS_VOICES: Record<'female' | 'male', string[]> = {

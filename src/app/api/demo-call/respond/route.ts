@@ -6,13 +6,15 @@ import {
   setDemoSessionStatus,
 } from '@/lib/demo-call-store';
 import {
+  appendDemoSpeech,
   cleanSpokenText,
   generateDemoAgentReply,
   getDemoAgentName,
   getDemoLanguage,
   getDemoMaxTurns,
-  getDemoVoice,
+  resolveDemoVoiceConfig,
 } from '@/lib/demo-call';
+import { resolvePublicAppUrl } from '@/lib/public-app-url';
 
 function xmlResponse(xml: string) {
   return new NextResponse(xml, {
@@ -92,15 +94,23 @@ async function handle(request: NextRequest) {
 
     await appendDemoSessionTurn(callSid, 'agent', reply);
 
+    const appUrl = resolvePublicAppUrl(request);
     const language = getDemoLanguage();
-    const voice = getDemoVoice();
+    const { voiceId, ttsFormat, userId } = await resolveDemoVoiceConfig();
 
-    response.say({ voice: voice as any, language: language as any }, reply || fallbackReply);
+    appendDemoSpeech(response, reply || fallbackReply, {
+      appUrl,
+      voiceId,
+      language,
+      ttsFormat,
+      userId,
+    });
 
     if (shouldEnd || turn >= getDemoMaxTurns()) {
-      response.say(
-        { voice: voice as any, language: language as any },
-        'Thanks for trying the live demo. Open the dashboard now to launch your first real campaign.'
+      appendDemoSpeech(
+        response,
+        'Thanks for trying the live demo. Open the dashboard now to launch your first real campaign.',
+        { appUrl, voiceId, language, ttsFormat, userId }
       );
       response.hangup();
       await setDemoSessionStatus(callSid, 'completed');
@@ -116,15 +126,21 @@ async function handle(request: NextRequest) {
       actionOnEmptyResult: true,
     });
 
-    gather.say(
-      { voice: voice as any, language: language as any },
-      'Tell me more so I can shape a practical calling plan for you.'
-    );
+    appendDemoSpeech(gather, 'Tell me more so I can shape a practical calling plan for you.', {
+      appUrl,
+      voiceId,
+      language,
+      ttsFormat,
+      userId,
+    });
 
-    response.say(
-      { voice: voice as any, language: language as any },
-      'No worries. You can retry from the website any time.'
-    );
+    appendDemoSpeech(response, 'No worries. You can retry from the website any time.', {
+      appUrl,
+      voiceId,
+      language,
+      ttsFormat,
+      userId,
+    });
     response.hangup();
     return xmlResponse(response.toString());
   } catch (error) {

@@ -5,6 +5,90 @@ interface ChatMessage {
   content: string;
 }
 
+function safeClip(value: unknown, max = 240): string {
+  const text = String(value || '').replace(/\s+/g, ' ').trim();
+  if (!text) return '';
+  if (text.length <= max) return text;
+  return `${text.slice(0, max - 1).trim()}…`;
+}
+
+function buildDeterministicScriptSuggestion(input: {
+  prompt: string;
+  context: {
+    businessName?: string;
+    industry?: string;
+    companyDetails?: string;
+    targetProfile?: string;
+    audience?: string;
+    objective?: string;
+    tone?: string;
+    language?: string;
+    callerName?: string;
+    callerPosition?: string;
+    mentionAi?: boolean;
+    sayThisRules?: string;
+    avoidThisRules?: string;
+  };
+}) {
+  const businessName = safeClip(input.context.businessName || 'your company', 80);
+  const audience = safeClip(input.context.audience || 'old leads', 80);
+  const objective = safeClip(input.context.objective || 'book a follow-up call', 120);
+  const offer = safeClip(input.context.targetProfile || input.context.companyDetails || input.prompt || 'a practical business update', 160);
+  const callerName = safeClip(input.context.callerName || 'Sara', 60);
+  const callerPosition = safeClip(input.context.callerPosition || 'reactivation specialist', 80);
+  const disclosure = input.context.mentionAi
+    ? `This is an automated call on behalf of ${businessName}. `
+    : '';
+
+  const targetBrief = [
+    `${disclosure}Hi, this is ${callerName}, ${callerPosition} at ${businessName}.`,
+    `I'm reaching out to ${audience} about ${offer}.`,
+    `Goal: ${objective}.`,
+    input.context.sayThisRules ? `Must say: ${safeClip(input.context.sayThisRules, 180)}.` : '',
+    input.context.avoidThisRules ? `Avoid saying: ${safeClip(input.context.avoidThisRules, 180)}.` : '',
+  ].filter(Boolean).join(' ');
+
+  return {
+    success: true,
+    reply: 'I prepared a launch-ready target blueprint with qualification and CTA flow.',
+    targetBrief,
+    targetProfile: {
+      goal: objective,
+      audience,
+      offer,
+      qualification: [
+        'Does the lead still need this service now?',
+        'Is budget and decision timeline known?',
+        'Can the lead commit to a next step today?',
+      ],
+      cta: objective,
+      constraints: [
+        input.context.mentionAi ? 'Keep automated-call disclosure in opening.' : 'Use direct business introduction.',
+        input.context.avoidThisRules ? safeClip(input.context.avoidThisRules, 140) : 'Do not over-explain technical details.',
+      ],
+    },
+    script: targetBrief,
+    objections: [
+      'If busy: acknowledge and ask for a better callback time today.',
+      'If uncertain: restate one concrete benefit and ask one qualifying question.',
+      'If no interest: confirm and offer opt-out respectfully.',
+    ],
+    discoveryQuestions: [
+      'What outcome are you trying to achieve right now?',
+      'When do you want to start?',
+      'Who else is involved in the decision?',
+      'What stopped follow-up from working before?',
+    ],
+    conversationMoves: buildFallbackConversationMoves({
+      objective,
+      audience,
+      offer,
+    }),
+    profileSummary: `${callerName} (${callerPosition}) focused on ${objective}.`,
+    source: 'deterministic-fallback',
+  };
+}
+
 function buildFallbackConversationMoves(profile: {
   objective?: string;
   audience?: string;
@@ -154,7 +238,7 @@ export async function POST(request: NextRequest) {
       'gemini-1.5-flash';
 
     if (!apiKey) {
-      return NextResponse.json({ error: 'Google AI API key is not configured on server' }, { status: 400 });
+      return NextResponse.json(buildDeterministicScriptSuggestion({ prompt, context }));
     }
 
     const history = messages
@@ -198,38 +282,41 @@ ${history || 'No previous history'}
 User request:
 ${prompt}`;
 
-    const parsed = await generateJsonWithGemini({
-      apiKey,
-      model,
-      systemPrompt,
-      userPrompt,
-    });
+    try {
+      const parsed = await generateJsonWithGemini({
+        apiKey,
+        model,
+        systemPrompt,
+        userPrompt,
+      });
 
-    return NextResponse.json({
-      success: true,
-      reply: parsed.reply || 'I drafted a target blueprint for you.',
-      targetBrief: parsed.targetBrief || parsed.script || '',
-      targetProfile: parsed.targetProfile || null,
-      script: parsed.targetBrief || parsed.script || '',
-      objections: Array.isArray(parsed.objections) ? parsed.objections : [],
-      discoveryQuestions: Array.isArray(parsed.discoveryQuestions) ? parsed.discoveryQuestions : [],
-      conversationMoves: Array.isArray(parsed.conversationMoves) && parsed.conversationMoves.length > 0
-        ? parsed.conversationMoves.map((item: unknown) => String(item)).filter(Boolean).slice(0, 5)
-        : buildFallbackConversationMoves({
-            objective: context.objective,
-            audience: context.audience,
-            offer: context.targetProfile,
-          }),
-      profileSummary: parsed.profileSummary || '',
-    });
+      return NextResponse.json({
+        success: true,
+        reply: parsed.reply || 'I drafted a target blueprint for you.',
+        targetBrief: parsed.targetBrief || parsed.script || '',
+        targetProfile: parsed.targetProfile || null,
+        script: parsed.targetBrief || parsed.script || '',
+        objections: Array.isArray(parsed.objections) ? parsed.objections : [],
+        discoveryQuestions: Array.isArray(parsed.discoveryQuestions) ? parsed.discoveryQuestions : [],
+        conversationMoves: Array.isArray(parsed.conversationMoves) && parsed.conversationMoves.length > 0
+          ? parsed.conversationMoves.map((item: unknown) => String(item)).filter(Boolean).slice(0, 5)
+          : buildFallbackConversationMoves({
+              objective: context.objective,
+              audience: context.audience,
+              offer: context.targetProfile,
+            }),
+        profileSummary: parsed.profileSummary || '',
+        source: 'gemini',
+      });
+    } catch (providerError) {
+      console.error('Script assistant provider fallback:', providerError);
+      return NextResponse.json(buildDeterministicScriptSuggestion({ prompt, context }));
+    }
   } catch (error) {
     console.error('Target assistant error:', error);
-    return NextResponse.json(
-      {
-        error: 'Failed to generate target suggestion',
-        details: error instanceof Error ? error.message : 'Unknown error',
-      },
-      { status: 500 }
-    );
+    return NextResponse.json(buildDeterministicScriptSuggestion({
+      prompt: 'Generate a resilient outbound target blueprint',
+      context: {},
+    }));
   }
 }

@@ -3,7 +3,10 @@
 import { getSettings } from './store';
 
 const ELEVENLABS_API_URL = 'https://api.elevenlabs.io/v1';
-const DEFAULT_VOICE_ID = process.env.ELEVENLABS_DEFAULT_VOICE_ID || 'SAz9YHcvj6GT2YYXdXww';
+const DEFAULT_VOICE_ID =
+  process.env.ELEVENLABS_HUMAN_VOICE_ID ||
+  process.env.ELEVENLABS_DEFAULT_VOICE_ID ||
+  '21m00Tcm4TlvDq8ikWAM';
 
 interface ElevenLabsVoice {
   voice_id: string;
@@ -31,6 +34,24 @@ function getBooleanEnv(name: string, fallback: boolean): boolean {
   if (raw === 'true') return true;
   if (raw === 'false') return false;
   return fallback;
+}
+
+function getChannelEnvName(base: string, channel: 'phone' | 'preview'): string {
+  return channel === 'phone' ? `ELEVENLABS_PHONE_${base}` : `ELEVENLABS_PREVIEW_${base}`;
+}
+
+function getChannelFloatEnv(base: string, fallback: number, channel: 'phone' | 'preview'): number {
+  const channelValue = getFloatEnv(getChannelEnvName(base, channel), Number.NaN);
+  if (Number.isFinite(channelValue)) return channelValue;
+  return getFloatEnv(`ELEVENLABS_${base}`, fallback);
+}
+
+function getChannelBooleanEnv(base: string, fallback: boolean, channel: 'phone' | 'preview'): boolean {
+  const channelRaw = process.env[getChannelEnvName(base, channel)];
+  if (channelRaw != null && channelRaw !== '') {
+    return getBooleanEnv(getChannelEnvName(base, channel), fallback);
+  }
+  return getBooleanEnv(`ELEVENLABS_${base}`, fallback);
 }
 
 function normalizeTtsText(input: string): string {
@@ -89,21 +110,24 @@ export async function generateSpeech(
     throw new Error('ElevenLabs API key not configured');
   }
   
+  const channel = options.channel || 'phone';
   // Default to quality-first model; users can override with ELEVENLABS_MODEL_ID.
   const modelId =
+    (channel === 'phone' ? process.env.ELEVENLABS_PHONE_MODEL_ID : process.env.ELEVENLABS_PREVIEW_MODEL_ID) ||
     process.env.ELEVENLABS_MODEL_ID ||
-    process.env.ELEVENLABS_PHONE_MODEL_ID ||
     'eleven_multilingual_v2';
-  // Tuned defaults for more human cadence: slightly slower with softer control.
-  const stability = getFloatEnv('ELEVENLABS_VOICE_STABILITY', 0.34);
-  const similarityBoost = getFloatEnv('ELEVENLABS_VOICE_SIMILARITY_BOOST', 0.88);
-  const style = getFloatEnv('ELEVENLABS_VOICE_STYLE', 0.16);
-  const speed = getFloatEnv('ELEVENLABS_VOICE_SPEED', 0.90);
-  const useSpeakerBoost = getBooleanEnv('ELEVENLABS_USE_SPEAKER_BOOST', true);
+  // Tuned defaults for more human cadence: softer stability and more expressiveness.
+  const stability = getChannelFloatEnv('VOICE_STABILITY', 0.28, channel);
+  const similarityBoost = getChannelFloatEnv('VOICE_SIMILARITY_BOOST', 0.82, channel);
+  const style = getChannelFloatEnv('VOICE_STYLE', 0.28, channel);
+  const speed = getChannelFloatEnv('VOICE_SPEED', 0.96, channel);
+  const useSpeakerBoost = getChannelBooleanEnv('USE_SPEAKER_BOOST', true, channel);
   // 0 favors quality over latency and typically sounds less synthetic.
   const optimizeLatency = Math.max(0, Math.min(4, Math.round(getFloatEnv('ELEVENLABS_OPTIMIZE_STREAMING_LATENCY', 0))));
-  const channel = options.channel || 'phone';
-  const outputFormat = process.env.ELEVENLABS_OUTPUT_FORMAT || (channel === 'preview' ? 'mp3_44100_128' : 'mp3_44100_128');
+  const outputFormat =
+    (channel === 'phone' ? process.env.ELEVENLABS_PHONE_OUTPUT_FORMAT : process.env.ELEVENLABS_PREVIEW_OUTPUT_FORMAT) ||
+    process.env.ELEVENLABS_OUTPUT_FORMAT ||
+    (channel === 'preview' ? 'mp3_44100_128' : 'mp3_44100_128');
   const normalizedText = normalizeTtsText(text);
 
   const response = await fetch(`${ELEVENLABS_API_URL}/text-to-speech/${voiceId}?optimize_streaming_latency=${optimizeLatency}&output_format=${encodeURIComponent(outputFormat)}`, {

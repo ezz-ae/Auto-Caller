@@ -11,6 +11,7 @@ import { formDataToParams, isValidTwilioWebhook } from '@/lib/twilio-webhook-aut
 import { addSuppressionNumber } from '@/lib/compliance-store';
 import { detectOptOutRequest, getQuietHoursDecision, resolveLeadTimeZone } from '@/lib/compliance';
 import { derivePursuitState } from '@/lib/pursuit-state';
+import { resolvePreferredVoiceId } from '@/lib/voice-selection';
 
 interface ConversationState {
   turn: number;
@@ -501,7 +502,8 @@ async function handleAnswer(request: NextRequest) {
     const legacyScript = pick('target') || pick('script') || callerIdentity?.script || 'Goal: qualify lead and connect to specialist';
     const forward = pick('forward') || settings.forwardToNumber;
     const language = pick('language') || callerIdentity?.language || 'en-US';
-    const voiceId = pick('voiceId') || callerIdentity?.voiceId || 'alice';
+    const requestedVoiceId = pick('voiceId') || callerIdentity?.voiceId || '';
+    const voiceId = resolvePreferredVoiceId(requestedVoiceId, settings);
     const ttsFormat: 'wav' | 'mp3' | 'ulaw_8khz' | undefined =
       settings.ttsProvider === 'csm' && !isTwilioNativeVoice(voiceId)
         ? 'ulaw_8khz'

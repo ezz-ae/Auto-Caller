@@ -7,6 +7,7 @@ import { runCampaign } from '@/lib/campaign-runner';
 import { dispatchDueScheduledCampaigns } from '@/lib/campaign-scheduler';
 import { requireUserIdFromRequest } from '@/lib/request-user';
 import { isUnauthorizedError } from '@/lib/route-errors';
+import { resolvePreferredVoiceId } from '@/lib/voice-selection';
 
 function normalizePhoneKey(raw: string): string {
   return String(raw || '').replace(/[^\d+]/g, '');
@@ -129,11 +130,10 @@ export async function POST(request: NextRequest) {
     }
 
     const selectedLanguage = String(language || selectedIdentity?.language || 'en-US');
-    const providerDefaultVoice =
-      settings.ttsProvider === 'csm'
-        ? `csm_speaker_${Math.max(0, Math.floor(Number(settings.csmSpeaker || 0)))}`
-        : '21m00Tcm4TlvDq8ikWAM';
-    const selectedVoiceId = String(voiceId || selectedIdentity?.voiceId || providerDefaultVoice);
+    const selectedVoiceId = resolvePreferredVoiceId(
+      String(voiceId || selectedIdentity?.voiceId || ''),
+      settings
+    );
     const baseScript = String(
       target ||
       script ||

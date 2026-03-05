@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import twilio from 'twilio';
 import { attachDemoCallSid, getDemoSessionById } from '@/lib/demo-call-store';
-import { buildDemoGreeting, getDemoLanguage, getDemoVoice } from '@/lib/demo-call';
+import {
+  appendDemoSpeech,
+  buildDemoGreeting,
+  getDemoLanguage,
+  resolveDemoVoiceConfig,
+} from '@/lib/demo-call';
+import { resolvePublicAppUrl } from '@/lib/public-app-url';
 
 function xmlResponse(xml: string) {
   return new NextResponse(xml, {
@@ -54,39 +60,43 @@ async function handle(request: NextRequest) {
 
     await attachDemoCallSid(session.id, callSid);
 
+    const appUrl = resolvePublicAppUrl(request);
+    const language = getDemoLanguage();
+    const { voiceId, ttsFormat, userId } = await resolveDemoVoiceConfig();
+
     response.pause({ length: 1 });
-    response.say(
-      {
-        voice: getDemoVoice() as any,
-        language: getDemoLanguage() as any,
-      },
-      buildDemoGreeting(session.leadName)
-    );
+    appendDemoSpeech(response, buildDemoGreeting(session.leadName), {
+      appUrl,
+      voiceId,
+      language,
+      ttsFormat,
+      userId,
+    });
 
     const gather = response.gather({
       input: ['speech'],
       speechTimeout: 'auto',
       action: `/api/demo-call/respond?callSid=${encodeURIComponent(callSid)}&turn=1`,
       method: 'POST',
-      language: getDemoLanguage() as any,
+      language: language as any,
       actionOnEmptyResult: true,
     });
 
-    gather.say(
-      {
-        voice: getDemoVoice() as any,
-        language: getDemoLanguage() as any,
-      },
-      'Go ahead, I am listening.'
-    );
+    appendDemoSpeech(gather, 'Go ahead, I am listening.', {
+      appUrl,
+      voiceId,
+      language,
+      ttsFormat,
+      userId,
+    });
 
-    response.say(
-      {
-        voice: getDemoVoice() as any,
-        language: getDemoLanguage() as any,
-      },
-      'I could not hear your response clearly. We can try again later from the website.'
-    );
+    appendDemoSpeech(response, 'I could not hear your response clearly. We can try again later from the website.', {
+      appUrl,
+      voiceId,
+      language,
+      ttsFormat,
+      userId,
+    });
     response.hangup();
 
     return xmlResponse(response.toString());

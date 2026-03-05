@@ -156,7 +156,7 @@ export async function makeCall(
     record: String(options.record || settings.recordCalls || false),
     transcribe: String(options.transcribe || settings.transcribeCalls || false),
     language: options.language || 'en-US',
-    voiceId: options.voiceId || 'alice',
+    voiceId: options.voiceId || '',
     mode: options.mode || 'conversation',
     userId: scopedUserId,
   });

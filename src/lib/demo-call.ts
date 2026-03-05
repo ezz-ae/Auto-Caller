@@ -1,6 +1,11 @@
 import twilio from 'twilio';
 import { resolvePublicAppUrl } from '@/lib/public-app-url';
 import { generateConversationDecision, type ConversationTurn } from '@/lib/conversation-agent';
+import { listCallerIdentities } from '@/lib/caller-identity-store';
+import { getSettings } from '@/lib/store';
+import { isTwilioNativeVoice } from '@/lib/twilio';
+import { createSignedTtsParams } from '@/lib/tts-auth';
+import { resolvePreferredVoiceId } from '@/lib/voice-selection';
 
 function asBool(name: string, fallback = false): boolean {
   const raw = String(process.env[name] || '').trim().toLowerCase();
@@ -32,6 +37,116 @@ export function getDemoLanguage(): string {
 
 export function getDemoVoice(): string {
   return String(process.env.DEMO_CALL_TWILIO_VOICE || 'alice').trim() || 'alice';
+}
+
+export function getDemoUserId(): string {
+  return String(process.env.DEMO_CALL_USER_ID || 'default').trim() || 'default';
+}
+
+function getDemoVoiceOverride(): string {
+  return String(process.env.DEMO_CALL_VOICE_ID || process.env.DEMO_CALL_TWILIO_VOICE || '').trim();
+}
+
+export async function resolveDemoVoiceConfig(userId = getDemoUserId()): Promise<{
+  voiceId: string;
+  ttsFormat?: 'wav' | 'mp3' | 'ulaw_8khz';
+  userId: string;
+}> {
+  const settings = await getSettings(userId);
+  const override = getDemoVoiceOverride();
+  let voiceId = override;
+  if (!voiceId) {
+    const identities = await listCallerIdentities(userId).catch(() => []);
+    if (identities.length > 0) {
+      voiceId = String(identities[0]?.voiceId || '').trim();
+    }
+  }
+  voiceId = resolvePreferredVoiceId(voiceId, settings);
+  const ttsFormat: 'wav' | 'mp3' | 'ulaw_8khz' | undefined =
+    settings.ttsProvider === 'csm' && !isTwilioNativeVoice(voiceId)
+      ? 'ulaw_8khz'
+      : undefined;
+  return { voiceId, ttsFormat, userId };
+}
+
+function resolveTwilioVoice(voiceId?: string): string {
+  if (!voiceId) return 'alice';
+  return isTwilioNativeVoice(voiceId) ? voiceId : 'alice';
+}
+
+export function buildDemoTtsUrl(params: {
+  appUrl: string;
+  text: string;
+  voiceId: string;
+  language: string;
+  format?: 'wav' | 'mp3' | 'ulaw_8khz';
+  userId: string;
+}): { url: string; signed: boolean } {
+  const script = cleanSpokenText(params.text, 320);
+  const url = new URL(`${params.appUrl}/api/calls/tts`);
+  url.searchParams.set('script', script);
+  url.searchParams.set('voiceId', params.voiceId);
+  url.searchParams.set('language', params.language || 'en-US');
+  if (params.format) {
+    url.searchParams.set('format', params.format);
+  }
+
+  const userId = String(params.userId || '').trim();
+  if (userId) {
+    const { exp, sig } = createSignedTtsParams({
+      script,
+      voiceId: params.voiceId,
+      language: params.language || 'en-US',
+      format: params.format || '',
+      userId,
+    });
+    if (sig) {
+      url.searchParams.set('userId', userId);
+      url.searchParams.set('exp', String(exp));
+      url.searchParams.set('sig', sig);
+      return { url: url.toString(), signed: true };
+    }
+  }
+
+  return { url: url.toString(), signed: false };
+}
+
+export function appendDemoSpeech(
+  target: any,
+  text: string,
+  options: {
+    appUrl: string;
+    voiceId: string;
+    language: string;
+    ttsFormat?: 'wav' | 'mp3' | 'ulaw_8khz';
+    userId: string;
+  }
+): void {
+  const spoken = cleanSpokenText(text, 320);
+  if (!spoken) return;
+
+  if (!isTwilioNativeVoice(options.voiceId)) {
+    const { url, signed } = buildDemoTtsUrl({
+      appUrl: options.appUrl,
+      text: spoken,
+      voiceId: options.voiceId,
+      language: options.language,
+      format: options.ttsFormat,
+      userId: options.userId,
+    });
+    if (signed) {
+      target.play(url);
+      return;
+    }
+  }
+
+  target.say(
+    {
+      voice: resolveTwilioVoice(options.voiceId) as any,
+      language: options.language as any,
+    },
+    spoken
+  );
 }
 
 export function getDemoAgentName(): string {
