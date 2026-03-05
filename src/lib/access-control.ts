@@ -60,6 +60,7 @@ export function shouldSkipAuthPath(pathname: string) {
       '/api/demo-call/answer',
       '/api/demo-call/respond',
       '/api/demo-call/status',
+      '/api/marketing-assistant',
     ];
 
     return publicApiPrefixes.some(prefix => pathname === prefix || pathname.startsWith(`${prefix}/`));

@@ -55,13 +55,20 @@ export function OnboardingChat({ onDemoRequested }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ prompt, messages: historyForApi }),
       })
+      if (!response.ok) {
+        throw new Error(`Marketing assistant failed (${response.status})`)
+      }
+
       const data = await response.json().catch(() => ({}))
-      const reply = String(data?.reply || '').trim() || 'Good direction. Tell me your industry and lead source, and I will map your first campaign.'
+      const reply = String(data?.reply || '').trim()
+      if (!reply) {
+        throw new Error('Marketing assistant returned empty reply')
+      }
       addMessage('assistant', reply)
     } catch {
       addMessage(
         'assistant',
-        'Good direction. Tell me your industry and lead source, and I will map your first campaign.',
+        'Sorry, I hit a live connection issue just now. Please retry in a few seconds.',
       )
     } finally {
       setIsTyping(false)

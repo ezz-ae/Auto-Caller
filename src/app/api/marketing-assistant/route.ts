@@ -22,9 +22,9 @@ function isGreeting(text: string): boolean {
 
 function fallbackReply(prompt: string): string {
   if (isGreeting(prompt)) {
-    return 'Hi. Happy to help. What sales result do you want first: more demos, faster lead follow-up, or reactivating old opportunities?';
+    return 'Hi, great to meet you. What are you in the mood to talk about?';
   }
-  return 'Good direction. Share your industry, lead source, and average monthly lead volume, and I will suggest a clear first campaign setup.';
+  return 'I can help with that. Share a bit more context and I will give you a concrete answer.';
 }
 
 function buildContextualFallback(prompt: string, messages: ChatMessage[]): string {
@@ -36,15 +36,15 @@ function buildContextualFallback(prompt: string, messages: ChatMessage[]): strin
   }
 
   if (/^(why|how|what do you mean)\b/.test(text)) {
-    return 'Because the best campaign setup depends on your sales motion. Tell me your industry and lead source, and I will give you a concrete first-call plan.';
+    return 'Fair question. Give me a little more context and I will explain clearly.';
   }
 
   if (text.includes('food') || text.includes('dubai')) {
-    return 'I can chat casually too, but I can help most with sales strategy. If you want, share your offer and I will draft a conversation flow for your next outreach call.';
+    return 'Absolutely. For food in Dubai, tell me your budget and vibe, and I will suggest great options.';
   }
 
   if (lastAssistant && lastAssistant.toLowerCase().includes('industry') && text.length < 30) {
-    return 'Got it. Also tell me where your leads come from (ads, CRM, referrals, forms), and I will map the first campaign.';
+    return 'Got it. Add one more detail so I can give you a better answer.';
   }
 
   return fallbackReply(prompt);
@@ -160,18 +160,19 @@ export async function POST(request: NextRequest) {
 
     const systemPrompt = [
       'You are Maya, a sales strategy assistant for Callware.',
-      'Audience is sales teams, not call centers.',
-      'Use natural, human conversation.',
-      'Do not push account creation when user just greets.',
-      'First ask clarifying questions when context is missing.',
-      'Keep replies concise (max 80 words).',
-      'No bullet points unless user asks for a plan.',
+      'Speak like a warm, practical human, not a scripted bot.',
+      'You can discuss general topics too; answer the user directly even if it is not about sales.',
+      'If the topic is sales, give concrete and useful guidance.',
+      'Do not push account creation on greetings.',
+      'Ask one clarifying question only when needed.',
+      'Keep replies concise (max 90 words), conversational, and varied.',
+      'No bullet points unless user asks for a plan or list.',
     ].join(' ');
 
     const userPrompt = [
       `Conversation so far:\n${history || 'No prior messages.'}`,
       `\nLatest user message:\n${prompt}`,
-      '\nGoal: Help the user map practical outbound sales follow-up workflows.',
+      '\nGoal: Hold a natural conversation and be genuinely helpful on any topic, with stronger guidance when sales context is provided.',
     ].join('\n');
 
     if (googleApiKey) {
