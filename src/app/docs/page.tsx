@@ -84,17 +84,17 @@ export default function DocsPage() {
     <div className="cw-editor-marketing min-h-screen text-white">
       <MarketingHeader />
 
-      <main className="mx-auto max-w-6xl px-4 py-12 md:py-16 space-y-10">
-        <section className="space-y-4">
-          <p className="text-sky-300 text-sm font-semibold">Docs</p>
-          <h1 className="text-4xl md:text-5xl font-semibold tracking-tight">trren Operator Runbook</h1>
-          <p className="text-zinc-300 max-w-3xl text-lg">
+      <main className="mx-auto max-w-6xl px-4 py-14 md:py-20 space-y-10 md:space-y-12">
+        <section className="space-y-4 md:space-y-5">
+          <p className="text-blue-200 text-xs md:text-sm font-semibold uppercase tracking-widest">Docs</p>
+          <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight">trren Operator Runbook</h1>
+          <p className="text-zinc-300 max-w-3xl text-base md:text-lg leading-relaxed">
             This page is the production playbook for customer onboarding, operations, and go-live checks.
           </p>
         </section>
 
-        <section className="rounded-2xl border border-sky-400/20 bg-zinc-950/55 p-6 md:p-8 space-y-4">
-          <div className="flex items-center gap-2 text-sky-300">
+        <section className="rounded-2xl border border-blue-400/20 bg-zinc-950/55 p-5 md:p-8 space-y-4">
+          <div className="flex items-center gap-2 text-blue-200">
             <BookOpenCheck className="w-5 h-5" />
             <p className="font-semibold">Customer onboarding in under 10 minutes</p>
           </div>
@@ -108,11 +108,11 @@ export default function DocsPage() {
           </div>
         </section>
 
-        <section className="grid gap-4 md:grid-cols-2">
+        <section className="grid gap-4 md:gap-5 md:grid-cols-2">
           {operatorChecks.map(block => (
-            <Card key={block.title} className="bg-zinc-900/65 border-sky-400/20">
+            <Card key={block.title} className="bg-zinc-900/65 border-blue-400/20">
               <CardHeader>
-                <div className="w-10 h-10 rounded-lg bg-sky-500/20 text-sky-300 flex items-center justify-center mb-2">
+                <div className="w-10 h-10 rounded-lg bg-blue-500/20 text-blue-200 flex items-center justify-center mb-2">
                   <block.icon className="w-5 h-5" />
                 </div>
                 <CardTitle>{block.title}</CardTitle>
@@ -120,7 +120,7 @@ export default function DocsPage() {
               <CardContent className="space-y-2">
                 {block.points.map(point => (
                   <p key={point} className="text-sm text-zinc-300 flex gap-2">
-                    <CheckCircle2 className="w-4 h-4 text-sky-300 mt-0.5 shrink-0" />
+                    <CheckCircle2 className="w-4 h-4 text-blue-200 mt-0.5 shrink-0" />
                     {point}
                   </p>
                 ))}
@@ -131,7 +131,7 @@ export default function DocsPage() {
 
         <section className="rounded-2xl border border-zinc-800 bg-zinc-950/50 p-6 md:p-8 space-y-4">
           <div className="flex items-center gap-2">
-            <FolderClock className="w-5 h-5 text-sky-300" />
+            <FolderClock className="w-5 h-5 text-blue-200" />
             <p className="text-lg font-semibold">Troubleshooting</p>
           </div>
           <div className="space-y-3">
@@ -144,11 +144,11 @@ export default function DocsPage() {
           </div>
         </section>
 
-        <section className="rounded-2xl border border-sky-400/25 bg-gradient-to-r from-sky-500/10 via-blue-500/5 to-transparent p-6 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <section className="rounded-2xl border border-blue-400/25 bg-gradient-to-r from-blue-700/20 via-blue-700/10 to-transparent p-5 md:p-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <p className="text-lg font-semibold">Final launch check</p>
             <p className="text-sm text-zinc-300 mt-1 flex items-center gap-2">
-              <Clock3 className="w-4 h-4 text-sky-300" />
+              <Clock3 className="w-4 h-4 text-blue-200" />
               Confirm: auth, credits, number activation, test call, and callback scheduling.
             </p>
           </div>
@@ -156,7 +156,7 @@ export default function DocsPage() {
             <Button variant="secondary" asChild className="bg-zinc-800 hover:bg-zinc-700">
               <Link href="/faq">Open FAQ</Link>
             </Button>
-            <Button asChild className="bg-sky-500 hover:bg-sky-400 font-semibold">
+            <Button asChild className="bg-blue-700 hover:bg-blue-600 font-semibold">
               <Link href="/login">Open workspace</Link>
             </Button>
           </div>

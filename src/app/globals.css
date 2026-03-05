@@ -133,11 +133,11 @@ body {
 
 .dark body {
   background-image:
-    linear-gradient(to right, rgba(31, 87, 180, 0.5) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(31, 87, 180, 0.5) 1px, transparent 1px),
-    radial-gradient(860px 540px at 6% 8%, rgba(93, 188, 255, 0.34), transparent 62%),
-    radial-gradient(980px 620px at 100% 0%, rgba(38, 99, 235, 0.25), transparent 68%),
-    linear-gradient(125deg, #1f74be 0%, #145eb4 35%, #0d4493 62%, #072a63 80%, #041941 100%);
+    linear-gradient(to right, rgba(18, 48, 104, 0.52) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(18, 48, 104, 0.52) 1px, transparent 1px),
+    radial-gradient(900px 540px at 8% 8%, rgba(47, 113, 219, 0.24), transparent 62%),
+    radial-gradient(980px 620px at 100% 0%, rgba(18, 58, 140, 0.22), transparent 68%),
+    linear-gradient(125deg, #123e86 0%, #0d3272 34%, #082657 60%, #051b40 79%, #030f29 100%);
   background-size: 20px 20px, 20px 20px, auto, auto, auto;
   background-attachment: fixed;
 }
@@ -161,11 +161,11 @@ body {
 
 .cw-editor-marketing {
   background-image:
-    linear-gradient(to right, rgba(31, 87, 180, 0.5) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(31, 87, 180, 0.5) 1px, transparent 1px),
-    radial-gradient(940px 560px at 12% 8%, rgba(93, 188, 255, 0.35), transparent 64%),
-    radial-gradient(980px 580px at 98% 2%, rgba(38, 99, 235, 0.28), transparent 68%),
-    linear-gradient(125deg, #1f74be 0%, #145eb4 35%, #0d4493 62%, #072a63 80%, #041941 100%);
+    linear-gradient(to right, rgba(18, 48, 104, 0.48) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(18, 48, 104, 0.48) 1px, transparent 1px),
+    radial-gradient(940px 560px at 12% 8%, rgba(47, 113, 219, 0.24), transparent 64%),
+    radial-gradient(980px 580px at 98% 2%, rgba(18, 58, 140, 0.2), transparent 68%),
+    linear-gradient(125deg, #123e86 0%, #0d3272 34%, #082657 60%, #051b40 79%, #030f29 100%);
   background-size: 20px 20px, 20px 20px, auto, auto, auto;
 }
 

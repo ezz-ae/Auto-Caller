@@ -70,36 +70,36 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="cw-editor-marketing min-h-screen flex flex-col items-center justify-center px-4 py-12 text-white">
+    <div className="cw-editor-marketing min-h-screen flex flex-col items-center justify-center px-4 py-10 md:py-12 text-white">
 
       {/* Back link */}
-      <div className="w-full max-w-sm mb-6">
+      <div className="w-full max-w-sm mb-5 md:mb-6">
         <Link
           href="/"
-          className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-zinc-200 transition"
+          className="inline-flex items-center gap-1.5 text-sm text-zinc-500 hover:text-blue-200 transition"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
           Back to trren
         </Link>
       </div>
 
-      <div className="w-full max-w-sm space-y-6">
+      <div className="w-full max-w-sm space-y-5 md:space-y-6">
 
         {/* Logo + heading */}
         <div className="text-center space-y-3">
           <BrandLogo className="justify-center" showTagline />
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">
+            <h1 className="text-xl md:text-2xl font-bold tracking-tight">
               {isRegister ? 'Create your workspace' : 'Sign in to trren'}
             </h1>
-            <p className="text-sm text-zinc-400 mt-1">
+            <p className="text-sm text-zinc-400 mt-1 leading-relaxed">
               {isRegister ? 'Start your free outreach workspace' : 'Access your outreach workspace'}
             </p>
           </div>
         </div>
 
         {/* Form card */}
-        <div className="rounded-2xl border border-sky-400/20 bg-gradient-to-br from-zinc-900/90 via-zinc-900/75 to-zinc-950/85 backdrop-blur-sm p-6 shadow-xl shadow-black/30">
+        <div className="rounded-2xl border border-blue-400/20 bg-gradient-to-br from-zinc-900/90 via-zinc-900/75 to-zinc-950/85 backdrop-blur-sm p-5 md:p-6 shadow-xl shadow-black/30">
           <form className="space-y-4" onSubmit={onSubmit}>
             {accountMode && isRegister && (
               <div className="space-y-1.5">
@@ -134,7 +134,7 @@ export default function LoginPage() {
                 {accountMode && !isRegister && (
                   <Link
                     href="/forgot-password"
-                    className="text-xs text-zinc-500 hover:text-sky-300 transition"
+                    className="text-xs text-zinc-500 hover:text-blue-200 transition"
                   >
                     Forgot password?
                   </Link>
@@ -155,7 +155,7 @@ export default function LoginPage() {
                 type="checkbox"
                 checked={rememberDevice}
                 onChange={e => setRememberDevice(e.target.checked)}
-                className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 accent-sky-500"
+                className="h-4 w-4 rounded border-zinc-600 bg-zinc-800 accent-blue-700"
               />
               Remember this device
             </label>
@@ -163,7 +163,7 @@ export default function LoginPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full h-11 rounded-xl font-semibold bg-sky-500 hover:bg-sky-400 shadow-lg shadow-sky-500/20 text-white"
+              className="w-full h-11 rounded-xl font-semibold bg-blue-700 hover:bg-blue-600 shadow-lg shadow-blue-900/40 text-white"
             >
               {loading
                 ? isRegister ? 'Creating account…' : 'Signing in…'
@@ -179,7 +179,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setIsRegister(prev => !prev)}
-              className="text-sky-300 hover:text-sky-200 font-medium transition"
+              className="text-blue-200 hover:text-blue-100 font-medium transition"
             >
               {isRegister ? 'Sign in' : 'Start free'}
             </button>
