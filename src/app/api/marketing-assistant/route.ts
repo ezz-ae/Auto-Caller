@@ -27,9 +27,32 @@ function fallbackReply(prompt: string): string {
   return 'Good direction. Share your industry, lead source, and average monthly lead volume, and I will suggest a clear first campaign setup.';
 }
 
+function buildContextualFallback(prompt: string, messages: ChatMessage[]): string {
+  const text = prompt.trim().toLowerCase();
+  const lastAssistant = [...messages].reverse().find(message => message.role === 'assistant')?.content || '';
+
+  if (isGreeting(prompt)) {
+    return 'Hi. Great to meet you. What sales outcome are you trying to improve first?';
+  }
+
+  if (/^(why|how|what do you mean)\b/.test(text)) {
+    return 'Because the best campaign setup depends on your sales motion. Tell me your industry and lead source, and I will give you a concrete first-call plan.';
+  }
+
+  if (text.includes('food') || text.includes('dubai')) {
+    return 'I can chat casually too, but I can help most with sales strategy. If you want, share your offer and I will draft a conversation flow for your next outreach call.';
+  }
+
+  if (lastAssistant && lastAssistant.toLowerCase().includes('industry') && text.length < 30) {
+    return 'Got it. Also tell me where your leads come from (ads, CRM, referrals, forms), and I will map the first campaign.';
+  }
+
+  return fallbackReply(prompt);
+}
+
 function normalizeGeminiModel(rawModel: string): string {
   const trimmed = String(rawModel || '').trim();
-  if (!trimmed) return 'gemini-1.5-flash';
+  if (!trimmed) return 'gemini-2.0-flash';
   return trimmed.replace(/^models\//i, '');
 }
 
@@ -67,6 +90,18 @@ async function generateWithGemini(params: {
   return clip(text, 900);
 }
 
+function getGeminiModelCandidates(preferred?: string): string[] {
+  const candidates = [
+    normalizeGeminiModel(preferred || ''),
+    'gemini-2.5-flash',
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite',
+    'gemini-1.5-flash-latest',
+  ].filter(Boolean);
+
+  return Array.from(new Set(candidates));
+}
+
 async function generateWithOpenAI(params: {
   apiKey: string;
   model: string;
@@ -89,10 +124,14 @@ async function generateWithOpenAI(params: {
 }
 
 export async function POST(request: NextRequest) {
+  let safePrompt = '';
+  let safeMessages: ChatMessage[] = [];
   try {
     const body = await request.json().catch(() => ({}));
     const prompt = clip(body?.prompt || '', 500);
     const messages = Array.isArray(body?.messages) ? (body.messages as ChatMessage[]) : [];
+    safePrompt = prompt;
+    safeMessages = messages;
 
     if (!prompt) {
       return NextResponse.json({ error: 'Prompt is required' }, { status: 400 });
@@ -101,6 +140,8 @@ export async function POST(request: NextRequest) {
     const googleApiKey = (
       process.env.MANAGED_GOOGLE_AI_API_KEY ||
       process.env.GOOGLE_AI_API_KEY ||
+      process.env.GOOGLE_API_KEY ||
+      process.env.GOOGLE_GENERATIVE_AI_API_KEY ||
       process.env.GEMINI_API_KEY ||
       ''
     ).trim();
@@ -111,7 +152,7 @@ export async function POST(request: NextRequest) {
       ''
     ).trim();
 
-    const model = normalizeGeminiModel(process.env.GOOGLE_AI_MODEL || process.env.GEMINI_MODEL || 'gemini-1.5-flash');
+    const model = normalizeGeminiModel(process.env.GOOGLE_AI_MODEL || process.env.GEMINI_MODEL || 'gemini-2.0-flash');
     const history = messages
       .slice(-10)
       .map(message => `${message.role === 'user' ? 'User' : 'Assistant'}: ${clip(message.content, 240)}`)
@@ -134,17 +175,22 @@ export async function POST(request: NextRequest) {
     ].join('\n');
 
     if (googleApiKey) {
-      try {
-        const reply = await generateWithGemini({
-          apiKey: googleApiKey,
-          model,
-          systemPrompt,
-          userPrompt,
-        });
-        return NextResponse.json({ success: true, reply, source: 'gemini' });
-      } catch (error) {
-        console.error('marketing-assistant gemini fallback:', error);
+      let geminiLastError: unknown = null;
+      const modelCandidates = getGeminiModelCandidates(model);
+      for (const candidate of modelCandidates) {
+        try {
+          const reply = await generateWithGemini({
+            apiKey: googleApiKey,
+            model: candidate,
+            systemPrompt,
+            userPrompt,
+          });
+          return NextResponse.json({ success: true, reply, source: 'gemini' });
+        } catch (error) {
+          geminiLastError = error;
+        }
       }
+      console.error('marketing-assistant gemini fallback:', geminiLastError);
     }
 
     if (openaiApiKey) {
@@ -158,9 +204,14 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: true, reply, source: 'openai' });
     }
 
-    return NextResponse.json({ success: true, reply: fallbackReply(prompt), source: 'fallback' });
+    return NextResponse.json({
+      success: true,
+      reply: buildContextualFallback(prompt, messages),
+      source: 'fallback',
+    });
   } catch (error) {
     console.error('marketing-assistant failed', error);
-    return NextResponse.json({ success: true, reply: 'I can help with that. Tell me your industry and main sales goal, and I will map the next step.' });
+    const fallback = buildContextualFallback(safePrompt || 'hi', safeMessages);
+    return NextResponse.json({ success: true, reply: fallback, source: 'fallback' });
   }
 }
