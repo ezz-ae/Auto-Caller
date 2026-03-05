@@ -87,7 +87,7 @@ export default function DocsPage() {
       <main className="mx-auto max-w-6xl px-4 py-14 md:py-20 space-y-10 md:space-y-12">
         <section className="space-y-4 md:space-y-5">
           <p className="text-blue-200 text-xs md:text-sm font-semibold uppercase tracking-widest">Docs</p>
-          <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight">trren Operator Runbook</h1>
+          <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight">Callware Operator Runbook</h1>
           <p className="text-zinc-300 max-w-3xl text-base md:text-lg leading-relaxed">
             This page is the production playbook for customer onboarding, operations, and go-live checks.
           </p>

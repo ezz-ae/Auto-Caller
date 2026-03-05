@@ -4,8 +4,8 @@ import { Toaster } from "@/components/ui/sonner";
 import { CookieConsent } from "@/components/cookie-consent";
 
 export const metadata: Metadata = {
-  title: "trren | The Sound of Conversations",
-  description: "trren — the sound of conversations. Automated follow-up and lead reactivation with hired calling agents.",
+  title: "Callware | The Sound of Conversations",
+  description: "Callware — the sound of conversations. Automated follow-up and lead reactivation with hired calling agents.",
   icons: {
     icon: '/logo.svg',
     shortcut: '/logo.svg',

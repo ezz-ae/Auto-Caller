@@ -1,12 +1,12 @@
-<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="trren logo">
+<svg width="256" height="256" viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Callware logo">
   <defs>
-    <linearGradient id="trren-bg" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="callware-bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0%" stop-color="#1d4ed8"/>
       <stop offset="55%" stop-color="#0f3fa8"/>
       <stop offset="100%" stop-color="#091f57"/>
     </linearGradient>
   </defs>
-  <rect x="12" y="12" width="232" height="232" rx="56" fill="url(#trren-bg)" />
+  <rect x="12" y="12" width="232" height="232" rx="56" fill="url(#callware-bg)" />
   <rect x="12" y="12" width="232" height="232" rx="56" fill="none" stroke="#93c5fd" stroke-opacity="0.5" stroke-width="3" />
   <path d="M71 74L114 62L120 74L111 164L90 172L71 74Z" fill="#f8fafc"/>
   <path d="M121 94L151 104C160 107 167 113 171 121L122 176L121 94Z" fill="#f8fafc"/>

@@ -65,7 +65,7 @@ export default function FeaturesPage() {
           </div>
           <h1 className="text-3xl md:text-5xl font-semibold tracking-tight leading-tight">Everything Needed To Run A Calling Business</h1>
           <p className="text-zinc-400 max-w-3xl text-base md:text-lg leading-relaxed">
-            trren is structured for operators, not demo screens: hire agents, launch campaigns,
+            Callware is structured for operators, not demo screens: hire agents, launch campaigns,
             capture outcomes, and monetize usage.
           </p>
         </section>

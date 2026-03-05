@@ -112,6 +112,7 @@ export function DemoCallHero() {
 
           <div className="flex gap-2">
             <Input
+              id="demo-call-phone-input"
               value={phoneNumber}
               onChange={e => setPhoneNumber(e.target.value)}
               placeholder="+1 555 123 4567"

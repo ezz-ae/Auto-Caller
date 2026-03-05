@@ -20,7 +20,7 @@ const flow = [
   {
     step: '03',
     title: 'Launch or schedule',
-    description: 'Start now or schedule for the right window. trren runs the campaign and tracks each lead state.',
+    description: 'Start now or schedule for the right window. Callware runs the campaign and tracks each lead state.',
     icon: CalendarClock,
   },
   {

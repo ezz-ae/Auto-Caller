@@ -54,6 +54,11 @@ function getChannelBooleanEnv(base: string, fallback: boolean, channel: 'phone' 
   return getBooleanEnv(`ELEVENLABS_${base}`, fallback);
 }
 
+function clamp(value: number, min: number, max: number): number {
+  if (!Number.isFinite(value)) return min;
+  return Math.max(min, Math.min(max, value));
+}
+
 function normalizeTtsText(input: string): string {
   return String(input || '')
     .replace(/[*_`#>-]/g, ' ')
@@ -117,10 +122,15 @@ export async function generateSpeech(
     process.env.ELEVENLABS_MODEL_ID ||
     'eleven_multilingual_v2';
   // Tuned defaults for more human cadence: softer stability and more expressiveness.
-  const stability = getChannelFloatEnv('VOICE_STABILITY', 0.28, channel);
-  const similarityBoost = getChannelFloatEnv('VOICE_SIMILARITY_BOOST', 0.82, channel);
-  const style = getChannelFloatEnv('VOICE_STYLE', 0.28, channel);
-  const speed = getChannelFloatEnv('VOICE_SPEED', 0.96, channel);
+  const rawStability = getChannelFloatEnv('VOICE_STABILITY', 0.28, channel);
+  const rawSimilarityBoost = getChannelFloatEnv('VOICE_SIMILARITY_BOOST', 0.82, channel);
+  const rawStyle = getChannelFloatEnv('VOICE_STYLE', 0.28, channel);
+  const rawSpeed = getChannelFloatEnv('VOICE_SPEED', 0.96, channel);
+  // Keep phone calls inside natural ranges to avoid robotic call-center tone.
+  const stability = channel === 'phone' ? clamp(rawStability, 0.16, 0.36) : clamp(rawStability, 0, 1);
+  const similarityBoost = clamp(rawSimilarityBoost, 0.7, 0.95);
+  const style = channel === 'phone' ? clamp(rawStyle, 0.12, 0.42) : clamp(rawStyle, 0, 1);
+  const speed = channel === 'phone' ? clamp(rawSpeed, 0.92, 1.0) : clamp(rawSpeed, 0.7, 1.2);
   const useSpeakerBoost = getChannelBooleanEnv('USE_SPEAKER_BOOST', true, channel);
   // 0 favors quality over latency and typically sounds less synthetic.
   const optimizeLatency = Math.max(0, Math.min(4, Math.round(getFloatEnv('ELEVENLABS_OPTIMIZE_STREAMING_LATENCY', 0))));

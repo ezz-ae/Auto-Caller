@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import { useCallback } from 'react'
 import {
   ArrowRight,
   CalendarClock,
@@ -51,7 +52,7 @@ const features = [
   },
   {
     title: 'Managed human-like voices',
-    description: 'trren assigns production-ready voice profiles automatically per hired agent.',
+    description: 'Callware assigns production-ready voice profiles automatically per hired agent.',
     icon: TrendingUp,
   },
   {
@@ -69,7 +70,7 @@ const features = [
 const faqs = [
   {
     q: 'Will it sound robotic?',
-    a: 'No. Each hired agent uses a tuned voice profile selected by trren for natural delivery. You can run a live test call before launch.',
+    a: 'No. Each hired agent uses a tuned voice profile selected by Callware for natural delivery. You can run a live test call before launch.',
   },
   {
     q: 'Can I use my own number?',
@@ -95,6 +96,16 @@ const icpCards = [
 ]
 
 export default function MarketingHomePage() {
+  const handleDemoRequestedFromChat = useCallback(() => {
+    const section = document.getElementById('live-test')
+    section?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+
+    window.setTimeout(() => {
+      const phoneInput = document.getElementById('demo-call-phone-input') as HTMLInputElement | null
+      phoneInput?.focus()
+    }, 450)
+  }, [])
+
   return (
     <div className="cw-editor-marketing min-h-screen text-white">
       <MarketingHeader />
@@ -149,7 +160,7 @@ export default function MarketingHomePage() {
           </div>
 
           <div className="lg:sticky lg:top-24 space-y-4">
-            <OnboardingChat />
+            <OnboardingChat onDemoRequested={handleDemoRequestedFromChat} />
             <p className="text-center text-[11px] text-zinc-600">
               Ask what to launch today and get a guided setup path in chat.
             </p>

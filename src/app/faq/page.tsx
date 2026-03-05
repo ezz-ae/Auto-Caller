@@ -7,7 +7,7 @@ const faqs = [
   {
     question: 'Do customers need to bring provider API keys?',
     answer:
-      'No. In managed mode, infrastructure is operated by trren. Customers only manage agents, leads, credits, and outcomes.',
+      'No. In managed mode, infrastructure is operated by Callware. Customers only manage agents, leads, credits, and outcomes.',
   },
   {
     question: 'What does a customer do inside the dashboard?',

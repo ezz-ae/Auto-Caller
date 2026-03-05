@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
         intent: 'CAPTURE',
         purchase_units: [{
           reference_id: product.id,
-          description: `trren - ${product.name}`,
+          description: `Callware - ${product.name}`,
           amount: {
             currency_code: 'USD',
             value: product.price.toFixed(2),
@@ -173,7 +173,7 @@ export async function POST(request: NextRequest) {
           }),
         }],
         application_context: {
-          brand_name: 'trren',
+          brand_name: 'Callware',
           landing_page: 'NO_PREFERENCE',
           user_action: 'PAY_NOW',
           return_url: `${appUrl}/pricing/success`,

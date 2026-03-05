@@ -66,8 +66,8 @@ export function MarketingFooter() {
           <p className="text-sm font-semibold text-white mb-3">Support</p>
           <div className="space-y-2 text-sm text-zinc-400">
             <p>Production support window: Mon-Fri</p>
-            <a href="mailto:support@trren.com" className="block hover:text-blue-200 transition">
-              support@trren.com
+            <a href="mailto:support@callware.com" className="block hover:text-blue-200 transition">
+              support@callware.com
             </a>
             <p>Status: <span className="text-blue-200">Operational</span></p>
           </div>
@@ -75,7 +75,7 @@ export function MarketingFooter() {
       </div>
       <div className="border-t border-zinc-800/80">
         <div className="mx-auto max-w-7xl px-4 py-4 text-xs text-zinc-500 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-          <p>© {new Date().getFullYear()} trren. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} Callware. All rights reserved.</p>
           <p>Built for fast, measurable outbound calling.</p>
         </div>
       </div>

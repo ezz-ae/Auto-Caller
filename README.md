@@ -1,6 +1,6 @@
-# trren Platform
+# Callware Platform
 
-trren is a managed outbound calling platform for lead reactivation.
+Callware is a managed outbound calling platform for lead reactivation.
 
 Users:
 - hire agents

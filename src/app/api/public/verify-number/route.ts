@@ -28,9 +28,9 @@ function buildVerifiedResponse(number: string, companyName: string, supportNumbe
   return {
     verified: true,
     number,
-    companyName: companyName || 'Verified trren customer',
+    companyName: companyName || 'Verified Callware customer',
     supportNumber: supportNumber || '',
-    notice: 'This number is operated by trren for automated outbound follow-up campaigns.',
+    notice: 'This number is operated by Callware for automated outbound follow-up campaigns.',
     optOut: 'Say "do not call" during any call, or contact support to be added to DNC.',
   };
 }
@@ -69,13 +69,13 @@ async function verifyFromPostgres(number: string) {
     return buildVerifiedResponse(number, byWorkspace.businessName || '', byWorkspace.forwardToNumber || supportFallback);
   }
 
-  return { verified: false, number, message: 'Number is not in the trren managed outbound registry.' };
+  return { verified: false, number, message: 'Number is not in the Callware managed outbound registry.' };
 }
 
 function verifyFromFilesystem(number: string) {
   const supportFallback = getSupportFallback();
   if (!fs.existsSync(DATA_DIR)) {
-    return { verified: false, number, message: 'Number is not in the trren managed outbound registry.' };
+    return { verified: false, number, message: 'Number is not in the Callware managed outbound registry.' };
   }
 
   const files = fs.readdirSync(DATA_DIR);
@@ -118,7 +118,7 @@ function verifyFromFilesystem(number: string) {
     }
   }
 
-  return { verified: false, number, message: 'Number is not in the trren managed outbound registry.' };
+  return { verified: false, number, message: 'Number is not in the Callware managed outbound registry.' };
 }
 
 export async function GET(request: NextRequest) {

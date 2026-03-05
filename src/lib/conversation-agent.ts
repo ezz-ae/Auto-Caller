@@ -40,6 +40,19 @@ interface TargetBlueprint {
   constraints: string;
 }
 
+const DECLINE_SIGNALS = [
+  'not interested',
+  "don't call",
+  'do not call',
+  'stop calling',
+  'remove me',
+  'wrong number',
+  'no thanks',
+  'leave me alone',
+  'unsubscribe',
+  'stop',
+];
+
 function clipText(input: string, max = 320): string {
   const cleaned = String(input || '').replace(/\s+/g, ' ').trim();
   if (cleaned.length <= max) return cleaned;
@@ -69,6 +82,11 @@ function getBooleanEnv(name: string, fallback: boolean): boolean {
 
 function hasAny(text: string, patterns: string[]): boolean {
   return patterns.some(pattern => text.includes(pattern));
+}
+
+function hasExplicitDecline(input: string): boolean {
+  const text = String(input || '').toLowerCase();
+  return hasAny(text, DECLINE_SIGNALS);
 }
 
 function parseTargetBlueprint(raw: string): TargetBlueprint {
@@ -321,18 +339,7 @@ function extractJsonObject(raw: string): Record<string, any> {
 function heuristicDecision(context: ConversationContext): ConversationDecision {
   const utterance = String(context.leadUtterance || '').toLowerCase();
 
-  const endSignals = [
-    'not interested',
-    "don't call",
-    'do not call',
-    'stop calling',
-    'remove me',
-    'wrong number',
-    'no thanks',
-    'leave me alone',
-  ];
-
-  if (endSignals.some(signal => utterance.includes(signal))) {
+  if (hasExplicitDecline(utterance)) {
     return {
       action: 'end',
       reason: 'Lead declined call',
@@ -454,6 +461,8 @@ DECISION RULES:
 - action="forward" - lead is warm, curious, asks price/details, or wants a human.
 - action="end" - lead clearly declines, says stop calling, wrong number.
 - action="continue" - still in discovery or building rapport.
+- If lead asks any unrelated or unexpected question, answer briefly in a human way and continue the conversation.
+- Never end the call just because you do not know an answer. Acknowledge, pivot, and ask one focused follow-up.
 
 OUTPUT FORMAT - strict JSON only, no prose outside it:
 {
@@ -495,14 +504,27 @@ Generate the next best response now.`;
 
 function coerceDecision(raw: Record<string, any>, fallback: ConversationDecision, context: ConversationContext): ConversationDecision {
   const mood = detectLeadMood(context.leadUtterance);
-  const action = normalizeAction(String(raw.action || 'continue'));
+  const requestedAction = normalizeAction(String(raw.action || 'continue'));
+  const shouldBlockEnd = requestedAction === 'end' && !hasExplicitDecline(context.leadUtterance);
+  const action: ConversationAction = shouldBlockEnd ? 'continue' : requestedAction;
   const nextQuestion = String(raw.nextQuestion || '').trim();
   const rawReply = String(raw.reply || '');
-  const mergedReply = action === 'continue' && nextQuestion && !rawReply.includes('?')
-    ? `${rawReply} ${nextQuestion}`
-    : rawReply;
+  const closingTone = /(goodbye|have a great day|thanks for your time|i will not keep you)/i.test(rawReply);
+  const safeReply = shouldBlockEnd && closingTone ? fallback.reply : rawReply;
+  const mergedReply = action === 'continue' && nextQuestion && !safeReply.includes('?')
+    ? `${safeReply} ${nextQuestion}`
+    : safeReply;
   const reply = normalizeSpokenReply(injectHumanTexture(mergedReply, action, context, mood));
-  if (!reply) return fallback;
+  if (!reply) {
+    if (shouldBlockEnd) {
+      return {
+        reply: fallback.reply,
+        action: 'continue',
+        reason: 'Kept conversation open on non-decline utterance',
+      };
+    }
+    return fallback;
+  }
 
   return {
     reply,

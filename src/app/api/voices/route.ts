@@ -75,11 +75,16 @@ export async function GET(request: NextRequest) {
     }
 
     const voices = await getVoiceEngineVoices(userId);
-    const telephonyVoices = [
-      { id: 'default-female', name: 'Standard Female', category: 'telephony', labels: { gender: 'female', language: 'multi' }, language: 'multi', source: 'telephony', previewUrl: '' },
-      { id: 'default-male', name: 'Standard Male', category: 'telephony', labels: { gender: 'male', language: 'en-US' }, language: 'en-US', source: 'telephony', previewUrl: '' },
-    ]
-    
+    const telephonyVoices: Array<{
+      id: string;
+      name: string;
+      category: string;
+      labels: Record<string, string>;
+      language: string;
+      source: string;
+      previewUrl: string;
+    }> = [];
+
     const highQualityVoices = voices
       .map(v => ({
         id: v.voice_id,

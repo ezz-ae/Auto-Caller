@@ -559,7 +559,7 @@ export default function Dashboard() {
   })
   const [identityLoading, setIdentityLoading] = useState(false)
   const [editingCallerIdentityId, setEditingCallerIdentityId] = useState<string | null>(null)
-  const [voicePreviewText, setVoicePreviewText] = useState('Hi, this is Sara from trren. I wanted to share a quick update and see if this is relevant for you.')
+  const [voicePreviewText, setVoicePreviewText] = useState('Hi, this is Sara from Callware. I wanted to share a quick update and see if this is relevant for you.')
   const [previewingVoice, setPreviewingVoice] = useState<string | null>(null)
   
   // Campaign state
@@ -1430,7 +1430,7 @@ export default function Dashboard() {
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
       a.href = url
-      a.download = `trren-compliance-${new Date().toISOString().slice(0, 10)}.json`
+      a.download = `Callware-compliance-${new Date().toISOString().slice(0, 10)}.json`
       document.body.appendChild(a)
       a.click()
       a.remove()
@@ -1643,7 +1643,7 @@ export default function Dashboard() {
           prompt,
           messages: copilotMessages,
           context: {
-            businessName: settings.businessName || 'trren',
+            businessName: settings.businessName || 'Callware',
             industry: settings.industry || selectedCallerIdentity?.industry || '',
             companyDetails: settings.companyDetails || '',
             targetProfile: script,
